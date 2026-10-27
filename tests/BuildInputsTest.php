@@ -393,10 +393,11 @@ final class BuildInputsTest extends TestCase
         preg_match('/set\(PHPBM_PREFIX_MAPS "([^"]*)"\)/', $inputs, $m);
         $maps = explode(';', $m[1]);
         $position = static fn (string $map): int|false => array_search($map, $maps, true);
-        self::assertNotFalse($position("{$project}=project"));
-        self::assertGreaterThan($position("{$project}=project"), $position("{$project}/vendor/hal=package/acme/esp32-hal"));
-        self::assertGreaterThan($position("{$project}=project"), $position("{$project}/vendor/cfg=package/acme/cfg"));
-        self::assertStringContainsString('"' . $project . '/vendor/hal/src/a.c"', (string) file_get_contents("{$plan->buildDir}/phpbm_packages/CMakeLists.txt"));
+        $cmake = BuildInputs::cmakePath($project);
+        self::assertNotFalse($position("{$cmake}=project"));
+        self::assertGreaterThan($position("{$cmake}=project"), $position("{$cmake}/vendor/hal=package/acme/esp32-hal"));
+        self::assertGreaterThan($position("{$cmake}=project"), $position("{$cmake}/vendor/cfg=package/acme/cfg"));
+        self::assertStringContainsString('"' . $cmake . '/vendor/hal/src/a.c"', (string) file_get_contents("{$plan->buildDir}/phpbm_packages/CMakeLists.txt"));
     }
 
     public function test_an_invalid_package_writes_nothing(): void

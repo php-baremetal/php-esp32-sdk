@@ -40,9 +40,11 @@ final class ReleaseTest extends TestCase
     /** @return array{int,string} */
     private function release(string ...$args): array
     {
-        $command = array_map('escapeshellarg', [PHP_BINARY, dirname(__DIR__) . '/tools/release.php', ...$args]);
-        exec(implode(' ', $command) . ' 2>&1', $output, $code);
-        return [$code, implode("\n", $output)];
+        // no shell: on Windows escapeshellarg() turns % into a space, which breaks file:// urls
+        $process = proc_open([PHP_BINARY, dirname(__DIR__) . '/tools/release.php', ...$args], [1 => ['pipe', 'w'], 2 => ['redirect', 1]], $pipes);
+        $output = (string) stream_get_contents($pipes[1]);
+        fclose($pipes[1]);
+        return [proc_close($process), rtrim($output, "\n")];
     }
 
     /** @return array<string,string> path => contents */
