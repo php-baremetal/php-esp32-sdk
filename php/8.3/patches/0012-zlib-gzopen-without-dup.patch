@@ -1,0 +1,46 @@
+Open compress.zlib:// streams without dup().
+
+  * zlib_fopen_wrapper.c: ESP-IDF's VFS has no dup(), so gzopen() and compress.zlib:// always failed
+    ("gzopen failed"). zlib now takes the inner stream's descriptor itself; gzclose() closes it and
+    the inner stream is freed with PHP_STREAM_FREE_PRESERVE_HANDLE, so the descriptor is closed once.
+    The descriptor is the inner stream's own: a stream that only borrows one (php://fd/N, php://stdin, a
+    stream over a FILE* opened elsewhere) has it closed for its owner too when the gz stream closes,
+    which dup() avoided upstream. If the gz stream cannot be allocated, "gzopen failed" is still reported.
+
+diff --git a/ext/zlib/zlib_fopen_wrapper.c b/ext/zlib/zlib_fopen_wrapper.c
+--- a/ext/zlib/zlib_fopen_wrapper.c
++++ b/ext/zlib/zlib_fopen_wrapper.c
+@@ -115,7 +115,8 @@ static int php_gziop_close(php_stream *stream, int close_handle)
+ 			self->gz_file = NULL;
+ 		}
+ 		if (self->stream) {
+-			php_stream_close(self->stream);
++			/* php-baremetal: gzclose() closed the descriptor, which the inner stream shares. */
++			php_stream_free(self->stream, PHP_STREAM_FREE_CLOSE | PHP_STREAM_FREE_PRESERVE_HANDLE);
+ 			self->stream = NULL;
+ 		}
+ 	}
+@@ -169,7 +170,9 @@ php_stream *php_stream_gzopen(php_stream_wrapper *wrapper, const char *path, con
+ 		if (SUCCESS == php_stream_cast(innerstream, PHP_STREAM_AS_FD, (void **) &fd, REPORT_ERRORS)) {
+ 			self = emalloc(sizeof(*self));
+ 			self->stream = innerstream;
+-			self->gz_file = gzdopen(dup(fd), mode);
++			/* php-baremetal: ESP-IDF's VFS has no dup(): zlib takes the inner stream's descriptor and
++			 * closes it, and the inner stream is then freed without closing it again. */
++			self->gz_file = gzdopen(fd, mode);
+ 
+ 			if (self->gz_file) {
+ 				zval *zlevel = context ? php_stream_context_get_option(context, "zlib", "level") : NULL;
+@@ -184,6 +187,12 @@ php_stream *php_stream_gzopen(php_stream_wrapper *wrapper, const char *path, con
+ 				}
+ 
+ 				gzclose(self->gz_file);
++				efree(self);
++				php_stream_free(innerstream, PHP_STREAM_FREE_CLOSE | PHP_STREAM_FREE_PRESERVE_HANDLE);
++				if (options & REPORT_ERRORS) {
++					php_error_docref(NULL, E_WARNING, "gzopen failed");
++				}
++				return NULL;
+ 			}
+ 
+ 			efree(self);

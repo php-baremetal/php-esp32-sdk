@@ -1,0 +1,12 @@
+{
+  "description": "Runs the script once, then setup() and loop($tick) repeatedly.",
+  "options": {
+    "loop-interval": {
+      "description": "Milliseconds to wait between two loop() calls; 0 runs loop() again right away.",
+      "type": "int",
+      "min": 0,
+      "max": 60000,
+      "default": 0
+    }
+  }
+}

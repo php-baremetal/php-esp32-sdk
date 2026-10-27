@@ -1,0 +1,8 @@
+{
+  "description": "Runs the script, then reacts to events (timers, GPIO, network).",
+  "requires": {
+    "packages": [
+      "php-baremetal/ext-events"
+    ]
+  }
+}

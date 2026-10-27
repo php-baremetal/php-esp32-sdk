@@ -1,0 +1,7 @@
+{
+    "module": "pdo",
+    "sources": ["ext/pdo/*.c"],
+    "include-dirs": ["ext/pdo"],
+    "cost": "about 55 KB",
+    "startup-kb": 47
+}

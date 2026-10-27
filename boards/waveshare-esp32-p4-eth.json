@@ -1,0 +1,15 @@
+{
+    "name": "Waveshare ESP32-P4-ETH",
+    "chip": "esp32p4",
+    "psram": "hex",
+    "flash": "32MB",
+    "revision": "v1",
+    "microsd": {
+        "type": "sdio",
+        "pwr_en": 45
+    },
+    "network": {
+        "type": "emac",
+        "rst": 51
+    }
+}

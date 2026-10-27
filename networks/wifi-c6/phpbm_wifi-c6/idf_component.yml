@@ -1,0 +1,7 @@
+# esp_wifi_remote forwards esp_wifi_* to the C6; esp_hosted is its SDIO transport. Transitive deps pinned too.
+dependencies:
+  espressif/esp_wifi_remote: "==1.6.5"
+  espressif/esp_hosted: "==3.0.9"
+  espressif/wifi_remote_over_eppp: "==0.3.3"
+  espressif/eppp_link: "==1.1.6"
+  espressif/esp_serial_slave_link: "==1.1.2"

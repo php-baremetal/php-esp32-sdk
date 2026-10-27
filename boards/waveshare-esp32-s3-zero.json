@@ -1,0 +1,10 @@
+{
+    "name": "Waveshare ESP32-S3-Zero",
+    "chip": "esp32s3",
+    "psram": "quad",
+    "flash": "4MB",
+    "console": "usb-jtag",
+    "network": {
+        "type": "wifi"
+    }
+}

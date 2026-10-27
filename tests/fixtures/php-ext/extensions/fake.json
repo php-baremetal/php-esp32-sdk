@@ -1,0 +1,23 @@
+{
+    "module": "fake",
+    "sources": ["ext/fake/*.c", "ext/fake/lib/*.c", "onig:src/regcomp.c"],
+    "exclude": ["ext/fake/fake_big.c", "ext/fake/lib/b.c"],
+    "include-dirs": ["ext/fake", "onig:src"],
+    "defines": { "HAVE_FAKE": 1 },
+    "requires": { "extensions": ["base"], "sources": ["onig"] },
+    "options": {
+        "fake-cjk": {
+            "description": "CJK filters.",
+            "type": "bool",
+            "default": true,
+            "when": { "false": { "defines": { "FAKE_NO_CJK": 1 }, "exclude": ["ext/fake/fake_cjk.c"] } }
+        },
+        "fake-tables": {
+            "description": "Table size.",
+            "values": ["small", "big"],
+            "default": "small",
+            "when": { "big": { "defines": { "FAKE_TABLES": "big" }, "sources": ["ext/fake/fake_big.c", "onig:src/regexec.c"], "include-dirs": ["ext/fake/lib"] } }
+        }
+    },
+    "cost": "about 1 KB"
+}

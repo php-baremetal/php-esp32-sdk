@@ -1,0 +1,109 @@
+Make the Unicode case-fold tables const, so they stay in flash instead of being
+copied to internal RAM (about 22 KB on ESP32). They are only ever read; the case-fold
+callbacks take a non-const pointer in the public API but do not write through it.
+
+--- a/src/regenc.c
++++ b/src/regenc.c
+@@ -967,7 +967,7 @@
+ }
+ 
+ extern int
+-onig_codes_cmp(OnigCodePoint a[], OnigCodePoint b[], int n)
++onig_codes_cmp(const OnigCodePoint a[], const OnigCodePoint b[], int n)
+ {
+   int i;
+ 
+--- a/src/regenc.h
++++ b/src/regenc.h
+@@ -224,9 +224,9 @@
+     return ONIGERR_INVALID_CODE_POINT_VALUE;\
+ } while (0)
+ 
+-extern OnigCodePoint OnigUnicodeFolds1[];
+-extern OnigCodePoint OnigUnicodeFolds2[];
+-extern OnigCodePoint OnigUnicodeFolds3[];
++extern const OnigCodePoint OnigUnicodeFolds1[];
++extern const OnigCodePoint OnigUnicodeFolds2[];
++extern const OnigCodePoint OnigUnicodeFolds3[];
+ 
+ struct ByUnfoldKey {
+   OnigCodePoint code;
+@@ -239,7 +239,7 @@
+ extern int onigenc_unicode_fold2_key(OnigCodePoint code[]);
+ extern int onigenc_unicode_fold3_key(OnigCodePoint code[]);
+ 
+-extern int onig_codes_cmp(OnigCodePoint a[], OnigCodePoint b[], int n);
++extern int onig_codes_cmp(const OnigCodePoint a[], const OnigCodePoint b[], int n);
+ extern int onig_codes_byte_at(OnigCodePoint code[], int at);
+ 
+ 
+--- a/src/unicode.c
++++ b/src/unicode.c
+@@ -112,7 +112,7 @@
+           return ONIGENC_CODE_TO_MBC(enc, *FOLDS1_FOLD(buk->index), fold);
+       }
+       else {
+-        OnigCodePoint* addr;
++        const OnigCodePoint* addr;
+ 
+         FOLDS_FOLD_ADDR_BUK(buk, addr);
+         rlen = 0;
+@@ -179,12 +179,12 @@
+   int i, j, k, n, r;
+ 
+   for (i = from; i < to; ) {
+-    OnigCodePoint* fold = FOLDS2_FOLD(i);
++    const OnigCodePoint* fold = FOLDS2_FOLD(i);
+     n = FOLDS2_UNFOLDS_NUM(i);
+     for (j = 0; j < n; j++) {
+       OnigCodePoint unfold = FOLDS2_UNFOLDS(i)[j];
+ 
+-      r = (*f)(unfold, fold, 2, arg);
++      r = (*f)(unfold, (OnigCodePoint* )fold, 2, arg); /* read only */
+       if (r != 0) return r;
+ 
+       for (k = 0; k < j; k++) {
+@@ -208,12 +208,12 @@
+   int i, j, k, n, r;
+ 
+   for (i = from; i < to; ) {
+-    OnigCodePoint* fold = FOLDS3_FOLD(i);
++    const OnigCodePoint* fold = FOLDS3_FOLD(i);
+     n = FOLDS3_UNFOLDS_NUM(i);
+     for (j = 0; j < n; j++) {
+       OnigCodePoint unfold = FOLDS3_UNFOLDS(i)[j];
+ 
+-      r = (*f)(unfold, fold, 3, arg);
++      r = (*f)(unfold, (OnigCodePoint* )fold, 3, arg); /* read only */
+       if (r != 0) return r;
+ 
+       for (k = 0; k < j; k++) {
+--- a/src/unicode_fold_data.c
++++ b/src/unicode_fold_data.c
+@@ -31,7 +31,7 @@
+ #define UNICODE_CASEFOLD_VERSION  160000
+ 
+ 
+-OnigCodePoint OnigUnicodeFolds1[] = {
++const OnigCodePoint OnigUnicodeFolds1[] = {
+  /*   0*/    0x0061,  1,   0x0041, /* LATIN CAPITAL LETTER A */
+  /*   3*/    0x0062,  1,   0x0042, /* LATIN CAPITAL LETTER B */
+  /*   6*/    0x0063,  1,   0x0043, /* LATIN CAPITAL LETTER C */
+@@ -1460,7 +1460,7 @@
+ #define FOLDS1_END_INDEX   4299
+ };
+ 
+-OnigCodePoint OnigUnicodeFolds2[] = {
++const OnigCodePoint OnigUnicodeFolds2[] = {
+  /* LATIN SMALL LETTER A WITH RIGHT HALF RING */
+  /*   0*/    0x0061,   0x02be,  1,   0x1e9a,
+  /* LATIN SMALL LIGATURE FF */
+@@ -1584,7 +1584,7 @@
+ #define FOLDS2_END_INDEX   265
+ };
+ 
+-OnigCodePoint OnigUnicodeFolds3[] = {
++const OnigCodePoint OnigUnicodeFolds3[] = {
+  /* LATIN SMALL LIGATURE FFI */
+  /*   0*/    0x0066,   0x0066,   0x0069,  1,   0xfb03,
+  /* LATIN SMALL LIGATURE FFL */

@@ -1,0 +1,9 @@
+{
+    "module": "pdo_sqlite",
+    "sources": ["ext/pdo_sqlite/*.c", "sqlite:sqlite3_phpbm.c"],
+    "include-dirs": ["ext/pdo_sqlite", "ext", "sqlite:."],
+    "defines": { "PDO_SQLITE_OMIT_LOAD_EXTENSION": 1, "HAVE_SQLITE3_CLOSE_V2": 1 },
+    "requires": { "extensions": ["pdo"], "sources": ["sqlite"] },
+    "cost": "about 530 KB with pdo and the SQLite engine (the engine, about 470 KB, is shared with sqlite3); SQLite allocates outside memory_limit: up to 256 KB of page cache per open connection",
+    "startup-kb": 21
+}

@@ -1,0 +1,28 @@
+{
+    "name": "php-baremetal/php-esp32-sdk",
+    "description": "ESP32 SDK for php-baremetal: descriptors, firmware host and the phpbm driver.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Gianfrancesco Aurecchia",
+            "email": "gianfri@aurecchia.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.4"
+    },
+    "require-dev": {
+        "php-baremetal/spec": "^1.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "repositories": [
+        { "type": "path", "url": "../packages/spec", "options": { "versions": { "php-baremetal/spec": "1.0.0" } } }
+    ],
+    "autoload": {
+        "psr-4": { "PhpBaremetal\\Esp32\\": "driver/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "PhpBaremetal\\Esp32\\Tests\\": "tests/" }
+    }
+}

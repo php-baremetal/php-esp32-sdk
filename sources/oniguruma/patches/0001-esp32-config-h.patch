@@ -1,0 +1,45 @@
+Add the config.h that ./configure would generate, for the ESP32 targets (ILP32), as
+src/onig_esp32_config.h, and include it from regenc.h under that name. A file named
+config.h in src/ would shadow PHP's own config.h for every php source once src/ is on the
+include path (mbstring-regex), so it gets a name nothing else uses.
+
+--- /dev/null
++++ b/src/onig_esp32_config.h
+@@ -0,0 +1,26 @@
++/* oniguruma config (what configure writes to config.h) for ESP32 targets (Xtensa and RISC-V, ILP32, newlib/picolibc); configure is not run. */
++#ifndef ONIG_ESP32_CONFIG_H
++#define ONIG_ESP32_CONFIG_H
++
++#define HAVE_ALLOCA_H 1
++#define HAVE_INTTYPES_H 1
++#define HAVE_STDINT_H 1
++#define HAVE_STDIO_H 1
++#define HAVE_STDLIB_H 1
++#define HAVE_STRINGS_H 1
++#define HAVE_STRING_H 1
++#define HAVE_SYS_STAT_H 1
++#define HAVE_SYS_TYPES_H 1
++#define HAVE_UNISTD_H 1
++#define STDC_HEADERS 1
++
++#define SIZEOF_INT 4
++#define SIZEOF_LONG 4
++#define SIZEOF_LONG_LONG 8
++#define SIZEOF_VOIDP 4
++
++#define PACKAGE "onig"
++#define PACKAGE_VERSION "6.9.10"
++#define VERSION "6.9.10"
++
++#endif
+--- a/src/regenc.h
++++ b/src/regenc.h
+@@ -33,7 +33,7 @@
+ #define ONIGURUMA_EXPORT
+ #endif
+ 
+-#include "config.h"
++#include "onig_esp32_config.h"
+ 
+ #ifndef ONIG_NO_STANDARD_C_HEADERS
+ #include <stddef.h>

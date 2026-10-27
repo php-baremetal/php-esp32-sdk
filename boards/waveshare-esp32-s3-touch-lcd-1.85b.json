@@ -1,0 +1,17 @@
+{
+    "name": "Waveshare ESP32-S3-Touch-LCD-1.85B",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "16MB",
+    "console": "usb-jtag",
+    "microsd": {
+        "type": "spi",
+        "cs": 13,
+        "sclk": 15,
+        "mosi": 14,
+        "miso": 16
+    },
+    "network": {
+        "type": "wifi"
+    }
+}

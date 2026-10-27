@@ -1,0 +1,7 @@
+/dev/ttyACM0        
+    desc: USB JTAG/serial debug unit
+    hwid: USB VID:PID=303A:1001 SER=F4:12:FA:CF:B1:20 LOCATION=1-2:1.0
+/dev/ttyS0          
+    desc: n/a
+    hwid: n/a
+2 ports found

@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for the report. Please fill in the board and versions — a bug on this project almost
-        always depends on them. If it reproduces on the latest `master`, even better.
+        always depends on them. If it reproduces on the latest SDK release, even better.
   - type: textarea
     id: what
     attributes:
@@ -19,66 +19,73 @@ body:
     attributes:
       label: Board
       options:
-        - waveshare-esp32-p4-pico
-        - waveshare-esp32-p4-eth
-        - waveshare-esp32-p4-wifi6
-        - waveshare-esp32-s3-zero
+        - espressif-esp32-s3-devkitc-1-n16r8
         - espressif-esp32-s3-devkitc-1-n8r2
         - espressif-esp32-s3-devkitc-1-n8r8
-        - espressif-esp32-s3-devkitc-1-n16r8
-        - waveshare-esp32-s3-zero-n8r8
+        - generic-esp32p4
+        - generic-esp32s3-octal
+        - generic-esp32s3-quad
+        - waveshare-esp32-p4-eth
+        - waveshare-esp32-p4-pico
+        - waveshare-esp32-p4-wifi6
         - waveshare-esp32-s3-eth
+        - waveshare-esp32-s3-touch-lcd-1.85b
+        - waveshare-esp32-s3-zero
+        - waveshare-esp32-s3-zero-n8r8
         - other (say which in "What happened")
     validations:
       required: true
   - type: input
-    id: php_version
+    id: versions
     attributes:
-      label: PHP version
-      description: The version built (e.g. 8.4.25). "default" is fine if you didn't pin one.
-      placeholder: "8.4.25"
+      label: SDK and PHP version
+      description: The SDK version from `phpbm.lock` and `config.platform.php` from composer.json.
+      placeholder: "esp32 2.0.0, PHP 8.5.11"
     validations:
       required: true
   - type: dropdown
-    id: project_type
+    id: runtime
     attributes:
-      label: Project type
+      label: Runtime
       options:
         - init-loop
+        - event-driven
         - web-server
-        - not sure
     validations:
       required: true
-  - type: input
-    id: extensions
+  - type: dropdown
+    id: storage
     attributes:
-      label: Extensions enabled
-      description: The optional extensions in your config (e.g. wifi, sqlite, openssl full + tls). "none" is fine.
-      placeholder: "wifi, s3_onboard_rgb"
+      label: Storage
+      options:
+        - embedded
+        - microsd
+    validations:
+      required: true
   - type: textarea
     id: repro
     attributes:
       label: Steps to reproduce
-      description: The smallest `index.php` / config that shows it, if you can.
+      description: Your composer.json (packages and `extra.baremetal`) and the smallest `index.php` that shows it.
     validations:
       required: true
   - type: textarea
     id: serial
     attributes:
       label: Serial output
-      description: The relevant serial log (boot + the failure). RENDERED AS CODE.
+      description: The relevant serial log (boot + the failure), or the phpbm output for a build error. RENDERED AS CODE.
       render: shell
   - type: input
     id: env
     attributes:
       label: Environment
-      description: phpflash version (or "built by hand"), ESP-IDF version, and host OS.
-      placeholder: "phpflash v0.10.0, ESP-IDF v5.5.5, Ubuntu 24.04"
+      description: phpbm version (`phpbm --version`), ESP-IDF version, and host OS.
+      placeholder: "phpbm 1.0.0, ESP-IDF v6.1, Ubuntu 24.04"
   - type: checkboxes
     id: checks
     attributes:
       label: Before submitting
       options:
-        - label: I redacted secrets from the log (WiFi passwords, `.env` values, tokens) — see the [security policy](https://github.com/php-baremetal/php-esp32/blob/master/SECURITY.md).
+        - label: I redacted secrets from the log (WiFi passwords, `.env` values, tokens) — see the [security policy](https://github.com/php-baremetal/php-esp32-sdk/blob/master/SECURITY.md).
           required: true
-        - label: It still reproduces on the latest `master` (or I said which version I'm on).
+        - label: It still reproduces on the latest SDK release (or I said which version I'm on).

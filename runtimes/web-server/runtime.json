@@ -1,0 +1,23 @@
+{
+  "description": "Serves HTTP: every request runs the entry script with a fresh state.",
+  "requires": {
+    "capabilities": [
+      "network"
+    ]
+  },
+  "options": {
+    "init": {
+      "description": "Script run once at boot, before the server starts (e.g. to connect to Wi-Fi with ext-wifi); empty for none. Relative to the source directory.",
+      "type": "string",
+      "pattern": "#^(?:(?:[A-Za-z0-9_-][A-Za-z0-9_.-]*/)*[A-Za-z0-9_-][A-Za-z0-9_.-]*\\.php)?$#D",
+      "default": ""
+    },
+    "port": {
+      "description": "TCP port of the HTTP server.",
+      "type": "int",
+      "min": 1,
+      "max": 65535,
+      "default": 80
+    }
+  }
+}

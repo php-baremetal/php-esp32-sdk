@@ -2,18 +2,19 @@
 
 ## Supported Versions
 
-`php-esp32` is pre-1.0 and moving quickly (see [ROADMAP.md](ROADMAP.md)). Security fixes land on the
-**latest release and `master`**; older tags are not back-patched. If you hit a security issue, first
-check whether it still reproduces on the latest `master`.
+Security fixes land on the **latest release and `master`**; older releases are not back-patched. The
+releases before 2.0.0 (`legacy` firmware, v1.5.0 and older) are no longer maintained. If you hit a
+security issue, first check whether it still reproduces on the latest release.
 
 | Version        | Supported |
 |----------------|-----------|
 | latest release / `master` | Yes |
-| older tags     | No        |
+| older releases | No        |
+| v1.5.0 and older (pre-SDK firmware) | No |
 
 The PHP engine itself is the unmodified upstream release from [php.net](https://www.php.net/), fetched
 at build time. Vulnerabilities in PHP proper should go to the [PHP project](https://www.php.net/security),
-though we're happy to bump the vendored version — the tree supports several (8.3–8.5), so a fixed
+though we're happy to bump the pinned version — the SDK supports several minors (8.3–8.5), so a fixed
 patch release usually drops in unchanged.
 
 ## Reporting a Vulnerability
@@ -28,8 +29,8 @@ patch release usually drops in unchanged.
 > - A vulnerability in **ESP-IDF** (the SDK and the components it provides) goes to Espressif:
 >   **[ESP-IDF `SECURITY.md`](https://github.com/espressif/esp-idf/blob/master/SECURITY.md)**.
 >
-> Report it **here** only when the issue is in *this project's own code* — the port patches, the C
-> extensions, the build/config tooling, or *how* this project uses PHP or ESP-IDF.
+> Report it **here** only when the issue is in *this project's own code* — the port patches, the
+> runtimes, storages and network components, the build driver, or *how* this project uses PHP or ESP-IDF.
 
 **Do not open a public issue for a security vulnerability.**
 
@@ -37,14 +38,14 @@ Report it privately, either way:
 
 - **Email** [security@php-baremetal.com](mailto:security@php-baremetal.com), or
 - Use **GitHub's private vulnerability reporting**: on the
-  [`php-baremetal/php-esp32`](https://github.com/php-baremetal/php-esp32) repository, go to the
+  [`php-baremetal/php-esp32-sdk`](https://github.com/php-baremetal/php-esp32-sdk) repository, go to the
   **Security** tab → **Report a vulnerability** (opens a private advisory visible only to the maintainers).
 
 Please include:
 
 - A description of the vulnerability
 - Steps to reproduce (a minimal project / `index.php` and the board involved, if relevant)
-- The affected version(s) — the php-esp32 release, the PHP version built, and the board profile
+- The affected version(s) — the SDK release (`phpbm.lock`), the PHP version built, and the board id
 - Any potential impact assessment
 
 You should receive an acknowledgment within a few days. Because this is a spare-time project, please
@@ -53,11 +54,13 @@ you if you'd like.
 
 ## Scope
 
-This policy covers the firmware in this repository. Vulnerabilities in the related tooling belong to
+This policy covers the ESP32 SDK in this repository. Vulnerabilities in the related tooling belong to
 their own repositories, but you can report them the same private way:
 
-- [flash-tool](https://github.com/php-baremetal/flash-tool) — the `phpflash` CLI
-- the project website
+- [phpbm](https://github.com/php-baremetal/phpbm) — the CLI that builds and flashes
+- [conductor](https://github.com/php-baremetal/conductor) and [spec](https://github.com/php-baremetal/spec)
+- the extension, HAL and driver packages (each in its own `php-baremetal/<name>` repository)
+- the package registry and the project website
 
 Out of scope, and to be reported to their own maintainers (see the note above), not here:
 
@@ -110,7 +113,8 @@ verify certificates — don't disable verification for convenience on a device t
 Flashing and the serial console are unauthenticated by default (that's how the hardware works). Anyone
 who can physically connect to the board can reflash it or read its console. The build fetches the PHP
 source and some libraries at build time; the PHP tarball is **sha256-verified** against a pinned hash,
-but treat your build environment as part of the trust chain.
+the SDK archive is verified against the sha256 in its release index and in `phpbm.lock`, but treat
+your build environment as part of the trust chain.
 
 ## Sharing Debug Logs and Reproducers
 

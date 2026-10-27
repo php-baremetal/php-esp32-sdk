@@ -32,7 +32,7 @@ used but that the result is correct and owned. Concretely:
   output stated. See [CONTRIBUTING.md](CONTRIBUTING.md). Generated code that merely compiles is not a
   contribution.
 - **Hold to the project's principles.** The engine stays unmodified (changes are build-time patches),
-  the manifest stays the source of truth (`check-manifest` green), and features stay opt-in. An AI
+  the SDK descriptors stay the source of truth (the test suite green), and features stay opt-in. An AI
   suggestion that breaks these is wrong for this project even if it's valid PHP or valid C.
 - **No unreviewed bulk output.** Don't submit large machine-generated changes you haven't read line by
   line. Small, reviewable commits are preferred.

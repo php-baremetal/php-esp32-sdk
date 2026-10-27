@@ -1,0 +1,9 @@
+{
+    "name": "ESP32-S3 (octal PSRAM, generic)",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "8MB",
+    "network": {
+        "type": "wifi"
+    }
+}

@@ -1,0 +1,6 @@
+{
+    "name": "ESP32-S3",
+    "target": "esp32s3",
+    "capabilities": { "microsd": ["spi"], "network": ["w5500", "wifi"] },
+    "psram": ["quad", "octal"]
+}

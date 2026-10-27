@@ -1,0 +1,28 @@
+Skip the F_GETLK probe for every "unix-excl" connection, read-only ones included.
+
+unix-excl keeps the locks inside the process (bProcessLock), but a read-only connection never
+takes the in-process lock, so unixCheckReservedLock still asked fcntl(F_GETLK). FATFS file locks
+do nothing and F_GETLK leaves l_type F_WRLCK: the reserved lock always looked held, and a
+read-only connection opened first after a reset ignored the hot journal and read the half-written
+pages. Now it sees the journal and gets SQLITE_READONLY_ROLLBACK until a read-write connection
+rolls it back.
+
+diff --git a/sqlite3.c b/sqlite3.c
+--- a/sqlite3.c
++++ b/sqlite3.c
+@@ -42366,9 +42366,14 @@
+   }
+ 
+   /* Otherwise see if some other process holds it.
++  **
++  ** php-baremetal: with "unix-excl" there is no other process. A read-only
++  ** connection never sets bProcessLock, and on FATFS F_GETLK reports every
++  ** byte locked: the probe would hide a hot journal from it.
+   */
+ #ifndef __DJGPP__
+-  if( !reserved && !pFile->pInode->bProcessLock ){
++  if( !reserved && !pFile->pInode->bProcessLock
++   && (pFile->ctrlFlags & UNIXFILE_EXCL)==0 ){
+     struct flock lock;
+     lock.l_whence = SEEK_SET;
+     lock.l_start = RESERVED_BYTE;

@@ -1,0 +1,9 @@
+{
+    "name": "Espressif ESP32-S3-DevKitC-1 (N8R2)",
+    "chip": "esp32s3",
+    "psram": "quad",
+    "flash": "8MB",
+    "network": {
+        "type": "wifi"
+    }
+}

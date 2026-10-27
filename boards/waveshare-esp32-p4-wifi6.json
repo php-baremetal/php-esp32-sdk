@@ -1,0 +1,13 @@
+{
+    "name": "Waveshare ESP32-P4-WIFI6",
+    "chip": "esp32p4",
+    "psram": "hex",
+    "flash": "32MB",
+    "revision": "v1",
+    "microsd": {
+        "type": "sdio"
+    },
+    "network": {
+        "type": "wifi-c6"
+    }
+}

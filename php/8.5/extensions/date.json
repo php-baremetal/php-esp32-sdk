@@ -1,0 +1,15 @@
+{
+    "module": "date",
+    "sources": ["ext/date/php_date.c", "ext/date/lib/*.c"],
+    "include-dirs": ["ext/date", "ext/date/lib"],
+    "options": {
+        "date-timezones": {
+            "description": "Timezone database of ext/date: full (every named zone, about 350 KB) or utc (UTC only; named zones such as Europe/Rome are rejected).",
+            "values": ["full", "utc"],
+            "default": "full",
+            "when": { "utc": { "defines": { "PHP_EXT_DATE_MINIMAL_TZ": 1 } } }
+        }
+    },
+    "cost": "about 610 KB, about 255 KB with date-timezones utc",
+    "startup-kb": 60
+}

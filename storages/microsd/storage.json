@@ -1,0 +1,1 @@
+{ "description": "The PHP sources live on the microSD card.", "requires": { "capabilities": ["microsd"] } }

@@ -1,20 +1,21 @@
 name: Feature or extension request
-description: Suggest a capability, or ask for a PHP extension to be ported.
+description: Suggest a capability of the SDK, or ask for a PHP extension to be made available.
 labels: ["enhancement"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have a look at the [roadmap](https://github.com/php-baremetal/php-esp32/blob/master/ROADMAP.md)
-        and, for a PHP extension, the [porting status](https://github.com/php-baremetal/php-esp32/blob/master/docs/extensions/porting-status.md)
-        first — it may already be planned, shipped, or not possible on a bare-metal target.
+        Check the [registry](https://repository.php-baremetal.com) first: the extension or the feature may
+        already be a package. Hardware features (GPIO, I2C, Wi-Fi, …) are extension and HAL packages in
+        their own repositories; this one covers boards, runtimes, storages, networks, build options and
+        the PHP extensions of the SDK.
   - type: dropdown
     id: kind
     attributes:
       label: What kind of request is this?
       options:
-        - A PHP extension to port (from the source tree)
-        - A new capability / native extension (hardware or runtime)
+        - A PHP extension to make available (from the PHP source tree)
+        - A runtime, storage, network or build option
         - An improvement to something that exists
         - Something else
     validations:
@@ -38,5 +39,5 @@ body:
     attributes:
       label: Before submitting
       options:
-        - label: I checked the roadmap and the extension porting status.
+        - label: I checked the registry for an existing package.
           required: true

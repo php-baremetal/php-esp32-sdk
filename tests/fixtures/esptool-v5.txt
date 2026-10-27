@@ -1,0 +1,16 @@
+esptool v5.1.0
+Connected to ESP32-P4 on /dev/ttyACM0:
+Chip type:          ESP32-P4 (revision v1.0)
+Features:           Dual Core + LP Core, 400MHz
+Crystal frequency:  40MHz
+MAC:                60:55:f9:00:00:01
+
+Stub flasher running.
+
+Flash Memory Information:
+=========================
+Manufacturer: 46
+Device: 4018
+Detected flash size: 32MB
+
+Hard resetting via RTS pin...

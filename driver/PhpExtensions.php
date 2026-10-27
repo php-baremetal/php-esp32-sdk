@@ -1,0 +1,168 @@
+<?php
+
+declare(strict_types=1);
+
+namespace PhpBaremetal\Esp32;
+
+use PhpBaremetal\Spec\Sdk\BuildPlan;
+use PhpBaremetal\Spec\Sdk\Descriptor\PhpExtension;
+use PhpBaremetal\Spec\SpecException;
+
+/** The optional PHP extensions of a build, compiled into the php component. */
+final readonly class PhpExtensions
+{
+    public const TABLE = 'php_extensions.c';
+
+    /**
+     * @param list<PhpExtension>       $extensions registration order
+     * @param list<string>             $sources    absolute paths
+     * @param list<string>             $includeDirs absolute paths
+     * @param array<string,string|int> $defines
+     * @param list<string>             $idfRequires ESP-IDF components the php component requires, sorted
+     *                                             (registry ones are declared by Packages in the phpbm_packages manifest)
+     */
+    public function __construct(
+        public array $extensions = [],
+        public array $sources = [],
+        public array $includeDirs = [],
+        public array $defines = [],
+        public array $idfRequires = [],
+    ) {
+    }
+
+    public static function fromPlan(BuildPlan $plan): self
+    {
+        $sources = [];
+        $includeDirs = [];
+        $defines = [];
+        $owners = [];
+        $idfRequires = [];
+        foreach ($plan->phpExtensions as $extension) {
+            $where = "php/{$extension->minor}/extensions/{$extension->name}.json";
+            $build = $extension->resolve($plan->options);
+            $files = [];
+            foreach ($build['layers'] as $layer) {
+                foreach ($layer['sources'] as $pattern) {
+                    $matches = self::glob($plan, $pattern, $where);
+                    if ($matches === []) {
+                        throw new SpecException("{$where}: 'sources' pattern '{$pattern}' matches no file");
+                    }
+                    foreach ($matches as $file) {
+                        $files[$file] = true;
+                    }
+                }
+                foreach ($layer['exclude'] as $pattern) {
+                    $matches = self::glob($plan, $pattern, $where);
+                    if ($matches === []) {
+                        throw new SpecException("{$where}: 'exclude' pattern '{$pattern}' matches no file");
+                    }
+                    foreach ($matches as $file) {
+                        unset($files[$file]);
+                    }
+                }
+            }
+            // The extension's port sources in php/<minor>/compat/extensions/<name> (stubs, backends, or all its code).
+            $compat = BuildInputs::cmakePath($plan->sdk->compatDir($extension->minor)) . "/extensions/{$extension->name}";
+            foreach (self::files($compat, '*.c') as $file) {
+                $files[$file] = true;
+            }
+            if ($files === []) {
+                throw new SpecException("{$where}: the extension compiles no file (no 'sources' and no compat/extensions/{$extension->name}/*.c)");
+            }
+            foreach (array_keys($files) as $file) {
+                $sources[$file] = true;
+            }
+            $idfRequires = [...$idfRequires, ...$extension->idfRequires];
+            foreach ($build['includeDirs'] as $path) {
+                $dir = self::resolve($plan, $path, $where);
+                if (!is_dir($dir)) {
+                    throw new SpecException("{$where}: include dir '{$path}' not found");
+                }
+                $includeDirs[$dir] = true;
+            }
+            foreach ($build['defines'] as $define => $value) {
+                if (isset($defines[$define]) && $defines[$define] !== $value) {
+                    throw new SpecException("php extensions '{$owners[$define]}' and '{$extension->name}' define {$define} differently");
+                }
+                $defines[$define] = $value;
+                $owners[$define] = $extension->name;
+            }
+        }
+        ksort($defines, SORT_STRING);
+        $idfRequires = array_values(array_unique($idfRequires));
+        sort($idfRequires, SORT_STRING);
+
+        return new self($plan->phpExtensions, array_keys($sources), array_keys($includeDirs), $defines, $idfRequires);
+    }
+
+    /** @return list<string> */
+    public function names(): array
+    {
+        return array_map(static fn (PhpExtension $e): string => $e->name, $this->extensions);
+    }
+
+    /** @return list<string> NAME=value */
+    public function definitions(): array
+    {
+        $definitions = [];
+        foreach ($this->defines as $name => $value) {
+            $definitions[] = "{$name}={$value}";
+        }
+        return $definitions;
+    }
+
+    /** The module table registered after the built-in extensions and before the package modules (a Zend extension with a null entry, opcache 8.3/8.4, registers its own). */
+    public function tableSource(): string
+    {
+        $modules = array_values(array_filter(array_map(static fn (PhpExtension $e): ?string => $e->entry, $this->extensions)));
+        $source = "/* Generated by phpbm from the project's bm-php-ext packages. */\n#include \"php.h\"\n#include \"zend_modules.h\"\n\n";
+        foreach ($modules as $module) {
+            $source .= "extern zend_module_entry {$module};\n";
+        }
+        $source .= "\nzend_module_entry *const phpbm_php_extensions[] = {\n";
+        foreach ($modules as $module) {
+            $source .= "    &{$module},\n";
+        }
+        if ($modules === []) {
+            $source .= "    NULL,\n";
+        }
+        return $source . "};\nconst int phpbm_php_extension_count = " . count($modules) . ";\n";
+    }
+
+    private static function resolve(BuildPlan $plan, string $path, string $where): string
+    {
+        [$source, $relative] = PhpExtension::split($path);
+        if ($source === '') {
+            $base = $plan->phpSourceDir;
+        } else {
+            $base = $plan->sourceDirs[$source] ?? throw new SpecException("{$where}: the source '{$source}' was not prepared for this build");
+        }
+        $base = rtrim(BuildInputs::cmakePath($base), '/');
+        return $relative === '.' ? $base : "{$base}/{$relative}";
+    }
+
+    /** @return list<string> */
+    private static function glob(BuildPlan $plan, string $pattern, string $where): array
+    {
+        $path = self::resolve($plan, $pattern, $where);
+        $last = basename($path);
+        if (strpbrk($last, '*?') === false) {
+            return is_file($path) ? [$path] : [];
+        }
+        return self::files(dirname($path), $last);
+    }
+
+    /** @return list<string> the files in base matching a pattern with '*' and '?', sorted */
+    private static function files(string $base, string $last): array
+    {
+        $regex = '/^' . strtr(preg_quote($last, '/'), ['\*' => '.*', '\?' => '.']) . '$/sD';
+        $matches = [];
+        foreach (is_dir($base) ? (scandir($base) ?: []) : [] as $entry) {
+            if ($entry[0] !== '.' && preg_match($regex, $entry) && is_file("{$base}/{$entry}")) {
+                $matches[] = "{$base}/{$entry}";
+            }
+        }
+        sort($matches, SORT_STRING);
+        return $matches;
+    }
+}

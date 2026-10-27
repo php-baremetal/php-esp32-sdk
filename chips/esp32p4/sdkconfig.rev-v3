@@ -1,0 +1,2 @@
+# Rev v3.x silicon from v3.1 (the IDF default): a v1.x chip refuses to boot this build.
+CONFIG_ESP32P4_REV_MIN_301=y

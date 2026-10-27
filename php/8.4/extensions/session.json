@@ -1,0 +1,9 @@
+{
+    "module": "session",
+    "sources": ["ext/session/*.c"],
+    "exclude": ["ext/session/mod_mm.c"],
+    "include-dirs": ["ext/session"],
+    "defines": { "HAVE_PHP_SESSION": 1 },
+    "cost": "about 45 KB (the default memory save handler keeps up to 64 sessions, 64 KB in all, in PSRAM outside memory_limit)",
+    "startup-kb": 18
+}

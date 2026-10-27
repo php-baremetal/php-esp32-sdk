@@ -5,11 +5,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        A board is a self-contained profile under `boards/` — a good first contribution, too (see
-        [CONTRIBUTING](https://github.com/php-baremetal/php-esp32/blob/master/CONTRIBUTING.md) and
-        [boards/README](https://github.com/php-baremetal/php-esp32/blob/master/boards/README.md)).
-        Two hard requirements: the part needs **external PSRAM** and **≥ 8 MB flash**, or the engine
-        won't fit.
+        A board is one JSON file under `boards/` — a good first contribution, too (see
+        [CONTRIBUTING](https://github.com/php-baremetal/php-esp32-sdk/blob/master/CONTRIBUTING.md)).
+        Two hard requirements: the part needs **external PSRAM** and **at least 4 MB of flash**, or the
+        engine won't fit.
   - type: input
     id: board
     attributes:
@@ -55,13 +54,13 @@ body:
     id: docs
     attributes:
       label: Datasheet / schematic
-      description: A link to the schematic or pinout, if you have one — it makes the profile much easier.
+      description: A link to the schematic or pinout, if you have one — it makes the board file much easier.
   - type: checkboxes
     id: checks
     attributes:
       label: Before submitting
       options:
-        - label: This part has external PSRAM and at least 8 MB of flash.
+        - label: This part has external PSRAM and at least 4 MB of flash.
           required: true
-        - label: I checked it isn't already covered in the [supported hardware](https://github.com/php-baremetal/php-esp32#supported-hardware) list.
+        - label: I checked it isn't already in [`boards/`](https://github.com/php-baremetal/php-esp32-sdk/tree/master/boards).
           required: true

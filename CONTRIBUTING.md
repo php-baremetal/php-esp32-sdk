@@ -1,103 +1,87 @@
-# Contributing to php-esp32
+# Contributing to php-esp32-sdk
 
-Thanks for being here. This project runs the real PHP engine on microcontrollers, and it's built in
-spare time — contributions are genuinely welcome, and there's a lot of self-contained work that doesn't
-require touching the engine port. If you're using it for something, telling me about it also helps
-steer the [roadmap](ROADMAP.md).
+Thanks for being here. This repository is the ESP32 SDK of php-baremetal: it describes the boards, chips,
+runtimes and storages, carries the build-time patches that run the real PHP engine on ESP32-S3 and
+ESP32-P4, and the driver [`phpbm`](https://github.com/php-baremetal/phpbm) calls to build and flash. It's
+built in spare time — contributions are genuinely welcome, and a lot of the work is self-contained.
+
+Extensions, HALs and drivers are Composer packages in their own `php-baremetal/<name>` repositories, not
+here: a GPIO feature goes to `ext-gpio` / `esp32-gpio-hal`, a sensor driver to its own package.
 
 ## Ways to contribute
 
 Good first areas, roughly easiest first — each is self-contained:
 
-- **An example.** A small project under `examples/` showing one feature end to end.
-- **Documentation.** Fixes, a clearer getting-started path, a how-to, or a recipe under `docs/`.
-- **A board profile.** Support a board that isn't covered yet — a directory under `boards/`.
-- **A PHP extension.** A per-project C extension in an example, or a built-in extension wrapping a
-  peripheral or a PHP `ext/*`.
+- **A board.** Support a board that isn't covered yet — one JSON file under `boards/`.
+- **Documentation and examples.** Fixes and recipes; the runnable examples live in
+  [samples](https://github.com/php-baremetal/samples).
+- **A PHP extension.** Make an `ext/*` of PHP available for a minor: `php/<minor>/extensions/<name>.json`
+  (and its `bm-php-ext` package in `php-extensions`).
 - **Bug fixes and hardening.** Especially anything found while running on real hardware.
 
-Bigger things (the build, the manifest, the version patches, a new PHP version, a new chip family)
-are very welcome too — just **open an issue or a discussion first** so we can agree on the shape before
-you write a lot of code.
-
+Bigger things (a new PHP minor, a runtime, a storage, a network, a new chip family, the driver) are very
+welcome too — just **open an issue or a discussion first** so we can agree on the shape before you write
+a lot of code.
 
 > **Testing on a real board is mandatory before opening any PR.** This is firmware — a change that
 > compiles is not a change that works. Every PR that affects behaviour must be flashed to real
 > hardware and confirmed working, and the PR must state which board(s) and PHP version(s) you tested on,
-> with the relevant serial output. PRs without hardware verification will not be merged. (Docs-only or
-> comment-only changes are the exception.)
-
-## Before you start
-
-- **Skim the [ROADMAP](ROADMAP.md)** to see where the project is heading and whether your idea fits a
-  planned milestone.
-- **Search open issues and discussions** so we don't duplicate work.
-- **For anything non-trivial, open an issue or discussion first.** A quick "I'd like to add X, here's my
-  plan" saves everyone time and avoids a PR that has to be reshaped.
+> with the relevant serial output. PRs without hardware verification will not be merged. (Docs-only,
+> comment-only and test-only changes are the exception.)
 
 ## The principles the project holds to
 
-New work should hold to these — they're what keep the project coherent:
-
 - **Real PHP, unmodified.** The engine is the pristine release from [php.net](https://www.php.net/),
-  fetched at build time and **never edited in place**. Every target-specific change is a separate
-  build-time patch under `components/php/versions/<ver>/patches/`. If you think you need to edit the
-  engine directly, that's a sign to open a discussion.
-- **The manifest is the source of truth.** `components/php/versions/<ver>/manifest.toml` describes what
-  the firmware can build; `phpflash` reads it and only ever offers real options. If you add or change a
-  build flag, the manifest changes with it, and `scripts/check-manifest.py` must stay green.
-- **Opt-in weight.** Extensions and features are off by default and cost only the flash they add. The
-  base image stays small.
-- **Verified on hardware.** A change is done when it runs on a real board, not when it compiles. Say in
-  your PR which board(s) and PHP version(s) you tested on, and paste the relevant serial output.
+  downloaded and sha256-checked at build time and **never edited in place**. Every target-specific change
+  is a build-time patch under `php/<minor>/patches/`. If you think you need to edit the engine directly,
+  that's a sign to open a discussion.
+- **The descriptors are the source of truth.** `sdk.json`, `boards/`, `chips/`, `runtimes/`, `storages/`
+  and `php/<minor>/extensions/` describe what the SDK can build; phpbm validates projects against them and
+  only ever offers real options. A new option or extension changes its descriptor, and the test suite
+  must stay green.
+- **Opt-in weight.** PHP extensions and features are off by default and cost only the flash they add.
+- **Releases are immutable.** A published version is never rebuilt with different contents: a fix is a
+  new version.
+- **Verified on hardware.** A change is done when it runs on a real board, not when it compiles.
 - **Follow the surrounding code.** Match the style, naming and comment density of the files you touch.
 
 ## Building and testing
 
-You'll need the toolchain from the [quick start](docs/getting-started/quick-start.md). The short version:
+You need PHP 8.4+, Composer, `git` and [phpbm](https://github.com/php-baremetal/phpbm).
 
-- **Build a project** with [`phpflash`](https://github.com/php-baremetal/flash-tool) (`phpflash build`,
-  `flash`, `monitor`), or drive `idf.py` directly:
-  `idf.py -DBOARD=<board> -DPHP_VERSION=<ver> [flags] build`.
-- **Check the manifest** after any build-flag / board / extension change, for every version you touched:
-  `python3 scripts/check-manifest.py <version>` (must exit 0).
-- **CI** runs the manifest checks and base-firmware builds across versions, boards and project types on
-  push and PR. Keep it green; if your change needs a matrix entry, add it.
+```bash
+composer install
+vendor/bin/phpunit                      # descriptors, driver, patches, release tooling
+phpbm sdk:link esp32 .                  # every project now builds with this checkout
+cd ../some-project && phpbm build       # or phpbm flash, phpbm monitor
+phpbm sdk:remove esp32@dev              # back to the releases
+```
 
-There's no way around the hardware step for a functional change: flash it to a board and confirm the
-behaviour before marking it done.
+`phpbm toolchain:install`, run in a project, installs the ESP-IDF version the SDK needs. CI runs the
+test suite on push and PR; keep it green, and add a test with the change.
 
 ## How-to, by area
 
-- **Add a board** — for a new product, add a preset (`boards/<chip>/<mode>/presets/<vendor-model>.toml`,
-  or `boards/<chip>/presets/` on a mode-less chip) with its flash, console and peripheral pins; no code
-  is needed. For a new chip, add `boards/<chip>/` with `chip.toml`, `sdkconfig.chip`, `board.c`/`board.h`/
-  `board.cmake` and `partitions.csv`. See [boards/README.md](boards/README.md).
-- **Add / port an extension** —
-  - *Per-project C extension* (project-local, the low-friction option): a directory under an example's
-    `firmware/exts/<name>/` with a `<name>.c` defining `zend_module_entry <name>_module_entry`. See
-    [docs/extensions/custom-extensions.md](docs/extensions/custom-extensions.md).
-  - *Built-in extension* (ships in the firmware, opt-in via the manifest): a `components/php_ext_<name>/`
-    component, registered in each version's `internal_functions.c` and declared in the manifest. Copy an
-    existing `components/php_ext_*` as the pattern.
-- **Add a PHP version** — a new `components/php/versions/<ver>/` directory (version.env with the
-  sha256, patches, sources.cmake, extensions.cmake, manifest.toml). Versions coexist. See
-  [components/php/versions/README.md](components/php/versions/README.md).
-- **Add an example** — a folder under `examples/` with `php-baremetal.config.toml`, `project-src/`, a
-  `README.md`, and (once you've run it) a `monitor.txt` of the real output. Don't commit the `build/`
-  directory.
-- **The why behind the port** — [docs/reference/porting-notes.md](docs/reference/porting-notes.md) is
-  the reference for the technical choices; skim it before touching the engine build.
+- **Add a board** — `boards/<vendor>-<model>.json` with the name, chip, PSRAM mode, flash size, console and
+  the peripheral blocks (network, microSD, LEDs) with their pins. Copy the closest existing board. Two
+  hard requirements: the part needs **external PSRAM** and **at least 4 MB of flash**, or the engine
+  won't fit.
+- **Add a chip variant** — `chips/<chip>/` (`chip.json` and its `sdkconfig.*` fragments).
+- **Make a PHP extension available** — `php/<minor>/extensions/<name>.json` for every minor that supports
+  it, plus patches if it needs them, then its `php-<name>` package in
+  [php-extensions](https://github.com/php-baremetal/php-extensions).
+- **Add a PHP minor** — a new `php/<minor>/` (patches, `sources.cmake`, `compat`, `extensions`) and its
+  release entry in `sdk.json`. Minors coexist.
+- **A runtime, storage or network** — `runtimes/<id>/`, `storages/<id>/`, `networks/<id>/`; open a
+  discussion first.
 
 ## Pull requests
 
 - **Branch** off `master`; keep a PR focused on one thing.
 - **Explain** what and why in the description, and **state your hardware verification**: board(s), PHP
   version(s), and the serial output that shows it working.
-- **Keep the tree clean** — `check-manifest` green, no committed `build/` artifacts, no editing the
-  vendored PHP source in place (use a patch).
-- **Match the docs** — if you add a feature, add or update the relevant `docs/` page and a `CHANGELOG.md`
-  entry.
+- **Keep the tree clean** — tests green, no build artifacts, no editing the PHP source in place (use a
+  patch).
 - Small, reviewable commits with clear messages are appreciated.
 
 ## AI assistance
@@ -109,9 +93,9 @@ other change. Please don't open PRs of unreviewed generated code you haven't run
 
 ## Reporting bugs and security issues
 
-- **Bugs:** open a GitHub issue with the board, the PHP version, your config/`index.php` (minimal if you
-  can), and the serial output. Redact secrets first (see the log-sharing guidance in
-  [SECURITY.md](SECURITY.md)).
+- **Bugs:** open a GitHub issue with the board id, the PHP version, the SDK version (from `phpbm.lock`),
+  your `composer.json` and a minimal `index.php`, and the serial output. Redact secrets first (see the
+  log-sharing guidance in [SECURITY.md](SECURITY.md)).
 - **Security vulnerabilities:** do **not** open a public issue — follow [SECURITY.md](SECURITY.md).
   Note that vulnerabilities in PHP proper or in ESP-IDF go to those projects, not here.
 

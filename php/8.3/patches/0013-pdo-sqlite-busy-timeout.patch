@@ -1,0 +1,19 @@
+PDO SQLite: a 5 s busy timeout by default, instead of 60 s.
+
+  * sqlite_driver.c: the firmware runs PHP on one task, so a database stays locked only while another
+    connection of the same script holds it (or after a bug); waiting 60 s for it would stall the whole
+    program. PDO::ATTR_TIMEOUT still sets any other value.
+
+diff --git a/ext/pdo_sqlite/sqlite_driver.c b/ext/pdo_sqlite/sqlite_driver.c
+--- a/ext/pdo_sqlite/sqlite_driver.c
++++ b/ext/pdo_sqlite/sqlite_driver.c
+@@ -777,7 +777,8 @@
+ {
+ 	pdo_sqlite_db_handle *H;
+ 	int i, ret = 0;
+-	zend_long timeout = 60, flags;
++	/* php-baremetal: 5 s, not 60, by default: one PHP task, so a lock held for long is a bug, not contention. */
++	zend_long timeout = 5, flags;
+ 	char *filename;
+ 
+ 	H = pecalloc(1, sizeof(pdo_sqlite_db_handle), dbh->is_persistent);

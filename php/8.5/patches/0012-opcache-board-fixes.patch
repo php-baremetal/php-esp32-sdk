@@ -1,0 +1,46 @@
+Make OPcache fit a board.
+
+  * zend_accelerator_module.c: opcache.memory_consumption also takes a size in KB ("<n>K", at least
+    256 KB). Upstream takes whole MB and refuses less than 8 MB, which is most of the PSRAM of a
+    board. A plain number keeps its upstream meaning.
+  * ZendAccelerator.c: fstat() on ESP-IDF FATFS reports st_mtime 0, and opcache.validate_timestamps
+    never caches a script without a time. When fstat() gives none, stat() the path.
+diff --git a/ext/opcache/ZendAccelerator.c b/ext/opcache/ZendAccelerator.c
+--- a/ext/opcache/ZendAccelerator.c
++++ b/ext/opcache/ZendAccelerator.c
+@@ -1123,6 +1123,16 @@ accel_time_t zend_get_file_handle_timestamp(zend_file_handle *file_handle, size_
+ 			return 0;
+ 	}
+ 
++	/* php-baremetal: fstat() on FATFS reports no time, stat() by name does. */
++	if (statbuf.st_mtime == 0 && file_handle->filename) {
++		zend_string *path = file_handle->opened_path ? file_handle->opened_path : file_handle->filename;
++		zend_stat_t pathbuf = {0};
++
++		if (!php_is_stream_path(ZSTR_VAL(path)) && VCWD_STAT(ZSTR_VAL(path), &pathbuf) == 0) {
++			statbuf.st_mtime = pathbuf.st_mtime;
++		}
++	}
++
+ 	if (size) {
+ 		*size = statbuf.st_size;
+ 	}
+diff --git a/ext/opcache/zend_accelerator_module.c b/ext/opcache/zend_accelerator_module.c
+--- a/ext/opcache/zend_accelerator_module.c
++++ b/ext/opcache/zend_accelerator_module.c
+@@ -90,6 +90,15 @@ static ZEND_INI_MH(OnUpdateMemoryConsumption)
+ 
+ 	zend_long *p = (zend_long *) ZEND_INI_GET_ADDR();
+ 	zend_long memsize = atoi(ZSTR_VAL(new_value));
++	/* php-baremetal: "<n>K" gives the size in KB, at least 256 KB: a board has a few MB of RAM. */
++	if (ZSTR_LEN(new_value) > 1 && (ZSTR_VAL(new_value)[ZSTR_LEN(new_value) - 1] | 0x20) == 'k') {
++		if (memsize < 256) {
++			zend_accel_error(ACCEL_LOG_WARNING, "opcache.memory_consumption is set below the required 256K.\n");
++			return FAILURE;
++		}
++		*p = memsize > ZEND_LONG_MAX / 1024 ? (ZEND_LONG_MAX & ~(1024 * 1024 - 1)) : memsize * 1024;
++		return SUCCESS;
++	}
+ 	/* sanity check we must use at least 8 MB */
+ 	if (memsize < 8) {
+ 		zend_accel_error(ACCEL_LOG_WARNING, "opcache.memory_consumption is set below the required 8MB.\n");

@@ -1,0 +1,23 @@
+{
+    "name": "Waveshare ESP32-S3-ETH",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "16MB",
+    "console": "usb-jtag",
+    "microsd": {
+        "type": "spi",
+        "cs": 4,
+        "sclk": 7,
+        "mosi": 6,
+        "miso": 5
+    },
+    "network": {
+        "type": "w5500",
+        "cs": 14,
+        "int": 10,
+        "rst": 9,
+        "sclk": 13,
+        "mosi": 11,
+        "miso": 12
+    }
+}

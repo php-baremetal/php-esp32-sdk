@@ -1,0 +1,3 @@
+# Rev v1.x silicon (the Waveshare P4 boards so far): IDF 6.1 defaults to v3.01 and would refuse it. Support of <3.0 and >=3.0 is mutually exclusive.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_100=y

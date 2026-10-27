@@ -1,0 +1,48 @@
+Lower PHP's persistent startup memory on small-PSRAM boards.
+
+  * Zend/zend_gc.c: start the GC root buffer at 4K entries instead of 16K (-48 KB on 32-bit)
+    and lower the default collection threshold from 10001 to 4001 roots to match: the fast
+    path of gc_possible_root() fills the buffer up to the threshold without growing it, so the
+    threshold must not exceed the initial buffer size. A collection now runs after ~4K possible
+    roots instead of ~10K; gc_adjust_threshold() still raises the threshold in 10K steps,
+    growing the buffer first.
+  * Zend/Optimizer/zend_optimizer.c: skip zend_func_info_startup() unless OPcache is linked in
+    (PHP_EXT_OPCACHE_ENABLED, see 0006). The func_info table (~50 KB) is read only by the
+    Optimizer and the JIT; zend_func_info_shutdown() already skips an uninitialised table.
+diff --git a/Zend/Optimizer/zend_optimizer.c b/Zend/Optimizer/zend_optimizer.c
+--- a/Zend/Optimizer/zend_optimizer.c
++++ b/Zend/Optimizer/zend_optimizer.c
+@@ -1781,7 +1781,12 @@ ZEND_API void zend_optimizer_unregister_pass(int idx)
+ 
+ zend_result zend_optimizer_startup(void)
+ {
++#ifdef PHP_EXT_OPCACHE_ENABLED
+ 	return zend_func_info_startup();
++#else
++	/* php-baremetal: without OPcache nothing optimizes, so the function-info table is not needed. */
++	return SUCCESS;
++#endif
+ }
+ 
+ zend_result zend_optimizer_shutdown(void)
+diff --git a/Zend/zend_gc.c b/Zend/zend_gc.c
+--- a/Zend/zend_gc.c
++++ b/Zend/zend_gc.c
+@@ -182,13 +182,15 @@
+ #define GC_INVALID           0
+ #define GC_FIRST_ROOT        1
+ 
+-#define GC_DEFAULT_BUF_SIZE  (16 * 1024)
++/* php-baremetal: 4K roots (16 KB on 32-bit) instead of 16K; the buffer grows on demand. */
++#define GC_DEFAULT_BUF_SIZE  (4 * 1024)
+ #define GC_BUF_GROW_STEP     (128 * 1024)
+ 
+ #define GC_MAX_UNCOMPRESSED  (512 * 1024)
+ #define GC_MAX_BUF_SIZE      0x40000000
+ 
+-#define GC_THRESHOLD_DEFAULT (10000 + GC_FIRST_ROOT)
++/* php-baremetal: must not exceed GC_DEFAULT_BUF_SIZE, gc_possible_root() fills the buffer up to it. */
++#define GC_THRESHOLD_DEFAULT (4000 + GC_FIRST_ROOT)
+ #define GC_THRESHOLD_STEP    10000
+ #define GC_THRESHOLD_MAX     1000000000
+ #define GC_THRESHOLD_TRIGGER 100

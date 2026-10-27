@@ -4,8 +4,11 @@ contact_links:
     url: https://github.com/orgs/php-baremetal/discussions
     about: Ask a question, share what you built, or float an idea before opening an issue.
   - name: Security vulnerability
-    url: https://github.com/php-baremetal/php-esp32/blob/master/SECURITY.md
+    url: https://github.com/php-baremetal/php-esp32-sdk/blob/master/SECURITY.md
     about: Do not open a public issue for a security problem — follow the security policy.
-  - name: Documentation
-    url: https://github.com/php-baremetal/php-esp32/tree/master/docs
-    about: Getting started, the extension API, recipes and reference.
+  - name: A problem with a package (ext-*, *-hal, a driver)
+    url: https://repository.php-baremetal.com
+    about: Extensions, HALs and drivers live in their own repositories; the registry page links each one.
+  - name: A problem with the phpbm CLI
+    url: https://github.com/php-baremetal/phpbm/issues
+    about: Install, sdk:*, init, discover and other CLI issues that are not about the ESP32 build.

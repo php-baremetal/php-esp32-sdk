@@ -1,0 +1,57 @@
+Make SQLite work on FATFS (ESP-IDF), where lseek() past EOF grows the file.
+
+Unlike POSIX, FatFs f_lseek() beyond the end of a file opened for writing extends
+it, and the new bytes are whatever the clusters held. SQLite seeks past EOF to
+probe a fresh database and to write pages beyond the end, so the file grows with
+garbage and looks corrupt ("file is not a database").
+
+  - seekAndRead: a read at or past EOF returns 0 without seeking.
+  - seekAndWriteFd: a write past EOF first grows the file with ftruncate(),
+    which ESP-IDF zero-fills.
+
+--- a/sqlite3.c
++++ b/sqlite3.c
+@@ -44131,13 +44131,22 @@
+     got = osPread64(id->h, pBuf, cnt, offset);
+     SimulateIOError( got = -1 );
+ #else
+-    newOffset = lseek(id->h, offset, SEEK_SET);
+-    SimulateIOError( newOffset = -1 );
+-    if( newOffset<0 ){
+-      storeLastErrno((unixFile*)id, errno);
+-      return -1;
++    /* php-baremetal: on FATFS lseek() past EOF grows the file (with
++    ** undefined content), so a read at or past EOF returns 0 without it. */
++    {
++      i64 iSize = lseek(id->h, 0, SEEK_END);
++      if( iSize>=0 && offset>=iSize ){
++        got = 0;
++      }else{
++        newOffset = lseek(id->h, offset, SEEK_SET);
++        SimulateIOError( newOffset = -1 );
++        if( newOffset<0 ){
++          storeLastErrno((unixFile*)id, errno);
++          return -1;
++        }
++        got = osRead(id->h, pBuf, cnt);
++      }
+     }
+-    got = osRead(id->h, pBuf, cnt);
+ #endif
+     if( got==cnt ) break;
+     if( got<0 ){
+@@ -44260,6 +44269,14 @@
+   do{ rc = (int)osPwrite64(fd, pBuf, nBuf, iOff);}while( rc<0 && errno==EINTR);
+ #else
+   do{
++    /* php-baremetal: FATFS does not zero the gap that seeking past EOF
++    ** leaves; ftruncate() does, so grow the file to iOff with it first. */
++    i64 iEnd = lseek(fd, 0, SEEK_END);
++    if( iEnd>=0 && iOff>iEnd ){
++      int rcT;
++      do{ rcT = osFtruncate(fd, iOff); }while( rcT<0 && errno==EINTR );
++      if( rcT<0 ){ rc = -1; break; }
++    }
+     i64 iSeek = lseek(fd, iOff, SEEK_SET);
+     SimulateIOError( iSeek = -1 );
+     if( iSeek<0 ){

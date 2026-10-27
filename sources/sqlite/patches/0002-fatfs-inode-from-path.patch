@@ -1,0 +1,69 @@
+Give each FATFS file its own inode key in the unix VFS.
+
+ESP-IDF FATFS leaves st_ino 0 for every file, and the unix VFS keys its per-file state
+(unixInodeInfo: the locks of all connections, the descriptors kept for reuse) on st_dev and
+st_ino. All the files on the card would share one state: a statement left open on one database
+makes "database is locked" for a write to another, and a descriptor could be reused for the
+wrong file. When st_ino is 0 the key is a 64-bit FNV-1a hash of the full path instead,
+case-folded like FAT. Limits: files whose paths collide would still share one state, including
+findReusableFd handing back the other file's descriptor (negligible with 64 bits), and since the
+key depends only on the path, fileHasMoved cannot detect a file deleted and recreated under the
+same name.
+
+--- a/sqlite3.c
++++ b/sqlite3.c
+@@ -42169,6 +42169,27 @@
+   }
+ }
+ 
++/*
++** php-baremetal: FATFS reports st_ino 0 for every file, so all the files
++** would share one unixInodeInfo (their locks and unused descriptors). Without
++** an inode number the key is a 64-bit FNV-1a hash of the full path,
++** case-folded like FAT. Two files whose paths collide would still share one
++** unixInodeInfo (spurious "locked", and findReusableFd could return the other
++** file's descriptor); with 64 bits that is negligible. The key depends only on
++** the path, so fileHasMoved cannot see a file deleted and recreated under the
++** same name.
++*/
++static u64 phpbmInode(const struct stat *pStat, const char *zPath){
++  u64 h = 14695981039346656037ULL;
++  if( pStat->st_ino!=0 || zPath==0 ) return (u64)pStat->st_ino;
++  for(; *zPath; zPath++){
++    unsigned char c = (unsigned char)*zPath;
++    h ^= (c>='A' && c<='Z') ? c+32 : c;
++    h *= 1099511628211ULL;
++  }
++  return h | 1;
++}
++
+ /*
+ ** Given a file descriptor, locate the unixInodeInfo object that
+ ** describes that file descriptor.  Create a new one if necessary.  The
+@@ -42237,7 +42258,7 @@
+ #if OS_VXWORKS
+   fileId.pId = pFile->pId;
+ #else
+-  fileId.ino = (u64)statbuf.st_ino;
++  fileId.ino = phpbmInode(&statbuf, pFile->zPath);
+ #endif
+   assert( unixMutexHeld() );
+   pInode = inodeList;
+@@ -42281,7 +42302,7 @@
+   struct stat buf;
+   return pFile->pInode!=0 &&
+       (osStat(pFile->zPath, &buf)!=0
+-         || (u64)buf.st_ino!=pFile->pInode->fileId.ino);
++         || phpbmInode(&buf, pFile->zPath)!=pFile->pInode->fileId.ino);
+ #endif
+ }
+ 
+@@ -47051,7 +47072,7 @@
+ 
+     pInode = inodeList;
+     while( pInode && (pInode->fileId.dev!=sStat.st_dev
+-                     || pInode->fileId.ino!=(u64)sStat.st_ino) ){
++                     || pInode->fileId.ino!=phpbmInode(&sStat, zPath)) ){
+        pInode = pInode->pNext;
+     }
+     if( pInode ){

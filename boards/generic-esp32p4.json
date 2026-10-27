@@ -1,0 +1,7 @@
+{
+    "name": "ESP32-P4 (generic)",
+    "chip": "esp32p4",
+    "psram": "hex",
+    "flash": "32MB",
+    "revision": "v1"
+}

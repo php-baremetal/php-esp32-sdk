@@ -1,0 +1,2 @@
+# phpbm sync over a UART console: the RX interrupt must keep running while the flash cache is off.
+CONFIG_UART_ISR_IN_IRAM=y

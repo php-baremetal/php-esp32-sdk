@@ -1,0 +1,54 @@
+Add sqlite3_phpbm.c, the unit the php component compiles: it sets the build options,
+works around the php component defines and newlib, and makes "unix-excl" the default VFS.
+
+diff --git a/sqlite3_phpbm.c b/sqlite3_phpbm.c
+new file mode 100644
+--- /dev/null
++++ b/sqlite3_phpbm.c
+@@ -0,0 +1,46 @@
++/* php-baremetal: the SQLite engine as one unit of the php component, with its build options. */
++
++/* One process on FATFS, no threads: no WAL, no mmap, no shared objects; temporary tables and files in RAM. */
++#define SQLITE_THREADSAFE 0
++#define SQLITE_OMIT_WAL 1
++#ifndef SQLITE_OMIT_LOAD_EXTENSION
++#define SQLITE_OMIT_LOAD_EXTENSION 1
++#endif
++#define SQLITE_TEMP_STORE 3
++#define SQLITE_MAX_MMAP_SIZE 0
++#define SQLITE_DEFAULT_MEMSTATUS 0
++#define SQLITE_DISABLE_DIRSYNC 1
++#define SQLITE_USE_URI 1
++/* Page cache per connection, in KB (PRAGMA cache_size changes it): SQLite allocates it outside memory_limit. */
++#define SQLITE_DEFAULT_CACHE_SIZE (-256)
++#define SQLITE_EXTRA_INIT phpbm_sqlite_init
++
++/* The php component defines HAVE_INT32_T and friends for timelib; SQLite would then typedef u32 as
++ * uint32_t (unsigned long here), which clashes with the unsigned int of its API. */
++#undef HAVE_INT32_T
++#undef HAVE_UINT32_T
++#undef HAVE_INT64_T
++#undef HAVE_UINT64_T
++
++/* newlib declares no lstat(), and FATFS has no links. */
++#define lstat stat
++
++/* A release build: SQLite's assert()s read members that exist only with SQLITE_DEBUG, and ESP-IDF's
++ * assert() may still evaluate its argument under NDEBUG. */
++#ifndef NDEBUG
++#define NDEBUG 1
++#endif
++#include <assert.h>
++#undef assert
++#define assert(X) ((void) 0)
++
++#include "sqlite3.c"
++
++/* FATFS file locks do nothing and F_GETLK leaves every byte locked, so the "unix" VFS would never roll
++ * back the journal a reset leaves behind. "unix-excl" keeps the locks inside this process, the only one. */
++int phpbm_sqlite_init(const char *unused)
++{
++    (void) unused;
++    sqlite3_vfs *vfs = sqlite3_vfs_find("unix-excl");
++    return vfs != NULL ? sqlite3_vfs_register(vfs, 1) : SQLITE_ERROR;
++}

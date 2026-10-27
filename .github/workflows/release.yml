@@ -1,0 +1,92 @@
+name: release
+
+on:
+  push:
+    tags: ['v[0-9]+.[0-9]+.[0-9]+*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  # php-baremetal/spec tag this release is tested and built against: set it to the released spec tag
+  # before tagging, and keep the tests job's spec-ref below equal to it
+  SPEC_REF: v1.0.0
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check that the tag is a semver release version
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(alpha|beta|RC)(\.?[0-9]+)?)?$ ]]; then
+            echo "::error::tag '$TAG' is not vX.Y.Z or vX.Y.Z-alphaN/-betaN/-RCN (semver that Composer and Packagist accept)"
+            exit 1
+          fi
+
+  tests:
+    needs: tag
+    uses: ./.github/workflows/tests.yml
+    with:
+      spec-ref: v1.0.0
+
+  release:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: php-esp32-sdk
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: php-baremetal/spec
+          path: packages/spec
+          ref: ${{ env.SPEC_REF }}
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          tools: composer
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+        working-directory: php-esp32-sdk
+      - name: Download the index of the previous release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          if latest=$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq .tag_name 2>&1); then
+            # releases before the SDK (v1.5.0 and older) carry no index.json
+            if gh release view "$latest" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx index.json; then
+              gh release download "$latest" --repo "$GITHUB_REPOSITORY" --pattern index.json --dir previous
+            else
+              echo "$latest has no index.json: starting a new index"
+            fi
+          elif echo "$latest" | grep -q 'HTTP 404'; then
+            echo "no previous release: starting a new index"
+          else
+            echo "$latest"
+            exit 1
+          fi
+      - name: Build the release assets
+        run: |
+          export SOURCE_DATE_EPOCH="$(git -C php-esp32-sdk log -1 --format=%ct)"
+          php php-esp32-sdk/tools/release.php "${GITHUB_REF_NAME#v}" dist \
+            --index-url previous/index.json \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}"
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          files: |
+            dist/php-esp32-sdk-*.tar.gz
+            dist/SHA256SUMS
+            dist/index.json
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          make_latest: ${{ !contains(github.ref_name, '-') }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true

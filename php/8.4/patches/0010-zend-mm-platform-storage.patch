@@ -1,0 +1,84 @@
+Let the embedder provide chunk allocation (zend_mm_platform_handlers, storage kept in static memory)
+and override ZEND_MM_CHUNK_SIZE; keep ZEND_MM_PAGE_SIZE when sysconf(_SC_PAGESIZE) fails (-1 on ESP-IDF).
+
+diff --git a/Zend/zend_alloc.c b/Zend/zend_alloc.c
+index f057f4ad..b4a81a82 100644
+--- a/Zend/zend_alloc.c
++++ b/Zend/zend_alloc.c
+@@ -3035,6 +3035,26 @@ static void tracked_free_all(zend_mm_heap *heap) {
+ }
+ #endif
+ 
++ZEND_API const zend_mm_handlers *zend_mm_platform_handlers = NULL;
++
++/* zend_mm_startup_ex() puts the storage inside the heap, where zend_mm_shutdown(heap, 0, ...)
++ * releases it: keep it in static memory instead. */
++static zend_mm_heap *zend_mm_platform_startup(void)
++{
++	zend_mm_heap *heap = zend_mm_startup_ex(zend_mm_platform_handlers, NULL, 0);
++#if ZEND_MM_STORAGE
++	static zend_mm_storage storage;
++
++	if (heap != NULL) {
++		zend_mm_storage *tmp = heap->storage;
++		memcpy(&storage, tmp, sizeof(zend_mm_storage));
++		heap->storage = &storage;
++		_zend_mm_free(heap, tmp ZEND_FILE_LINE_CC ZEND_FILE_LINE_CC);
++	}
++#endif
++	return heap;
++}
++
+ static void alloc_globals_ctor(zend_alloc_globals *alloc_globals)
+ {
+ 	char *tmp;
+@@ -3070,7 +3090,9 @@ static void alloc_globals_ctor(zend_alloc_globals *alloc_globals)
+ 	if (tmp && ZEND_ATOL(tmp)) {
+ 		zend_mm_use_huge_pages = true;
+ 	}
+-	alloc_globals->mm_heap = zend_mm_init();
++	alloc_globals->mm_heap = zend_mm_platform_handlers != NULL
++		? zend_mm_platform_startup()
++		: zend_mm_init();
+ }
+ 
+ #ifdef ZTS
+@@ -3088,6 +3110,12 @@ ZEND_API void start_memory_manager(void)
+ #  elif defined(_SC_PAGE_SIZE)
+ 	REAL_PAGE_SIZE = sysconf(_SC_PAGE_SIZE);
+ #  endif
++#  if defined(_SC_PAGESIZE) || defined(_SC_PAGE_SIZE)
++	/* sysconf() fails (-1) on some embedded libcs: keep the default page size then. */
++	if (REAL_PAGE_SIZE == 0 || REAL_PAGE_SIZE == (size_t) -1) {
++		REAL_PAGE_SIZE = ZEND_MM_PAGE_SIZE;
++	}
++#  endif
+ #endif
+ #ifdef ZTS
+ 	ts_allocate_fast_id(&alloc_globals_id, &alloc_globals_offset, sizeof(zend_alloc_globals), (ts_allocate_ctor) alloc_globals_ctor, (ts_allocate_dtor) alloc_globals_dtor);
+diff --git a/Zend/zend_alloc.h b/Zend/zend_alloc.h
+index 541989a2..f38e7bfe 100644
+--- a/Zend/zend_alloc.h
++++ b/Zend/zend_alloc.h
+@@ -315,6 +315,7 @@ struct _zend_mm_storage {
+ 
+ ZEND_API zend_mm_storage *zend_mm_get_storage(zend_mm_heap *heap);
+ ZEND_API zend_mm_heap *zend_mm_startup_ex(const zend_mm_handlers *handlers, void *data, size_t data_size);
++ZEND_API extern const zend_mm_handlers *zend_mm_platform_handlers;
+ 
+ /*
+ 
+diff --git a/Zend/zend_alloc_sizes.h b/Zend/zend_alloc_sizes.h
+index 502b982a..9d5d4ebd 100644
+--- a/Zend/zend_alloc_sizes.h
++++ b/Zend/zend_alloc_sizes.h
+@@ -19,7 +19,9 @@
+ #ifndef ZEND_ALLOC_SIZES_H
+ #define ZEND_ALLOC_SIZES_H
+ 
++#ifndef ZEND_MM_CHUNK_SIZE
+ #define ZEND_MM_CHUNK_SIZE ((size_t) (2 * 1024 * 1024))    /* 2 MB  */
++#endif
+ #define ZEND_MM_PAGE_SIZE  (4 * 1024)                      /* 4 KB  */
+ #define ZEND_MM_PAGES      (ZEND_MM_CHUNK_SIZE / ZEND_MM_PAGE_SIZE)  /* 512 */
+ #define ZEND_MM_FIRST_PAGE (1)

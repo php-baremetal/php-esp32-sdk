@@ -1,0 +1,7 @@
+{
+    "module": "filter",
+    "sources": ["ext/filter/*.c"],
+    "include-dirs": ["ext/filter"],
+    "cost": "about 20 KB",
+    "startup-kb": 22
+}

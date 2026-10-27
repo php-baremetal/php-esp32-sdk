@@ -1,0 +1,3 @@
+dependencies:
+  espressif/w5500: "==2.0.1"
+  espressif/wiznet_common: "==1.1.0"

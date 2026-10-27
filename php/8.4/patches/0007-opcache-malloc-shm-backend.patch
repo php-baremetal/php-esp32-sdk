@@ -1,0 +1,139 @@
+Add a heap-backed shared-memory backend for OPcache (USE_MALLOC_SHM), so the compiled-bytecode
+cache can live in RAM (PSRAM) across requests instead of being re-read from the file cache each time.
+
+This target has no mmap()/System V SHM, but it also doesn't need cross-process sharing: it's a single
+process with the PHP engine kept alive across HTTP requests, so a plain allocation persists the cache
+for the process lifetime (the actual segment is allocated in shared_alloc_malloc.c). This patch just
+registers that backend in the handler table and turns the file-lock based locking into a no-op --
+a single task serves one request at a time, and mkstemp()/fcntl() locks don't work on FATFS anyway.
+Without the lock file, ZendAccelerator.c's per-request usage count and restart lock (fcntl on it)
+become no-ops too: otherwise accel_activate_add() fails and no script is ever cached.
+diff --git a/ext/opcache/ZendAccelerator.c b/ext/opcache/ZendAccelerator.c
+--- a/ext/opcache/ZendAccelerator.c
++++ b/ext/opcache/ZendAccelerator.c
+@@ -268,7 +268,9 @@ static ZEND_INI_MH(accel_include_path_on_modify)
+ 
+ static inline void accel_restart_enter(void)
+ {
+-#ifdef ZEND_WIN32
++#ifdef USE_MALLOC_SHM
++	/* php-baremetal: one process, no lock file (see zend_shared_alloc_create_lock). */
++#elif defined(ZEND_WIN32)
+ 	INCREMENT(restart_in);
+ #else
+ 	struct flock restart_in_progress;
+@@ -287,7 +289,9 @@ static inline void accel_restart_enter(void)
+ 
+ static inline void accel_restart_leave(void)
+ {
+-#ifdef ZEND_WIN32
++#ifdef USE_MALLOC_SHM
++	ZCSG(restart_in_progress) = false;
++#elif defined(ZEND_WIN32)
+ 	ZCSG(restart_in_progress) = false;
+ 	DECREMENT(restart_in);
+ #else
+@@ -308,7 +312,11 @@ static inline void accel_restart_leave(void)
+ static inline int accel_restart_is_active(void)
+ {
+ 	if (ZCSG(restart_in_progress)) {
+-#ifndef ZEND_WIN32
++#ifdef USE_MALLOC_SHM
++		/* php-baremetal: one process, no restart runs while another request asks. */
++		ZCSG(restart_in_progress) = false;
++		return 0;
++#elif !defined(ZEND_WIN32)
+ 		struct flock restart_check;
+ 
+ 		restart_check.l_type = F_WRLCK;
+@@ -336,7 +344,9 @@ static inline int accel_restart_is_active(void)
+ /* Creates a read lock for SHM access */
+ static inline zend_result accel_activate_add(void)
+ {
+-#ifdef ZEND_WIN32
++#ifdef USE_MALLOC_SHM
++	/* php-baremetal: one process, nothing to count. */
++#elif defined(ZEND_WIN32)
+ 	SHM_UNPROTECT();
+ 	INCREMENT(mem_usage);
+ 	SHM_PROTECT();
+@@ -359,7 +369,9 @@ static inline zend_result accel_activate_add(void)
+ /* Releases a lock for SHM access */
+ static inline void accel_deactivate_sub(void)
+ {
+-#ifdef ZEND_WIN32
++#ifdef USE_MALLOC_SHM
++	ZCG(counted) = false;
++#elif defined(ZEND_WIN32)
+ 	if (ZCG(counted)) {
+ 		SHM_UNPROTECT();
+ 		DECREMENT(mem_usage);
+@@ -894,7 +906,10 @@ static inline void kill_all_lockers(struct flock *mem_usage_check)
+ 
+ static inline bool accel_is_inactive(void)
+ {
+-#ifdef ZEND_WIN32
++#ifdef USE_MALLOC_SHM
++	/* php-baremetal: one process, and it is between requests. */
++	return true;
++#elif defined(ZEND_WIN32)
+ 	/* on Windows, we don't need kill_all_lockers() because SAPIs
+ 	   that work on Windows don't manage child processes (and we
+ 	   can't do anything about hanging threads anyway); therefore
+diff --git a/ext/opcache/zend_shared_alloc.c b/ext/opcache/zend_shared_alloc.c
+--- a/ext/opcache/zend_shared_alloc.c
++++ b/ext/opcache/zend_shared_alloc.c
+@@ -68,7 +68,14 @@ int lock_file = -1;
+ static char lockfile_name[MAXPATHLEN];
+ #endif
+ 
++#ifdef USE_MALLOC_SHM
++extern const zend_shared_memory_handlers zend_alloc_malloc_handlers;
++#endif
++
+ static const zend_shared_memory_handler_entry handler_table[] = {
++#ifdef USE_MALLOC_SHM
++	{ "malloc", &zend_alloc_malloc_handlers },
++#endif
+ #ifdef USE_MMAP
+ 	{ "mmap", &zend_alloc_mmap_handlers },
+ #endif
+@@ -89,6 +96,14 @@ void zend_shared_alloc_create_lock(char *lockfile_path)
+ {
+ 	int val;
+ 
++#ifdef USE_MALLOC_SHM
++	/* php-baremetal: single process/task, no cross-process lock needed, and mkstemp()/fcntl() file
++	 * locks don't work on this target's FATFS. Skip creating a lock file entirely. */
++	(void) lockfile_path;
++	(void) val;
++	return;
++#endif
++
+ #ifdef ZTS
+ 	zts_lock = tsrm_mutex_alloc();
+ #endif
+@@ -495,6 +510,11 @@ void zend_shared_alloc_lock(void)
+ {
+ 	ZEND_ASSERT(!ZCG(locked));
+ 
++#ifdef USE_MALLOC_SHM
++	ZCG(locked) = 1;   /* php-baremetal: single task, no real lock (see zend_shared_alloc_create_lock) */
++	return;
++#endif
++
+ #ifndef ZEND_WIN32
+ 	struct flock mem_write_lock;
+ 
+@@ -534,6 +554,11 @@ void zend_shared_alloc_unlock(void)
+ {
+ 	ZEND_ASSERT(ZCG(locked));
+ 
++#ifdef USE_MALLOC_SHM
++	ZCG(locked) = 0;
++	return;
++#endif
++
+ #ifndef ZEND_WIN32
+ 	struct flock mem_write_unlock;
+ 

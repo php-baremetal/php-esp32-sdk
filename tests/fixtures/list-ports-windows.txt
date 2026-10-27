@@ -1,0 +1,4 @@
+COM3                
+    desc: USB-SERIAL CH340 (COM3)
+    hwid: USB VID:PID=1A86:7523 SER= LOCATION=1-1
+1 ports found

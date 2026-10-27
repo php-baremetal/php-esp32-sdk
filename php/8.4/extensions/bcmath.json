@@ -1,0 +1,8 @@
+{
+    "module": "bcmath",
+    "sources": ["ext/bcmath/bcmath.c", "ext/bcmath/libbcmath/src/*.c"],
+    "include-dirs": ["ext/bcmath", "ext/bcmath/libbcmath/src"],
+    "defines": { "HAVE_BCMATH": 1 },
+    "cost": "about 25 KB",
+    "startup-kb": 8
+}

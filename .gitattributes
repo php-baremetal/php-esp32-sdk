@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.php text eol=lf
+*.json text eol=lf
+*.patch text eol=lf
+*.txt text eol=lf

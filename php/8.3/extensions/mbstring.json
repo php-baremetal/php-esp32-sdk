@@ -1,0 +1,53 @@
+{
+    "module": "mbstring",
+    "sources": [
+        "ext/mbstring/mbstring.c",
+        "ext/mbstring/php_unicode.c",
+        "ext/mbstring/mb_gpc.c",
+        "ext/mbstring/libmbfl/filters/*.c",
+        "ext/mbstring/libmbfl/mbfl/*.c",
+        "ext/mbstring/libmbfl/nls/*.c"
+    ],
+    "include-dirs": ["ext/mbstring", "ext/mbstring/libmbfl", "ext/mbstring/libmbfl/mbfl"],
+    "defines": { "HAVE_MBSTRING": 1 },
+    "requires": { "sources": ["oniguruma"] },
+    "options": {
+        "mbstring-cjk": {
+            "description": "Chinese, Japanese and Korean encodings of ext/mbstring (SJIS, EUC-*, Big5, GB18030, ISO-2022-*, the Japanese mobile UTF-8 variants) and mb_convert_kana(). Off saves most of the extension's flash and makes mb_language() reject ja/ko/zh-cn/zh-tw; UTF-8/16/32 and the Latin and Cyrillic encodings stay.",
+            "type": "bool",
+            "default": true,
+            "when": { "false": { "defines": { "MBSTRING_NO_CJK": 1 }, "exclude": ["ext/mbstring/libmbfl/filters/mbfilter_cjk.c", "ext/mbstring/libmbfl/filters/mbfilter_utf8_mobile.c", "ext/mbstring/libmbfl/nls/nls_ja.c", "ext/mbstring/libmbfl/nls/nls_kr.c", "ext/mbstring/libmbfl/nls/nls_zh.c"] } }
+        },
+        "mbstring-regex": {
+            "description": "The mb_ereg*() and mb_split() functions, with the oniguruma regex library.",
+            "type": "bool",
+            "default": false,
+            "when": {
+                "true": {
+                    "defines": { "HAVE_MBREGEX": 1, "ONIG_ESCAPE_UCHAR_COLLISION": 1, "PHP_ONIG_BAD_KOI8_ENTRY": 1 },
+                    "sources": [
+                        "ext/mbstring/php_mbregex.c",
+                        "oniguruma:src/reg*.c",
+                        "oniguruma:src/st.c",
+                        "oniguruma:src/unicode*.c",
+                        "oniguruma:src/ascii.c",
+                        "oniguruma:src/utf*.c",
+                        "oniguruma:src/euc_*.c",
+                        "oniguruma:src/sjis*.c",
+                        "oniguruma:src/iso8859_*.c",
+                        "oniguruma:src/big5.c",
+                        "oniguruma:src/gb18030.c",
+                        "oniguruma:src/koi8_r.c",
+                        "oniguruma:src/cp1251.c",
+                        "oniguruma:src/onig_init.c"
+                    ],
+                    "exclude": ["oniguruma:src/regposix.c", "oniguruma:src/regposerr.c", "oniguruma:src/unicode_*_data*.c"],
+                    "include-dirs": ["oniguruma:src"],
+                    "startup-kb": 8
+                }
+            }
+        }
+    },
+    "cost": "about 950 KB, about 200 KB with mbstring-cjk false; mbstring-regex adds about 445 KB (oniguruma's own CJK encodings stay linked even with mbstring-cjk false)",
+    "startup-kb": 13
+}

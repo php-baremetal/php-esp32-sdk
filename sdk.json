@@ -1,0 +1,82 @@
+{
+    "name": "esp32",
+    "version": "0.1.0",
+    "contract": 1,
+    "driver": {
+        "class": "PhpBaremetal\\Esp32\\Driver",
+        "autoload": { "psr-4": { "PhpBaremetal\\Esp32\\": "driver/" } }
+    },
+    "options": {
+        "network": {
+            "description": "Bring up the board's wired network (DHCP) before PHP starts. On Wi-Fi boards the script connects with ext-wifi. Runtimes that need a network turn it on by themselves.",
+            "values": ["off", "on"],
+            "default": "off"
+        },
+        "on-error": {
+            "description": "An uncaught exception in loop() or in an event handler: stop the program (like the php CLI), or print it as a warning and go on. Fatal errors always stop. In web-server an error ends only that request.",
+            "values": ["stop", "continue"],
+            "default": "stop"
+        },
+        "restart-delay": {
+            "description": "Seconds the board waits before restarting once the program has ended.",
+            "type": "int",
+            "min": 0,
+            "max": 3600,
+            "default": 5
+        },
+        "firmware-reserve": {
+            "description": "PSRAM in KB left to the rest of the firmware (network, HTTP server, native extensions); PHP gets the rest as memory_limit.",
+            "type": "int",
+            "min": 256,
+            "max": 4096,
+            "default": 1024
+        },
+        "optimization": {
+            "description": "Compiler optimization of the whole firmware: size (-Os, the smallest app), performance (-O2, faster PHP, bigger app) or debug (-Og, for debugging with gdb).",
+            "values": ["size", "performance", "debug"],
+            "default": "size"
+        },
+        "power-save": {
+            "description": "Automatic light sleep: the board sleeps by itself while every task waits (between events, between two loop() runs). power_hold() keeps it awake; not with I2cBus::CORE1; the USB-JTAG console keeps it awake while connected.",
+            "values": ["off", "on"],
+            "default": "off"
+        },
+        "request-timeout": {
+            "description": "Time limit in seconds for handling one HTTP request (web-server runtime, or ext-web requests in event-driven): PHP gets max_execution_time = this value and the server answers 503 after it plus 5 s. 0 = no limit.",
+            "type": "int",
+            "min": 0,
+            "max": 3600,
+            "default": 30
+        }
+    },
+    "php": {
+        "8.3": {
+            "version": "8.3.35",
+            "url": "https://www.php.net/distributions/php-8.3.35.tar.gz",
+            "sha256": "e60396276fd57e8210f88919d9acd4aab98d65fbb7f431c13285ca1fb04ff205",
+            "startup-kb": 760
+        },
+        "8.4": {
+            "version": "8.4.26",
+            "url": "https://www.php.net/distributions/php-8.4.26.tar.gz",
+            "sha256": "c248abaebc4bb777b80968f0760da0da8e989836e896c9ff637b6775d7d37662",
+            "startup-kb": 816
+        },
+        "8.5": {
+            "version": "8.5.11",
+            "url": "https://www.php.net/distributions/php-8.5.11.tar.gz",
+            "sha256": "338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab",
+            "startup-kb": 872
+        }
+    },
+    "sources": {
+        "oniguruma": {
+            "url": "https://github.com/kkos/oniguruma/releases/download/v6.9.10/onig-6.9.10.tar.gz",
+            "sha256": "2a5cfc5ae259e4e97f86b68dfffc152cdaffe94e2060b770cb827238d769fc05"
+        },
+        "sqlite": {
+            "url": "https://www.sqlite.org/2026/sqlite-amalgamation-3540100.zip",
+            "sha256": "0a9c8e34352dad46006aa82836d5383bff9dc6bc9ce5a60553c05aa30e6ad1f9"
+        }
+    }
+}

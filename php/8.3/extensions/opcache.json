@@ -1,0 +1,24 @@
+{
+    "module": "opcache",
+    "entry": null,
+    "sources": ["ext/opcache/*.c"],
+    "exclude": ["ext/opcache/shared_alloc_*.c"],
+    "include-dirs": ["ext/opcache"],
+    "defines": { "PHP_EXT_OPCACHE_ENABLED": 1, "USE_MALLOC_SHM": 1 },
+    "options": {
+        "opcache-memory": {
+            "description": "PSRAM in KB for OPcache's bytecode cache, taken from PHP's memory_limit (plus about 64 KB OPcache allocates besides it); no JIT, nothing is written to flash. Needs a board with 4 MB of PSRAM or more: below that OPcache is disabled at boot.",
+            "type": "int",
+            "min": 256,
+            "max": 16384,
+            "default": 1024
+        },
+        "opcache-validate": {
+            "description": "microsd storage: check the scripts' timestamps (opcache.validate_timestamps), for PHP files the program itself writes on the card. Off: the sources change only with a flash or a sync, which restart the board. Always off with embedded storage. FAT stores modification times with 2-second resolution, and without a set clock every file gets the same 1980 time: a file rewritten within 2 seconds, or while the clock is unset, may not be detected.",
+            "type": "bool",
+            "default": false
+        }
+    },
+    "cost": "about 280 KB, and opcache-memory KB of PSRAM taken from memory_limit",
+    "startup-kb": 62
+}

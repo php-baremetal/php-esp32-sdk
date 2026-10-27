@@ -1,0 +1,6 @@
+{
+    "name": "ESP32-P4",
+    "target": "esp32p4",
+    "capabilities": { "microsd": ["sdio"], "network": ["emac", "wifi-c6"] },
+    "psram": ["hex"]
+}

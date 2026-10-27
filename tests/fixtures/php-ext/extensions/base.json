@@ -1,0 +1,6 @@
+{
+    "module": "base",
+    "sources": ["ext/base/*.c"],
+    "include-dirs": ["ext/base"],
+    "defines": { "HAVE_BASE": 1 }
+}

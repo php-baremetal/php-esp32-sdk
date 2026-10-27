@@ -1,0 +1,10 @@
+{
+    "name": "Waveshare ESP32-S3-Zero (N8R8)",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "8MB",
+    "console": "usb-jtag",
+    "network": {
+        "type": "wifi"
+    }
+}

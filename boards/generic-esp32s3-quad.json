@@ -1,0 +1,9 @@
+{
+    "name": "ESP32-S3 (quad PSRAM, generic)",
+    "chip": "esp32s3",
+    "psram": "quad",
+    "flash": "4MB",
+    "network": {
+        "type": "wifi"
+    }
+}
