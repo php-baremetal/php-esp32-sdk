@@ -1,0 +1,78 @@
+name: preview
+
+# Until 2.0.0 is released: every push to the sdk branch publishes 2.0.0-alpha.<run> to the sdk-preview
+# pre-release, whose index.json lists every preview so far. phpbm 1.0 reads that index by default.
+# Delete this workflow and the sdk-preview release once v2.0.0 is out.
+
+on:
+  push:
+    branches: [sdk]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview
+  cancel-in-progress: false
+
+env:
+  SPEC_REF: v1.0.0
+  PREVIEW_TAG: sdk-preview
+
+jobs:
+  tests:
+    uses: ./.github/workflows/tests.yml
+    with:
+      spec-ref: v1.0.0
+
+  preview:
+    needs: tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          path: php-esp32-sdk
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: php-baremetal/spec
+          path: packages/spec
+          ref: ${{ env.SPEC_REF }}
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.4'
+          tools: composer
+          coverage: none
+      - run: composer install --no-interaction --no-progress
+        working-directory: php-esp32-sdk
+      - name: Download the preview index
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p previous
+          if gh release view "$PREVIEW_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release download "$PREVIEW_TAG" --repo "$GITHUB_REPOSITORY" --pattern index.json --dir previous || true
+          fi
+      - name: Build the preview assets
+        id: build
+        run: |
+          version="2.0.0-alpha.${GITHUB_RUN_NUMBER}"
+          export SOURCE_DATE_EPOCH="$(git -C php-esp32-sdk log -1 --format=%ct)"
+          php php-esp32-sdk/tools/release.php "$version" dist \
+            --index-url previous/index.json \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${PREVIEW_TAG}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
+        with:
+          tag_name: ${{ env.PREVIEW_TAG }}
+          target_commitish: ${{ github.sha }}
+          name: SDK preview (latest ${{ steps.build.outputs.version }})
+          body: Preview builds of the esp32 SDK 2.0 from the sdk branch, until v2.0.0 is released.
+          files: |
+            dist/php-esp32-sdk-*.tar.gz
+            dist/index.json
+          prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true

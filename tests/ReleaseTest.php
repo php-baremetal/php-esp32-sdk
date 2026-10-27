@@ -70,7 +70,7 @@ final class ReleaseTest extends TestCase
 
         $tops = array_values(array_unique(array_map(static fn (string $p) => explode('/', $p)[1], array_keys($entries))));
         sort($tops);
-        self::assertSame(['LICENSE', 'boards', 'chips', 'driver', 'host', 'networks', 'php', 'runtimes', 'sdk.json', 'sources', 'storages'], $tops);
+        self::assertSame(['LICENSE', 'README.md', 'boards', 'chips', 'driver', 'host', 'networks', 'php', 'runtimes', 'sdk.json', 'sources', 'storages'], $tops);
         self::assertArrayHasKey('php-esp32-sdk-0.99.0-alpha1/driver/tools/sync.py', $entries);
         self::assertSame([], array_filter(array_keys($entries), static fn (string $p) => str_contains($p, '__pycache__') || str_ends_with($p, '.pyc')));
 
