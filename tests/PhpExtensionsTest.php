@@ -162,10 +162,10 @@ final class PhpExtensionsTest extends TestCase
 
     public function test_build_inputs_carry_the_extensions(): void
     {
-        $d = self::dir();
+        $d = BuildInputs::cmakePath(self::dir());
         $plan = self::plan(['fake-cjk' => false]);
         $inputs = (string) file_get_contents(BuildInputs::write($plan));
-        $build = $plan->buildDir;
+        $build = BuildInputs::cmakePath($plan->buildDir);
         self::assertStringContainsString("set(PHPBM_PHP_EXTENSIONS \"base;fake\")\n", $inputs);
         self::assertStringContainsString("set(PHPBM_PHP_EXT_TABLE \"{$build}/php_extensions.c\")\n", $inputs);
         self::assertStringContainsString("set(PHPBM_PHP_EXT_SOURCES \"{$d}/php-src/ext/base/base.c;{$d}/php-src/ext/fake/fake.c;{$d}/php-src/ext/fake/lib/a.c;{$d}/onig/src/regcomp.c\")\n", $inputs);

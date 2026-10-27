@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpBaremetal\Esp32\Tests;
 
+use PhpBaremetal\Esp32\BuildInputs;
 use PhpBaremetal\Esp32\Driver;
 use PhpBaremetal\Esp32\SerialPorts;
 use PhpBaremetal\Esp32\Tests\Support\FakeIdf;
@@ -45,6 +46,12 @@ final class DriverTest extends TestCase
         return new Driver(new Context($sdk->dir, $this->toolchainDir, $process), ['PATH' => '/usr/bin'], new SerialPorts(Plans::tempDir(), Plans::tempDir()), $os);
     }
 
+    /** The sync tool as the driver names it: its own directory plus /tools/sync.py. */
+    private static function syncTool(): string
+    {
+        return dirname((string) (new \ReflectionClass(Driver::class))->getFileName()) . '/tools/sync.py';
+    }
+
     /** @return list<string> */
     private function last(FakeProcess $process): array
     {
@@ -61,10 +68,11 @@ final class DriverTest extends TestCase
 
         $artifacts = $this->driver($process)->build($plan, $out);
 
-        $sdk = $plan->sdk->dir;
+        $sdk = BuildInputs::cmakePath($plan->sdk->dir);
         $build = $plan->buildDir;
+        $cmake = BuildInputs::cmakePath($build);
         self::assertSame(
-            [$this->python, "{$this->idf}/tools/idf.py", '-C', "{$build}/project", '-B', "{$build}/idf", "-DSDKCONFIG={$build}/sdkconfig", "-DPHPBM_INPUTS={$build}/inputs.cmake", '-DIDF_TARGET=esp32s3', 'build'],
+            [$this->python, "{$this->idf}/tools/idf.py", '-C', "{$cmake}/project", '-B', "{$cmake}/idf", "-DSDKCONFIG={$cmake}/sdkconfig", "-DPHPBM_INPUTS={$cmake}/inputs.cmake", '-DIDF_TARGET=esp32s3', 'build'],
             $this->last($process),
         );
         self::assertFileExists("{$build}/inputs.cmake");
@@ -82,7 +90,7 @@ final class DriverTest extends TestCase
         } catch (SpecException) {
         }
         $run = $process->last();
-        self::assertSame($plan->buildDir . '/project', $run['cwd']);
+        self::assertSame(BuildInputs::cmakePath($plan->buildDir) . '/project', $run['cwd']);
         self::assertSame('esp32s3', $run['env']['IDF_TARGET']);
         self::assertSame($this->venv, $run['env']['IDF_PYTHON_ENV_PATH']);
         self::assertSame($this->idf, $run['env']['IDF_PATH']);
@@ -289,7 +297,7 @@ final class DriverTest extends TestCase
         $plan = Plans::plan();
         $this->buildWith($plan);
         mkdir($plan->buildDir . '/idf/stale', 0777, true);
-        file_put_contents($plan->buildDir . '/idf/CMakeCache.txt', "CMAKE_CACHEFILE_DIR:INTERNAL={$plan->buildDir}/idf\n");
+        file_put_contents($plan->buildDir . '/idf/CMakeCache.txt', 'CMAKE_CACHEFILE_DIR:INTERNAL=' . BuildInputs::cmakePath($plan->buildDir) . "/idf\n");
         file_put_contents($plan->buildDir . '/sdkconfig', 'x');
         $this->buildWith($plan);
         self::assertDirectoryExists($plan->buildDir . '/idf/stale', 'a cache of this directory is kept');
@@ -490,7 +498,7 @@ final class DriverTest extends TestCase
     public function test_sync_runs_the_sync_tool_on_the_sources(): void
     {
         $plan = Plans::plan(['storage' => 'microsd']);
-        $tool = dirname(__DIR__) . '/driver/tools/sync.py';
+        $tool = self::syncTool();
         $process = new RecordingProcess($this->process()->on("{$this->python} -u {$tool}", new ProcessResult(0, "put index.php (12 B)\nsynced 1 file(s)\n")));
         $out = new BufferedOutput();
 
@@ -505,7 +513,7 @@ final class DriverTest extends TestCase
     public function test_sync_excludes_the_manifest_env_file_and_forces_utf8(): void
     {
         $plan = Plans::plan(['storage' => 'microsd', 'envFile' => 'config/prod.env']);
-        $tool = dirname(__DIR__) . '/driver/tools/sync.py';
+        $tool = self::syncTool();
         $process = new RecordingProcess($this->process()->on("{$this->python} -u {$tool}", new ProcessResult(0)));
 
         $this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput());
@@ -516,7 +524,7 @@ final class DriverTest extends TestCase
     public function test_failed_sync_explains(): void
     {
         $plan = Plans::plan(['storage' => 'microsd']);
-        $process = $this->process()->on("{$this->python} -u " . dirname(__DIR__) . '/driver/tools/sync.py', new ProcessResult(1, '', "error: the board did not answer\n"));
+        $process = $this->process()->on("{$this->python} -u " . self::syncTool(), new ProcessResult(1, '', "error: the board did not answer\n"));
         $this->expectException(SpecException::class);
         $this->expectExceptionMessage('syncing to the microSD card on /dev/ttyACM0 failed: the board did not answer');
         $this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput());

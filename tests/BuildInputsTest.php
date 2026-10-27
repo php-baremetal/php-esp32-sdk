@@ -24,9 +24,9 @@ final class BuildInputsTest extends TestCase
     {
         $plan = Plans::plan(['sources' => ['sqlite' => '/cache/trees/sqlite-1']]);
         $file = BuildInputs::write($plan);
-        $build = $plan->buildDir;
-        $project = $plan->projectDir;
-        $sdk = $plan->sdk->dir;
+        $build = BuildInputs::cmakePath($plan->buildDir);
+        $project = BuildInputs::cmakePath($plan->projectDir);
+        $sdk = BuildInputs::cmakePath($plan->sdk->dir);
         $maps = ["{$project}" => 'project', $sdk => 'php-esp32-sdk', '/cache/trees/php-8.4.26-abc' => 'php-src', '/cache/trees/sqlite-1' => 'source/sqlite'];
         uksort($maps, static fn (string $a, string $b): int => strlen($a) <=> strlen($b));
         $maps = implode(';', array_map(static fn (string $d, string $n): string => "{$d}={$n}", array_keys($maps), $maps));
@@ -387,7 +387,7 @@ final class BuildInputsTest extends TestCase
         $inputs = (string) file_get_contents(BuildInputs::write($plan));
 
         self::assertStringContainsString("set(PHPBM_PARTITIONS \"phpstore,nvs,24;logs,fat,64\")\n", $inputs);
-        self::assertStringContainsString("set(PHPBM_PACKAGE_SDKCONFIG \"{$project}/vendor/cfg/sdkconfig.esp32\")\n", $inputs);
+        self::assertStringContainsString('set(PHPBM_PACKAGE_SDKCONFIG "' . BuildInputs::cmakePath($project) . "/vendor/cfg/sdkconfig.esp32\")\n", $inputs);
         self::assertStringNotContainsString('PHPBM_PACKAGES ', $inputs);
         self::assertStringNotContainsString('PHPBM_PACKAGE_0', $inputs);
         preg_match('/set\(PHPBM_PREFIX_MAPS "([^"]*)"\)/', $inputs, $m);
@@ -440,7 +440,7 @@ final class BuildInputsTest extends TestCase
         self::assertStringContainsString("#define PHPBM_OPTION_POWER_SAVE_ON 0\n", (string) file_get_contents(dirname(BuildInputs::write(Plans::plan())) . '/include/phpbm_options.h'));
         $plan = Plans::plan(['options' => ['power-save' => 'on']]);
         $on = (string) file_get_contents(BuildInputs::write($plan));
-        self::assertStringContainsString('set(PHPBM_POWER_SAVE_SDKCONFIG "' . $plan->sdk->dir . "/host/sdkconfig/power-save\")\n", $on);
+        self::assertStringContainsString('set(PHPBM_POWER_SAVE_SDKCONFIG "' . BuildInputs::cmakePath($plan->sdk->dir) . "/host/sdkconfig/power-save\")\n", $on);
         self::assertFileExists($plan->sdk->dir . '/host/sdkconfig/power-save');
         self::assertStringContainsString('CONFIG_PM_ENABLE=y', (string) file_get_contents($plan->sdk->dir . '/host/sdkconfig/power-save'));
     }
@@ -519,7 +519,7 @@ final class BuildInputsTest extends TestCase
     {
         $build = Plans::tempDir() . '/build';
         $dir = BuildInputs::project($build, 'C:\\sdk "x"\\$y');
-        self::assertSame("{$build}/project", $dir);
+        self::assertSame(BuildInputs::cmakePath($build) . '/project', $dir);
         self::assertSame("cmake_minimum_required(VERSION 3.22)\ninclude(\"C:/sdk \\\"x\\\"/\\\$y/host/project.cmake\")\nproject(firmware)\ninclude(\"C:/sdk \\\"x\\\"/\\\$y/host/post-project.cmake\")\n", file_get_contents("{$dir}/CMakeLists.txt"));
     }
 

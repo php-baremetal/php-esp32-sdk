@@ -6,6 +6,7 @@ namespace PhpBaremetal\Esp32\Tests;
 
 use PHPUnit\Framework\TestCase;
 
+use function PhpBaremetal\Esp32Release\fileUrl;
 use function PhpBaremetal\Esp32Release\localPath;
 use function PhpBaremetal\Esp32Release\mtime;
 use function PhpBaremetal\Esp32Release\packagedSdkJson;
@@ -167,12 +168,12 @@ final class ReleaseTest extends TestCase
             '0.97.0' => ['url' => 'https://example.test/php-esp32-sdk-0.97.0.tar.gz', 'sha256' => str_repeat('b', 64)],
         ]]));
 
-        [$code, $output] = $this->release('0.99.0', "{$this->out}/dist", '--index-url', 'file://' . str_replace(' ', '%20', $previous));
+        [$code, $output] = $this->release('0.99.0', "{$this->out}/dist", '--index-url', fileUrl($previous));
         self::assertSame(0, $code, $output);
         $versions = json_decode((string) file_get_contents("{$this->out}/dist/index.json"), true)['versions'];
         $url = $versions['0.98.0']['url'];
         self::assertStringStartsWith('file://', $url);
-        self::assertSame(realpath("{$this->out}/old mirror") . '/php-esp32-sdk-0.98.0.tar.gz', str_replace('\\', '/', localPath($url)));
+        self::assertSame(str_replace('\\', '/', (string) realpath("{$this->out}/old mirror")) . '/php-esp32-sdk-0.98.0.tar.gz', str_replace('\\', '/', localPath($url)));
         self::assertSame('https://example.test/php-esp32-sdk-0.97.0.tar.gz', $versions['0.97.0']['url']);
         self::assertSame('php-esp32-sdk-0.99.0.tar.gz', $versions['0.99.0']['url']);
 
