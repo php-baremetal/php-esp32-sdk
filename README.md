@@ -47,8 +47,10 @@ phpbm toolchain:install          # ESP-IDF v6.1, once per machine
 phpbm flash && phpbm monitor
 ```
 
-See the [phpbm documentation](https://github.com/php-baremetal/phpbm/blob/master/docs/overview.md) for the
-project format, the options and every command.
+The [SDK documentation](docs/overview.md) covers the boards, the runtimes, storage and network, every option,
+PHP and its extensions, memory and power saving, and how to work on the SDK. The
+[phpbm documentation](https://github.com/php-baremetal/phpbm/blob/master/docs/overview.md) covers the
+project format and every command.
 
 ## What the SDK provides
 

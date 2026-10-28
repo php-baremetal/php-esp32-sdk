@@ -1,0 +1,42 @@
+# Documentation Index
+
+- Overview
+  - [Overview](./overview.md)
+  - [Your first firmware](./getting-started/first-firmware.md)
+- Boards
+  - [Supported boards](./boards/supported-boards.md)
+  - [Board files](./boards/board-files.md)
+  - [Board overrides](./boards/board-overrides.md)
+- Runtimes and storage
+  - [Runtimes](./runtime/runtimes.md)
+  - [init-loop](./runtime/init-loop.md)
+  - [event-driven](./runtime/event-driven.md)
+  - [web-server](./runtime/web-server.md)
+  - [Storage](./runtime/storage.md)
+  - [Network](./runtime/network.md)
+- Modules
+  - [Available modules](./modules/overview.md)
+  - [GPIO](./modules/gpio.md)
+  - [LED strips](./modules/led-strips.md)
+  - [I2C and sensors](./modules/i2c-and-sensors.md)
+  - [SPI and displays](./modules/spi-and-displays.md)
+  - [Events and timers](./modules/events-and-timers.md)
+  - [Wi-Fi](./modules/wifi.md)
+  - [HTTP and the web](./modules/web.md)
+  - [Saving data](./modules/saving-data.md)
+  - [System and power](./modules/system-and-power.md)
+  - [PHP extensions](./modules/php-extensions.md)
+  - [PHP frameworks](./modules/frameworks.md)
+- Reference
+  - [Options](./reference/options.md)
+  - [PHP versions and extensions](./reference/php.md)
+  - [Memory, flash and partitions](./reference/memory-and-flash.md)
+  - [Power saving](./reference/power-save.md)
+  - [Toolchain](./reference/toolchain.md)
+  - [Troubleshooting](./reference/troubleshooting.md)
+- SDK development
+  - [Working on the SDK](./development/working-on-the-sdk.md)
+  - [Adding a board or chip](./development/adding-a-board.md)
+  - [Adding a PHP extension or minor](./development/adding-php.md)
+  - [Writing native packages](./development/firmware-rules.md)
+  - [Releases and previews](./development/releases.md)

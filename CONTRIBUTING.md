@@ -63,7 +63,7 @@ test suite on push and PR; keep it green, and add a test with the change.
 ## How-to, by area
 
 - **Add a board** — `boards/<vendor>-<model>.json` with the name, chip, PSRAM mode, flash size, console and
-  the peripheral blocks (network, microSD, LEDs) with their pins. Copy the closest existing board. Two
+  the peripheral blocks the chip supports (`network`, `microsd`) with their pins. Copy the closest existing board. Two
   hard requirements: the part needs **external PSRAM** and **at least 4 MB of flash**, or the engine
   won't fit.
 - **Add a chip variant** — `chips/<chip>/` (`chip.json` and its `sdkconfig.*` fragments).

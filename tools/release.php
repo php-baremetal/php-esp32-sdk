@@ -19,7 +19,7 @@ use SplFileInfo;
 
 const PACKAGED = ['sdk.json', 'LICENSE', 'README.md', 'driver', 'php', 'chips', 'boards', 'runtimes', 'storages', 'networks', 'host', 'sources', 'schemas'];
 const REQUIRED = ['sdk.json', 'driver'];
-const UNPACKAGED = ['tests', 'tools', 'vendor', 'composer.json', 'composer.lock', 'phpunit.xml.dist', 'phpunit.xml', 'assets', 'AI_USAGE.md', 'CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'SECURITY.md'];
+const UNPACKAGED = ['tests', 'tools', 'vendor', 'composer.json', 'composer.lock', 'phpunit.xml.dist', 'phpunit.xml', 'assets', 'AI_USAGE.md', 'CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs', 'CHANGELOG.md'];
 const JUNK = ['__pycache__', '.DS_Store', 'Thumbs.db'];
 
 final class ReleaseError extends RuntimeException
