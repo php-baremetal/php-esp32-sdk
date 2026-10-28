@@ -6,7 +6,7 @@
     "authors": [
         {
             "name": "Gianfrancesco Aurecchia",
-            "email": "gianfri@aurecchia.com"
+            "email": "gianfri@php-baremetal.com"
         }
     ],
     "require": {
