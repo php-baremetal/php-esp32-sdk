@@ -16,6 +16,20 @@
 
 # PHP on ESP32
 
+> [!WARNING]
+> **We are in the middle of the 2.0.0 restructuring, and it changes everything.**
+>
+> This branch (`master`) holds the previous code, which 2.0 replaces. The new SDK, driven by the
+> phpbm command-line tool, is being built on the
+> **[`sdk` branch](https://github.com/php-baremetal/php-esp32-sdk/tree/sdk)**: the build, the project format,
+> the packages and the documentation are all different there. Until 2.0.0 is released, things here may be
+> out of date or inconsistent. We apologise for the temporary inconvenience. When 2.0.0 is out, the `sdk`
+> branch will become `master`.
+>
+> **Want to try 2.0.0 early?** In mid-November we will run a general test of 2.0.0 before the release. If you
+> would like to take part, email me at [gianfri@php-baremetal.com](mailto:gianfri@php-baremetal.com).
+> Testers get early access to the phpbm repository and all the documentation material.
+
 > **A quick heads-up on the project's pace.**
 >
 > If you've followed this from the start, you know it began as something to fill my time over the
