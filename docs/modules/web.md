@@ -74,7 +74,7 @@ const AP_SSID = 'php-baremetal';
 const AP_PASS = 'baremetal';   // >= 8 chars for WPA2; '' for an open network
 
 if (!wifi_available()) {
-    echo "wifi not built -- require php-baremetal/ext-wifi on a WiFi-capable board\n";
+    echo "the Wi-Fi radio did not come up\n";
     return;
 }
 

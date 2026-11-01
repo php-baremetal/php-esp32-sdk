@@ -62,9 +62,10 @@ The server takes one request at a time: while PHP runs a request, the next one w
 - PHP gets `max_execution_time` equal to `request-timeout`; `0` means no limit.
 - If PHP has not answered `request-timeout` plus 5 seconds after the request arrived, the client gets
   `503 Service Unavailable`, and the console prints `phpbm: <method> <uri>: no answer within N s, 503 sent`. PHP
-  keeps running the request until it ends; its answer is dropped, and the server takes the next request only
-  then.
-- A request that waits that long for a free slot also gets 503.
+  keeps running the request until it ends; its answer is dropped.
+- Until that request ends, every request that needs PHP gets `503 Service Unavailable` with `Retry-After: 1`
+  at once (a request with a body also has its connection closed, so the body is not read). Static files are
+  still served.
 
 The server answers some requests without running PHP:
 
@@ -110,9 +111,11 @@ The program ends only when PHP can no longer start a request (the console prints
 `sys_restart()` or `sys_deep_sleep()`: that request is answered, later ones get 503, and the board restarts or
 sleeps. Then `restart-delay` applies as in [Runtimes](./runtimes.md).
 
-<!-- @callout variant="note" title="ext-events does not work here" -->
-Every request starts a fresh PHP state, while ext-events keeps its listener table for the whole run. For HTTP
-with state kept between requests, use `ext-web` in the [event-driven](./event-driven.md) runtime.
+<!-- @callout variant="note" title="No event sources here" -->
+Every request starts a fresh PHP state. With ext-events 1.0.2 and later, `Events::listen()`, `dispatch()` and
+`now()` work inside a request and their listeners are dropped when it ends, while `every()`, `watch_gpio()`,
+`watch_button()` and `button_sampling()` throw, in a request and in the `init` script. For timers, pin events, or HTTP with state kept between
+requests, use `ext-web` in the [event-driven](./event-driven.md) runtime.
 <!-- @endcallout -->
 
 ## Example

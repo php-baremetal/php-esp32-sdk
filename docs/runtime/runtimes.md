@@ -24,7 +24,7 @@ the other two runtimes are not in the firmware.
 | Lifecycle | Runs the script once, then `setup()` once and `loop($tick)` forever | Runs the script once, then waits for events and runs their listeners | Runs the entry script again for every HTTP request, each with a fresh PHP state |
 | Requires | Nothing | Package `php-baremetal/ext-events` | Capability `network` (the board needs a network type) |
 | Options | `loop-interval` | None | `init`, `port` |
-| Delivers events | No: `ext-events` sources run, but their queue is never read | Yes: timers, GPIO, buttons, samplers and, with `ext-web`, HTTP and WebSocket | No: `ext-events` is not supported here |
+| Delivers events | No: `ext-events` sources run, but their queue is never read | Yes: timers, GPIO, buttons, samplers and, with `ext-web`, HTTP and WebSocket | No: listeners, `dispatch()` and `now()` work within a request; event sources throw |
 | Calls PHP functions | `setup()`, `loop()` | Listeners registered by the script | None: the whole script is the handler |
 | `on-error` | Applies to an uncaught exception in `setup()`, `loop()` and the garbage collector | Applies to an uncaught exception in a listener | No effect: an error ends only that request, with a 500 |
 | Program end | `exit()`, a fatal error, an uncaught exception with `stop`, or a script without `loop()` | `exit()`, a fatal error, an uncaught exception with `stop` | Only when PHP cannot start a request, or on a request that restarts the board |

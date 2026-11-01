@@ -106,12 +106,13 @@ each press. `$on` keeps its value between events, because the script stays resid
 | --- | --- | --- | --- |
 | `event-driven` | Delivered by the runtime, one at a time on the PHP task | Work | Frozen when the entry script returns |
 | `init-loop` | Never delivered: the sources run, but nothing reads the queue | Work | Never frozen |
-| `web-server` | Not supported | Not supported | Not supported |
+| `web-server` | Refused: the source functions throw | Work, inside the request | One per request, dropped when it ends |
 
 <!-- @callout variant="warning" title="Sources need the event-driven runtime" -->
 Under `init-loop`, `every()` and `watch_gpio()` start without error, and their events are never delivered. Use
-the [event-driven](../runtime/event-driven.md) runtime for them. In `web-server` every request starts with a
-fresh PHP state while ext-events keeps its listener table for the whole run: do not use ext-events there.
+the [event-driven](../runtime/event-driven.md) runtime for them. In `web-server` (ext-events 1.0.2 and later)
+`every()`, `watch_gpio()`, `watch_button()` and `button_sampling()` throw, in a request and in the `init`
+script, because nothing reads the queue; listeners registered during a request last until that request ends.
 <!-- @endcallout -->
 
 In `event-driven`, `Events::listen()` throws `Events::listen() must be called in setup(); the listener table is

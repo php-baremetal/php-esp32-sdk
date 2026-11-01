@@ -163,7 +163,7 @@ transactions serialised with them on one task. The example `05-i2c-sensors/i2c-c
 
 <!-- @callout variant="warning" title="Power saving" -->
 With the `power-save` option on, `new Bus(..., owner: Bus::CORE1)` throws
-`I2cBus::CORE1 polling keeps the CPU busy and defeats power_save; use I2cBus::SYNC`. A sampler on a `SYNC` bus wakes
+`Bus::CORE1 is not available with the power-save option; use Bus::SYNC`. A sampler on a `SYNC` bus wakes
 the chip once per period, so the board never sleeps longer than `1000 / $hz` ms, and a sampler cannot be stopped:
 start one only when you need it. See [Power saving](../reference/power-save.md).
 <!-- @endcallout -->

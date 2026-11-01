@@ -17,7 +17,7 @@ use SplFileInfo;
 //                file or an HTTP 404 means "first release"
 //   --base-url   where the tarball will be downloaded from (default: next to index.json)
 
-const PACKAGED = ['sdk.json', 'LICENSE', 'README.md', 'driver', 'php', 'chips', 'boards', 'runtimes', 'storages', 'networks', 'host', 'sources', 'schemas'];
+const PACKAGED = ['sdk.json', 'LICENSE', 'README.md', 'driver', 'php', 'chips', 'boards', 'runtimes', 'storages', 'networks', 'host', 'sources'];
 const REQUIRED = ['sdk.json', 'driver'];
 const UNPACKAGED = ['tests', 'tools', 'vendor', 'composer.json', 'composer.lock', 'phpunit.xml.dist', 'phpunit.xml', 'assets', 'AI_USAGE.md', 'CODE_OF_CONDUCT.md', 'CONTRIBUTING.md', 'SECURITY.md', 'docs', 'CHANGELOG.md'];
 const JUNK = ['__pycache__', '.DS_Store', 'Thumbs.db'];

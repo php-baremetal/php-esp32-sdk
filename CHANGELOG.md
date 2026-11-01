@@ -33,6 +33,8 @@ default. Previews are not ready for use: anything can still change.
 - Boards: Espressif ESP32-S3-DevKitC-1 (N8R2, N8R8, N16R8), Waveshare ESP32-S3-Zero (and N8R8),
   ESP32-S3-ETH, ESP32-S3-Touch-LCD-1.85B, ESP32-P4-ETH, ESP32-P4-Pico, ESP32-P4-WIFI6, and generic
   ESP32-S3 (quad or octal PSRAM) and ESP32-P4 boards.
+- `phpbm_runtime_request_scoped()` in the host API (`phpbm.h`), implemented by each runtime: true in
+  `web-server`. esp32-events-hal 1.0.2 passes it to ext-events, which refuses event sources there.
 - [Documentation](docs/overview.md) for users and for SDK development.
 
 ### Removed

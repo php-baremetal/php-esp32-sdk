@@ -33,6 +33,11 @@ static bool event_driven(const char *entry_script)
     }
 }
 
+bool phpbm_runtime_request_scoped(void)
+{
+    return false;   /* listeners are called for the whole run */
+}
+
 void phpbm_runtime_run(const char *entry_script)
 {
     printf("--- %s (event-driven) ---\n", entry_script);

@@ -41,6 +41,11 @@ static bool init_loop(const char *entry_script)
     return true;
 }
 
+bool phpbm_runtime_request_scoped(void)
+{
+    return false;   /* one PHP request for the whole run */
+}
+
 void phpbm_runtime_run(const char *entry_script)
 {
     printf("--- %s (init-loop) ---\n", entry_script);

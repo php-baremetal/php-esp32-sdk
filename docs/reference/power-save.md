@@ -55,14 +55,13 @@ board wakes on a timer, an interrupt or network activity. Nothing changes in PHP
 | `init-loop` with `loop-interval` 0 | `loop()` never waits, so the board never sleeps. |
 | A USB data cable on the USB-Serial-JTAG console | The firmware sets `CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION` on purpose, otherwise the console port goes silent. To measure real sleep, power the board from 5 V without the data cable. The boards with this console are `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-zero` and `waveshare-esp32-s3-zero-n8r8`. |
 | `power_hold()` | Forbids light sleep until the matching `power_release()`; the calls nest. In `event-driven` a hold still standing when an event's listeners return is released. |
-| Periodic work | An `every()` timer wakes the board each period; a button watch wakes it every 10 ms while it runs; an ext-i2c sampler wakes it for as long as it runs. |
+| Periodic work | An `every()` timer wakes the board each period; a button watch wakes it every 10 ms while it runs; an ext-i2c sampler wakes it once per sampling period for as long as it runs (esp32-executor 1.0.2 and later; earlier versions woke it every millisecond). |
 
 `power_hold()` and `power_release()` belong to [ext-events](https://repository.php-baremetal.com/packages/php-baremetal/ext-events),
 not to ext-sys. Without `power-save` they do nothing, so the same script runs either way.
 
-<!-- @callout variant="warning" title="Not with I2cBus::CORE1" -->
-With `power-save` on, ext-i2c refuses a bus opened with `Bus::CORE1`: its polling keeps the CPU busy and defeats the
-power saving. Use `Bus::SYNC`. A sampler on a `SYNC` bus wakes the chip once per period, so the board never sleeps
+<!-- @callout variant="warning" title="Not with Bus::CORE1" -->
+With `power-save` on, ext-i2c refuses a bus opened with `Bus::CORE1`. Use `Bus::SYNC`. A sampler on a `SYNC` bus wakes the chip once per period, so the board never sleeps
 longer than that period. See the ext-i2c page on
 [ownership and power-save](https://repository.php-baremetal.com/packages/php-baremetal/ext-i2c).
 <!-- @endcallout -->
@@ -74,7 +73,7 @@ The ext-sys package has three calls that work with or without the option. They a
 
 | Call | What it does |
 | --- | --- |
-| `sys_light_sleep($ms, $wakePin, $wakeLow)` | Sleeps in place for `$ms` or until a pin reaches its level, then returns `timer`, `gpio` or `other`. It runs on the executor task, which is blocked for the whole sleep: NVS writes and `Bus::CORE1` buses wait. |
+| `sys_light_sleep($ms, $wakePin, $wakeLow)` | Sleeps in place for `$ms` or until a pin reaches its level, then returns `timer`, `gpio` or `other`, or `none` when the chip did not sleep. It runs on the executor task, which is blocked for the whole sleep: NVS writes and `Bus::CORE1` buses wait. |
 | `sys_deep_sleep($ms, $wakePin, $wakeLow)` | Ends the program and puts the chip in deep sleep; waking is a full boot. The wake pin must be an RTC IO on ESP32-S3 or an LP IO on ESP32-P4. |
 | `sys_wake_cause()` | What ended the deep sleep this boot came from: `timer`, `gpio`, `other`, or `none`. |
 

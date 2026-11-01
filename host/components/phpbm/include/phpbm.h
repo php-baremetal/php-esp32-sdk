@@ -10,6 +10,9 @@ struct _zend_array;
 const char *phpbm_storage_mount(void);
 void phpbm_storage_unmount(void);
 void phpbm_runtime_run(const char *entry_script);
+/* Implemented by the runtime: true when every HTTP request is its own PHP request and nothing reads the
+ * event queue (web-server), for the whole run, the init script included. */
+bool phpbm_runtime_request_scoped(void);
 /* The directory the project sources are mounted at (where the options' relative paths start). */
 const char *phpbm_source_dir(void);
 /* microsd only: serves `phpbm sync` on the console for 1.5 s, copying the sources into dir

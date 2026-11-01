@@ -36,7 +36,8 @@ Each chip package adds one class in `Baremetal\Led\Driver\`. Both extend `Bareme
 | `Sk6812` | led-sk6812 | `GRB`, `RGB`, `GRBW`, `RGBW` | `GRBW` |
 
 The constructor is `new Ws2812(int $pin, int $count = 1, ?int $order = null)`, and the same for `Sk6812`. The
-strip is cleared (every pixel off) when the object is created.
+strip is cleared (every pixel off) when the object is created, except while serving an HTTP request
+(`web-server`), where the LEDs keep the last frame from the previous request.
 
 | Method | Meaning |
 | --- | --- |
@@ -66,8 +67,9 @@ $strip->show();
 ```
 <!-- @endcode-block -->
 
-If red and green come out swapped, the strip is not GRB: pass `Ws2812::RGB`. For an SK6812, `Sk6812::GRBW` and
-`Sk6812::RGBW` are the orders that fit; the white channel is always written as 0.
+If red and green come out swapped, the strip is not GRB: pass `Ws2812::RGB`. For an SK6812 with a white LED use
+`Sk6812::GRBW` or `Sk6812::RGBW` (the white channel is always written as 0); for one without, `Sk6812::GRB` or
+`Sk6812::RGB`.
 
 ## The RGB LED on a board
 
@@ -112,10 +114,10 @@ function loop(int $tick): void
 | --- | --- |
 | RMT channels | Each strip is built on the RMT peripheral and takes one transmit channel; ESP32-S3 and ESP32-P4 have 4. When none is free the constructor throws `cannot init ws2812 on GPIO N`. |
 | Timing | 10 MHz RMT resolution, no DMA. WS2812 or SK6812 timing is chosen by the class. |
-| `show()` | Blocks the PHP task until the frame has gone out. Errors of the transfer are not reported. |
+| `show()` | Blocks the PHP task until the frame has gone out. A failed transfer throws `LED refresh failed on GPIO N (error E)`. |
 | Pixels | The buffer takes 3 or 4 bytes per pixel; memory is the practical limit on `count`. |
 | Lifetime | The object owns its channel. Destroying it releases the channel and leaves the LEDs on their last frame. |
-| One object per pin | Two objects on the same pin are not detected: each takes its own channel. |
+| One object per pin | A second object on a pin that a live object drives throws. To replace a strip, set the old variable to `null` first: `$led = new Ws2812(8, 16)` over an existing `$led` on GPIO 8 builds the new object before the old one is released. |
 
 In the `event-driven` runtime keep the object in a variable that your handlers capture (or a global); in the
 `web-server` runtime it lasts one request.
@@ -133,5 +135,9 @@ suitable power supply for long strips.
 | `Argument #2 ($count) must be at least 1` | `$count` is 0 or negative |
 | `Argument #3 ($order) must be one of the GRB, RGB constants` | An order the class does not support; `Sk6812` lists its four constants |
 | `Argument #1 ($i) is out of range for this strip` | `pixel()` or `hsv()` with an index outside 0 to `count() - 1` |
+| `cannot init ws2812: GPIO N is already used by another LED strip` | Another live object drives that pin; reuse it, or set it to `null` first |
+| `LED write failed on GPIO N (error E)` | The driver refused a pixel in `pixel()`, `fill()`, `hsv()` or `set()` |
+| `LED refresh failed on GPIO N (error E)` | The frame could not be sent by `show()`, `set()`, `off()` or the constructor |
+| `Trying to clone an uncloneable object of class ...` | `clone` on a strip: keep one object per strip |
 
 The full API is on the [ext-led](https://repository.php-baremetal.com/packages/php-baremetal/ext-led) package page.

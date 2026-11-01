@@ -80,7 +80,7 @@ the firmware then shuts PHP down, unmounts the storage and restarts or sleeps. T
 | --- | --- |
 | `sys_restart(): never` | Restarts at once, with no `restart-delay`. Afterwards `sys_reset_reason()` is `"software"`. |
 | `sys_deep_sleep(int $ms, ?int $wakePin = null, bool $wakeLow = true): never` | Stops the program and powers down CPUs and RAM. Waking is a full boot: the script starts from the beginning and `sys_reset_reason()` is `"deepsleep"`. |
-| `sys_light_sleep(int $ms, ?int $wakePin = null, bool $wakeLow = true): string` | Sleeps in place and returns when the chip wakes: `"timer"`, `"gpio"` or `"other"`. RAM, PSRAM, variables and open files survive. |
+| `sys_light_sleep(int $ms, ?int $wakePin = null, bool $wakeLow = true): string` | Sleeps in place and returns when the chip wakes: `"timer"`, `"gpio"` or `"other"`, or `"none"` when it did not sleep. RAM, PSRAM, variables and open files survive. |
 | `sys_wake_cause(): string` | What ended the deep sleep this boot came from: `"timer"`, `"gpio"`, `"other"`, or `"none"` after power-on, reset button, `sys_restart()` or a crash. |
 | `sys_reset_reason(): string` | Why the chip last booted: `poweron`, `external`, `software`, `panic`, `int_wdt`, `task_wdt`, `wdt`, `deepsleep`, `brownout`, `sdio`, `usb`, `jtag` or `unknown`. |
 
@@ -229,6 +229,6 @@ package is not in the build: check `composer.json`, run `composer install` and b
 | --- | --- |
 | `\ValueError` from `sys_deep_sleep()` or `sys_light_sleep()` | Negative `$ms`, `$ms` 0 without a wake pin, a GPIO the chip does not have, or a deep sleep pin that is not an RTC/LP GPIO. |
 | `Call to undefined function sys_delay()` | `ext-sys` is not required in `composer.json`. |
-| `sys_light_sleep()` returns `"other"` at once | The chip refused to sleep, or the executor queue stayed full for 1000 ms. |
+| `sys_light_sleep()` returns `"none"` at once | The chip refused to sleep, or the executor queue stayed full for 1000 ms (ext-sys before 1.0.2 returned `"other"`). |
 | A time comparison fails after a while | The 32-bit counters wrapped: compare differences. |
 | The board never sleeps with `power-save` on | A USB data cable is connected, or `init-loop` runs with `loop-interval` 0. |

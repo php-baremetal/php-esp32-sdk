@@ -599,9 +599,18 @@ static esp_err_t web_handle(httpd_req_t *req)
     }
 
     web_slot_t *w = s_web;
-    /* The slot still belongs to PHP while it runs a request whose client already got 503. */
+    /* The slot still belongs to PHP while it runs a request whose client already got 503 (the httpd task
+     * handles one request at a time, so that is the only way to find it busy). Answer at once instead of
+     * holding the httpd task, and every static file with it, until PHP comes back. */
     uint32_t seq = __atomic_load_n(&s_park_seq, __ATOMIC_RELAXED);
-    if (!web_wait_php(seq, web_deadline())) {
+    if (__atomic_load_n(&s_done_seq, __ATOMIC_ACQUIRE) != seq) {
+        httpd_resp_set_hdr(req, "Retry-After", "1");
+        if (req->content_len > 0) {
+            /* Close rather than let httpd drain the body on its own task, which would hold it as long. */
+            httpd_resp_set_hdr(req, "Connection", "close");
+            web_send_text(req, "503 Service Unavailable", "Service Unavailable");
+            return ESP_FAIL;
+        }
         return web_send_text(req, "503 Service Unavailable", "Service Unavailable");
     }
     heap_caps_free(w->body);
@@ -853,6 +862,11 @@ static bool web_server(const char *entry_script)
     sapi_module.register_server_variables = saved.register_server_variables;
     php_request_startup();
     return true;
+}
+
+bool phpbm_runtime_request_scoped(void)
+{
+    return true;   /* every HTTP request is a fresh PHP request; nothing reads the event queue */
 }
 
 void phpbm_runtime_run(const char *entry_script)

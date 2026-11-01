@@ -37,7 +37,7 @@
             "default": "size"
         },
         "power-save": {
-            "description": "Automatic light sleep: the board sleeps by itself while every task waits (between events, between two loop() runs). power_hold() keeps it awake; not with I2cBus::CORE1; the USB-JTAG console keeps it awake while connected.",
+            "description": "Automatic light sleep: the board sleeps by itself while every task waits (between events, between two loop() runs). power_hold() keeps it awake; not with Bus::CORE1; the USB-JTAG console keeps it awake while connected.",
             "values": ["off", "on"],
             "default": "off"
         },

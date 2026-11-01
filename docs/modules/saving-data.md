@@ -84,8 +84,8 @@ Its `composer.json` requires `ext-store` and `ext-sys` on the Waveshare ESP32-S3
 ### Rules on the board
 
 - **Strings only.** Cast numbers on the way in and out; store arrays with `json_encode()` and bytes with
-  `base64_encode()`. A value ends at its first NUL byte, and a value over 4000 bytes makes `store_set()` return
-  `false`.
+  `base64_encode()`. A value with a NUL byte or over 4000 bytes makes `store_set()` return `false`
+  (ext-store 1.0.2 and later; earlier versions cut the value at its first NUL).
 - **Keys of 1 to 15 bytes.** Any other length is treated as a missing key: `store_set()` returns `false`.
   Short prefixes such as `wifi.ssid` or `boot.count` keep keys readable.
 - **No exceptions** except `store_keys()`, which throws `store_keys(): cannot list the keys (out of memory or NVS

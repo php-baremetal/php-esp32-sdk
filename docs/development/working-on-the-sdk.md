@@ -22,7 +22,7 @@ those files and building a real project with your checkout.
 | `sdk.json` | SDK name, version, driver class, the SDK options, the PHP releases (`version`, `url`, `sha256`, `startup-kb`) and the external `sources` (`url`, `sha256`). | phpbm, the driver |
 | `boards/<id>.json` | One file per board: chip, PSRAM mode, flash, console and peripheral blocks. | phpbm (validation), `BuildInputs` |
 | `chips/<chip>/` | `chip.json` (target, capabilities, PSRAM modes) and the `sdkconfig.*` fragments. | phpbm, `BuildInputs`, `host/cmake/sdkconfig.cmake` |
-| `runtimes/<id>/` | `runtime.json` and the C of a runtime (`init-loop`, `event-driven`, `web-server`), an ESP-IDF component. | phpbm, CMake host |
+| `runtimes/<id>/` | `runtime.json` and the C of a runtime (`init-loop`, `event-driven`, `web-server`), an ESP-IDF component. It implements `phpbm_runtime_run()` and `phpbm_runtime_request_scoped()` (true when every HTTP request is its own PHP request; packages read it through their HAL). | phpbm, CMake host |
 | `storages/<id>/` | `storage.json` and the C of a storage (`embedded`, `microsd`), an ESP-IDF component. | phpbm, CMake host |
 | `networks/<id>/` | The network drivers (`emac`, `w5500`, `wifi-c6`): `sdkconfig` and a `phpbm_<id>` component. | `BuildInputs`, CMake host |
 | `php/<minor>/` | `patches/`, `sources.cmake`, `compat/` and `extensions/*.json` of one PHP minor (8.3, 8.4, 8.5). Minors coexist. | phpbm (patches, descriptors), `PhpExtensions`, CMake host |

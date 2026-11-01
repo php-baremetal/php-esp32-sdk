@@ -137,8 +137,10 @@ final class Driver implements DriverContract
         return $this->ports->list();
     }
 
-    /** A CMake cache written in another directory (a copied project): CMake would refuse it. */
-    /** Whether <dir>/CMakeCache.txt was made for another directory (paths compare case-insensitively on Windows). */
+    /**
+     * Whether <dir>/CMakeCache.txt was made for another directory (a copied project), which CMake would refuse.
+     * Paths compare case-insensitively on Windows.
+     */
     public static function movedCache(string $dir, bool $windows = false): bool
     {
         $cache = @file_get_contents("{$dir}/CMakeCache.txt");

@@ -46,14 +46,14 @@ builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet.
 | Function | Returns | Meaning |
 | --- | --- | --- |
 | `wifi_scan()` | `array` or `false` | Networks in range, up to 48: `ssid`, `bssid`, `rssi`, `channel`, `auth`. |
-| `wifi_connect(string $ssid, ?string $password = null, int $timeout_ms = 15000)` | `bool` | Join a network and wait for an IP address. |
+| `wifi_connect(string $ssid, ?string $password = null, int $timeout_ms = 30000)` | `bool` | Join a network and wait for an IP address. |
 | `wifi_disconnect()` | `bool` | Leave the network. |
 | `wifi_connected()` | `bool` | Whether the station has an IP address. |
 | `wifi_ip()`, `wifi_rssi()` | `?string`, `?int` | Station address and signal in dBm; `null` when not connected. |
 | `wifi_ap_start(string $ssid, ?string $password = null, int $channel = 1, int $max_conn = 4)` | `bool` | Open the board's own network. |
 | `wifi_ap_stop()` | `bool` | Close it. |
 | `wifi_ap_ip()`, `wifi_ap_clients()` | `?string`, `int` | Access point address and number of joined stations. |
-| `wifi_available()` | `bool` | `true` whenever ext-wifi is built in. |
+| `wifi_available()` | `bool` | Whether the radio comes up. |
 
 No function throws for a Wi-Fi failure: each reports it in its return value. Signatures and the other
 details are in the [ext-wifi package](https://repository.php-baremetal.com/packages/php-baremetal/ext-wifi).
@@ -169,19 +169,21 @@ over HTTP and WebSocket from the board's own access point.
 ## Behaviour on the board
 
 - **Blocking.** `wifi_scan()` waits up to 15 s and `wifi_connect()` up to `$timeout_ms` (a value of 0 or less
-  means 15000). The script is blocked meanwhile: under `init-loop` the next `loop()` runs after the call; under
-  `event-driven` no event is delivered, and HTTP requests queue up and may time out. The other functions return
-  within milliseconds.
-- **The first call sets up the radio.** The first scan, connect or access point call initialises the `nvs`
+  means 30000; 15000 before ext-wifi 1.0.2). The script is blocked meanwhile: under `init-loop` the next
+  `loop()` runs after the call; under `event-driven` no event is delivered, and HTTP requests queue up and may
+  time out. The other functions return within milliseconds.
+- **The first call sets up the radio.** The first `wifi_available()`, scan, connect or access point call initialises the `nvs`
   partition and the Wi-Fi driver. If the partition is full or in a newer format it is erased and formatted
   again. If setup fails, every function reports failure (`false`, `null` or `0`).
 - **Which task does the work.** Driver calls run on the executor task (core 0); the PHP task waits for them.
   If the executor queue stays full for 1 s the call fails.
 - **Connecting.** All channels are scanned and the strongest access point with that SSID is chosen. With a
-  password the minimum is WPA2-PSK, and WPA3 is accepted. The SSID is limited to its first 31 bytes, so a
-  32-byte name cannot be joined. A dropped association during the attempt is retried up to 10 times.
-- **When the link drops.** The driver retries on its own while retries are left from the last `wifi_connect()`;
-  after that the station stays down. Watch `wifi_connected()` and call `wifi_connect()` again.
+  password the minimum is WPA2-PSK, and WPA3 is accepted. The SSID is 1 to 32 bytes and the password 8 to 63
+  characters or 64 hex digits; a longer value or a NUL byte throws `\ValueError`. A dropped association during the attempt is retried up to 10 times.
+- **When the link drops.** The driver reconnects on its own, up to 10 times, and the count starts again at
+  every address it gets; after 10 failures in a row the station stays down. Watch `wifi_connected()` and call
+  `wifi_connect()` again.
+- **Credentials stay in RAM.** The driver does not write SSIDs or passwords to flash.
 - **Access point.** The radio follows the station's channel while the station is connected. `$max_conn`
   defaults to 4.
 - **Power.** ext-wifi does not change the radio's power mode: the ESP-IDF default (modem sleep while connected)
