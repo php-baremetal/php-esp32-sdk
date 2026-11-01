@@ -325,6 +325,12 @@ static bool phpbm_deep_sleep_wake_pin(int pin, int level)
         rtc_gpio_pulldown_dis(pin);
         rtc_gpio_pullup_en(pin);
     }
+#if SOC_PM_SUPPORT_RTC_PERIPH_PD
+    /* EXT1 alone lets ESP-IDF power the RTC peripherals down, and the pull with them: the pin would float. */
+    if (esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON) != ESP_OK) {
+        return false;
+    }
+#endif
     return esp_sleep_enable_ext1_wakeup_io(1ULL << pin, level ? ESP_EXT1_WAKEUP_ANY_HIGH : ESP_EXT1_WAKEUP_ANY_LOW) == ESP_OK;
 #else
     (void) pin;

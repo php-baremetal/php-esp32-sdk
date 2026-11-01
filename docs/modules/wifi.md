@@ -181,7 +181,7 @@ over HTTP and WebSocket from the board's own access point.
   password the minimum is WPA2-PSK, and WPA3 is accepted. The SSID is 1 to 32 bytes and the password 8 to 63
   characters or 64 hex digits; a longer value or a NUL byte throws `\ValueError`. A dropped association during the attempt is retried up to 10 times.
 - **When the link drops.** The driver reconnects on its own, up to 10 times, and the count starts again at
-  every address it gets; after 10 failures in a row the station stays down. Watch `wifi_connected()` and call
+  every address it gets; after 10 failures in a row (about 25 s) the station stays down. Watch `wifi_connected()` and call
   `wifi_connect()` again.
 - **Credentials stay in RAM.** The driver does not write SSIDs or passwords to flash.
 - **Access point.** The radio follows the station's channel while the station is connected. `$max_conn`
