@@ -227,3 +227,4 @@ With `event-driven` and ext-web, connect or open the access point in the entry s
 | `serve_http(): no network interface (turn the network option on, or connect with ext-wifi first)` | `serve_http()` ran before `wifi_connect()` or `wifi_ap_start()`. |
 | Build error `has no Wi-Fi: remove php-baremetal/ext-wifi` | The board has no radio. |
 | Wi-Fi calls fail on `waveshare-esp32-p4-wifi6` | The ESP32-C6 companion did not answer at boot; the console says so. |
+| `eh_init_evt: major version mismatch — OTA coprocessor from host` at boot on `waveshare-esp32-p4-wifi6` | The ESP32-C6 runs the firmware the board shipped with, which reports version `0.0.0` to esp_hosted 3.0.9. Wi-Fi still works; the SDK does not update the C6. |

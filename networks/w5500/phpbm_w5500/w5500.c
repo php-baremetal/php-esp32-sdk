@@ -12,6 +12,7 @@
 #include "esp_log.h"
 #include "esp_mac.h"
 #include "esp_netif.h"
+#include "esp_pm.h"
 
 #include "phpbm.h"
 
@@ -121,6 +122,12 @@ bool phpbm_network_up(char *ip, size_t len)
     what = "start";
     if ((err = esp_eth_start(eth)) != ESP_OK) {
         goto fail;
+    }
+    /* The W5500 interrupt is an edge that cannot wake the chip: in light sleep a packet would wait up to 1 s. */
+    esp_pm_lock_handle_t awake;
+    if (phpbm_power_save() && esp_pm_lock_create(ESP_PM_NO_LIGHT_SLEEP, 0, "w5500", &awake) == ESP_OK
+        && esp_pm_lock_acquire(awake) == ESP_OK) {
+        ESP_LOGI(TAG, "power save: no light sleep while the W5500 runs");
     }
 
     for (int t = 0; !s_link_up; t += W5500_POLL_MS) {

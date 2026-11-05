@@ -234,6 +234,7 @@ final class Driver implements DriverContract
             "chips/{$chip}/sdkconfig.flash-" . BuildInputs::flashMode($plan),
             'host/sdkconfig/console-' . ($plan->board->console ?? 'uart'),
             'host/sdkconfig/optimization-' . BuildInputs::optimization($plan),
+            'host/sdkconfig/log-' . BuildInputs::log($plan),
             ...(BuildInputs::powerSave($plan) ? ['host/sdkconfig/power-save'] : []),
             "runtimes/{$plan->runtime->id}/sdkconfig",
             "storages/{$plan->storage->id}/sdkconfig",

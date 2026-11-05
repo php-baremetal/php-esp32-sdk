@@ -55,8 +55,35 @@ These apply to every runtime.
 | `restart-delay` | int | 0 to 3600 | `5` | Seconds the board waits before it restarts once the program has ended. |
 | `firmware-reserve` | int | 256 to 4096 | `1024` | PSRAM in KB left to the rest of the firmware (network, HTTP server, native extensions); PHP gets the rest as `memory_limit`. See [Memory, flash and partitions](./memory-and-flash.md). |
 | `optimization` | enum | `size`, `performance`, `debug` | `size` | Compiler optimization of the whole firmware: `size` is `-Os`, `performance` is `-O2`, `debug` is `-Og`. |
+| `log` | enum | `none`, `error`, `warn`, `info`, `debug` | `info` | Lowest level of the firmware's own log lines (ESP-IDF, the network drivers, native packages) that are compiled in and printed. See [The log option](#the-log-option). |
 | `power-save` | enum | `off`, `on` | `off` | Automatic light sleep while every task waits. See [Power saving](./power-save.md). |
 | `request-timeout` | int | 0 to 3600 | `30` | Seconds allowed for one HTTP request, in `web-server` or for ext-web requests in `event-driven`: PHP gets `max_execution_time` equal to this value, and the server answers 503 after it plus 5 s. `0` means no limit. |
+
+### The log option
+
+`log` sets ESP-IDF's default and maximum log level. Lines below that level are not printed and not compiled
+in, so their text leaves the app. It does not change:
+
+- what PHP prints (`echo`, warnings, uncaught exceptions);
+- the firmware's `phpbm:` lines, such as `phpbm: restarting in 5 s`;
+- the backtrace printed by a crash;
+- the lines of the ROM and of the bootloader before the app starts.
+
+App size of `new_examples/08-network-web/wifi-ap-s3-rgb-manage` (`waveshare-esp32-s3-zero-n8r8`, PHP 8.5,
+`optimization` `size`):
+
+| `log` | App | Against `info` |
+| --- | --- | --- |
+| `none` | 3,014,464 bytes | −74,992 bytes (−2.4%) |
+| `error` | 3,063,216 bytes | −26,240 bytes (−0.8%) |
+| `warn` | 3,078,592 bytes | −10,864 bytes (−0.4%) |
+| `info` | 3,089,456 bytes | |
+| `debug` | 3,124,272 bytes | +34,816 bytes (+1.1%) |
+
+Only the app image was measured, not the RAM used at run time. Below `warn` the firmware's
+warnings go too, and some of them are the only sign of a problem. One example is esp32-web-hal's `no memory
+for the request, 503 sent`. Keep `info` while you develop, and choose `warn` or lower when the app has to fit
+a smaller partition.
 
 ## Runtime options
 

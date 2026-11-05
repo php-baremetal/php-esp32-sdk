@@ -26,8 +26,9 @@ default. Previews are not ready for use: anything can still change.
   synced over the serial port with `phpbm sync`.
 - PHP 8.3, 8.4 and 8.5, each with the optional extensions bcmath, ctype, date, filter, mbstring, opcache,
   openssl (partial API), pdo, pdo_sqlite, session, sqlite3, tokenizer and zlib.
-- Options `network`, `on-error`, `restart-delay`, `firmware-reserve`, `optimization`, `power-save` (automatic
-  light sleep) and `request-timeout`, plus `loop-interval` (`init-loop`) and `init` / `port` (`web-server`).
+- Options `network`, `on-error`, `restart-delay`, `firmware-reserve`, `optimization`, `log` (the firmware's
+  log level), `power-save` (automatic light sleep) and `request-timeout`, plus `loop-interval`
+  (`init-loop`) and `init` / `port` (`web-server`).
 - Networks: on-chip Wi-Fi, Ethernet through the ESP32-P4 EMAC or a W5500, and Wi-Fi through an ESP32-C6
   companion.
 - Boards: Espressif ESP32-S3-DevKitC-1 (N8R2, N8R8, N16R8), Waveshare ESP32-S3-Zero (and N8R8),

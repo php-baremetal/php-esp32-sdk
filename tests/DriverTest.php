@@ -208,6 +208,17 @@ final class DriverTest extends TestCase
         self::assertFileDoesNotExist($p4->buildDir . '/sdkconfig');
     }
 
+    public function test_changing_the_log_level_drops_sdkconfig(): void
+    {
+        $plan = Plans::plan();
+        $this->buildWith($plan);
+        $this->seed($plan);
+        $this->buildWith($plan);
+        self::assertFileExists($plan->buildDir . '/sdkconfig');
+        $this->buildWith($this->movedTo($plan, Plans::plan(['options' => ['log' => 'warn']])));
+        self::assertFileDoesNotExist($plan->buildDir . '/sdkconfig');
+    }
+
     public function test_changing_power_save_drops_sdkconfig(): void
     {
         $plan = Plans::plan();

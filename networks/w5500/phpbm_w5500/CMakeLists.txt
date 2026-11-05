@@ -1,7 +1,7 @@
 include("$ENV{PHPBM_INPUTS}")
 idf_component_register(
     SRCS "w5500.c"
-    REQUIRES phpbm esp_eth esp_netif esp_driver_spi esp_driver_gpio
+    REQUIRES phpbm esp_eth esp_netif esp_driver_spi esp_driver_gpio esp_pm
     WHOLE_ARCHIVE)
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
     PHPBM_NETWORK_CS=${PHPBM_NETWORK_CS}

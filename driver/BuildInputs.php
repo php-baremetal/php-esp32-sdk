@@ -59,6 +59,7 @@ final class BuildInputs
             'FLASH_MODE' => self::flashMode($plan),
             'REVISION' => self::revision($plan),
             'OPTIMIZATION' => self::optimization($plan),
+            'LOG' => self::log($plan),
             'POWER_SAVE_SDKCONFIG' => self::powerSaveSdkconfig($plan),
             'CONSOLE' => $board->console ?? 'uart',
             'RUNTIME' => $plan->runtime->id,
@@ -190,6 +191,12 @@ final class BuildInputs
     private static function powerSaveSdkconfig(BuildPlan $plan): string
     {
         return self::powerSave($plan) ? self::cmakePath("{$plan->sdk->dir}/host/sdkconfig/power-save") : '';
+    }
+
+    /** The log option: host/sdkconfig/log-<value>. */
+    public static function log(BuildPlan $plan): string
+    {
+        return (string) ($plan->options['log'] ?? ($plan->sdk->descriptor->options['log']->default ?? 'info'));
     }
 
     /** The optimization option: host/sdkconfig/optimization-<value>. */

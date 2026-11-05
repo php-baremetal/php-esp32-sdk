@@ -36,6 +36,11 @@
             "values": ["size", "performance", "debug"],
             "default": "size"
         },
+        "log": {
+            "description": "Lowest level of the firmware's own log lines (ESP-IDF and native packages) that are compiled in and printed: none, error, warn, info or debug. A lower level makes the app smaller; PHP output and the phpbm: lines are not affected.",
+            "values": ["none", "error", "warn", "info", "debug"],
+            "default": "info"
+        },
         "power-save": {
             "description": "Automatic light sleep: the board sleeps by itself while every task waits (between events, between two loop() runs). power_hold() keeps it awake; not with Bus::CORE1; the USB-JTAG console keeps it awake while connected.",
             "values": ["off", "on"],

@@ -6,6 +6,7 @@ foreach(_fragment
         "${PHPBM_SDK_DIR}/chips/${PHPBM_CHIP}/sdkconfig.flash-${PHPBM_FLASH_MODE}"
         "${PHPBM_HOST}/sdkconfig/console-${PHPBM_CONSOLE}"
         "${PHPBM_HOST}/sdkconfig/optimization-${PHPBM_OPTIMIZATION}"
+        "${PHPBM_HOST}/sdkconfig/log-${PHPBM_LOG}"
         "${PHPBM_POWER_SAVE_SDKCONFIG}"
         "${PHPBM_SDK_DIR}/runtimes/${PHPBM_RUNTIME}/sdkconfig"
         "${PHPBM_SDK_DIR}/storages/${PHPBM_STORAGE}/sdkconfig"

@@ -120,10 +120,12 @@ final class SdkDescriptorsTest extends TestCase
         $options = self::sdk()->descriptor->options;
         $names = array_keys($options);
         sort($names);
-        self::assertSame(['firmware-reserve', 'network', 'on-error', 'optimization', 'power-save', 'request-timeout', 'restart-delay'], $names);
+        self::assertSame(['firmware-reserve', 'log', 'network', 'on-error', 'optimization', 'power-save', 'request-timeout', 'restart-delay'], $names);
         self::assertSame(['int', 0, 3600, 30], [$options['request-timeout']->type, $options['request-timeout']->min, $options['request-timeout']->max, $options['request-timeout']->default]);
         self::assertSame(['size', 'performance', 'debug'], $options['optimization']->values);
         self::assertSame('size', $options['optimization']->default);
+        self::assertSame(['none', 'error', 'warn', 'info', 'debug'], $options['log']->values);
+        self::assertSame('info', $options['log']->default);
         self::assertSame(['off', 'on'], $options['power-save']->values);
         self::assertSame('off', $options['power-save']->default);
         self::assertSame('enum', $options['on-error']->type);
