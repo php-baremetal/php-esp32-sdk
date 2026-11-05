@@ -30,14 +30,6 @@
 > would like to take part, email me at [gianfri@php-baremetal.com](mailto:gianfri@php-baremetal.com).
 > Testers get early access to the phpbm repository and all the documentation material.
 
-> **A quick heads-up on the project's pace.**
->
-> If you've followed this from the start, you know it began as something to fill my time over the
-> holidays. The holidays are now over. **This does not mean the project is dead or parked** — it means
-> the release cycles will be a bit longer from here on. I fully intend to keep growing it, and the
-> interest is still very much there. There's a **[roadmap](ROADMAP.md)** laying out how I want to
-> structure and carry the project forward from now on. **New contributors are very welcome.**
-
 Run the real PHP interpreter on a microcontroller. Not a lookalike, not a language subset, not a
 transpiler: the official Zend engine from php.net, cross-compiled for the chip, executing your
 `index.php` opcode by opcode the same way it would behind a web server.
