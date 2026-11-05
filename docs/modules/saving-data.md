@@ -47,7 +47,7 @@ The conductor adds the ESP32 HAL (`esp32-store-hal`), which keeps the pairs in a
 | `store_keys()` | The keys, in no particular order. |
 | `store_available()` | Whether the store opened at boot. |
 
-`new_examples/03-storage/store-demo` is a boot counter. Reset the board and the count keeps climbing:
+`03-storage/store-demo` is a boot counter. Reset the board and the count keeps climbing:
 
 <!-- @code-block language="php" label="project-src/index.php" -->
 ```php
@@ -118,7 +118,7 @@ With `"storage": "microsd"` the firmware mounts the card at `/sdcard`, and PHP's
 with no extension. Your sources are in `/sdcard/app`; the rest of the card is free for the script's own data.
 Use a path under `/sdcard`, for example `/sdcard/log.txt`.
 
-`new_examples/03-storage/sd-write` writes a file, reads it back and appends to it. Its `composer.json` requires
+`03-storage/sd-write` writes a file, reads it back and appends to it. Its `composer.json` requires
 only the conductor, on `waveshare-esp32-p4-pico` with `"storage": "microsd"`:
 
 <!-- @code-block language="php" label="project-src/index.php" -->

@@ -50,6 +50,7 @@ Measured memory limits (PHP 8.4 unless noted):
 | `waveshare-esp32-s3-eth` | all thirteen extensions, `opcache-memory` 1024 | 4352 KB | 1562, 1477 and 1407 KB on 8.3, 8.4 and 8.5 |
 | `waveshare-esp32-p4-eth` (32 MB PSRAM) | blink | 30208 KB | 1493 KB |
 | `waveshare-esp32-s3-zero` (2 MB PSRAM, small profile) | blink | 1024 KB | 85 KB |
+| `waveshare-esp32-s3-zero` | eleven extensions (all but mbstring and opcache), PHP 8.5 | 768 KB | 9 KB |
 
 ### Outside memory_limit
 
@@ -68,6 +69,21 @@ Large fragmented allocations can fail below `memory_limit`. A script that exhaus
 
 A board with 2 MB of PSRAM (`waveshare-esp32-s3-zero`, `espressif-esp32-s3-devkitc-1-n8r2`) gets the small
 profile: no firmware reserve, a 128 KB stack, OPcache off. If the pool is under 1024 KB the boot logs a warning.
+
+Measured on an ESP32-S3 with 4 MB of flash and 2 MB of quad PSRAM (board `waveshare-esp32-s3-zero`, PHP 8.5):
+
+- **Eleven extensions** (all but mbstring and opcache, see [What fits in 4 MB of flash](#what-fits-in-4-mb-of-flash)):
+  `memory_limit` is 768 KB and the boot warns that the pool is under 1024 KB. A script starts with about 375 KB
+  already used, and 9 KB of PSRAM stay for the rest of the firmware. A light check of each of the eleven passes,
+  but a long script such as `12-extension-checks` runs out of memory: it needs a board with more PSRAM.
+- **zlib:** `gzuncompress()` works, and so does compressing with a small window, for example
+  `deflate_init($encoding, ['window' => 9, 'memory' => 1])`. `gzcompress()` with the default
+  parameters fails with `Allowed memory size of 786432 bytes exhausted (tried to allocate 65536 bytes)`, even as
+  the first call of the script.
+- **Wi-Fi:** in `08-network-web/wifi-ap-s3-rgb-manage` about 20 KB of PSRAM stay free after the
+  start. Once a station joins the board's access point, the Wi-Fi buffers bring that down to about 1.2 KB.
+  esp32-web-hal 1.0.2 and later then put HTTP requests in internal RAM; earlier versions answered every request
+  with 503.
 
 ## The PHP task stack
 
@@ -137,6 +153,27 @@ ESP32-S3 (see [Board files](../boards/board-files.md)); no board of the SDK does
 When the sources and the package partitions leave less than 1024K for the firmware, the build stops with
 `the project sources (...K) and the package partitions (...K) leave ...K for the firmware (at least 1024K): use a
 board with more flash or the microsd storage`.
+
+### What fits in 4 MB of flash
+
+On a 4 MB board the flash is the limit before the PSRAM. The `factory` partition is 3840K, and the app with
+every optional extension does not fit. Measured on `waveshare-esp32-s3-zero` with PHP 8.5.11 and `optimization`
+`size`:
+
+| What | App size |
+| --- | --- |
+| The engine: Zend, standard, pcre | about 853, 530 and 255 KB |
+| mbstring, plus oniguruma for `mbstring-regex` | 919 KB, plus 414 KB |
+| date | 534 KB |
+| SQLite, plus pdo, pdo_sqlite and sqlite3 | 387 KB, plus 70 KB |
+| opcache | 63 KB |
+| All thirteen extensions with `mbstring-regex` | 5.18 MB: does not fit |
+| Eleven extensions, all but mbstring and opcache | 3.82 MB: fits, 108 KB left |
+
+opcache is disabled at boot under 4 MB of PSRAM anyway, so leaving it out costs nothing. To fit mbstring, leave
+out others that weigh as much: date and the SQLite group together weigh more than mbstring. The
+[`log` option](./options.md#the-log-option) saves a little more: 75 KB at most with `none` in one measured
+project.
 
 ## Firmware size and the optimization option
 

@@ -86,7 +86,7 @@ the length of one event. See [Power saving](../reference/power-save.md) and the
 
 ## Example
 
-`new_examples/07-event-driven/event-driven-hello`: a timer event every second and a GPIO event on the BOOT
+`07-event-driven/event-driven-hello`: a timer event every second and a GPIO event on the BOOT
 button.
 
 <!-- @code-block language="json" label="composer.json" -->

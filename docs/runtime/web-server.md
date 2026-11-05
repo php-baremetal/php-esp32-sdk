@@ -120,7 +120,7 @@ requests, use `ext-web` in the [event-driven](./event-driven.md) runtime.
 
 ## Example
 
-`new_examples/08-network-web/web-server`: the Waveshare ESP32-P4-ETH board serves its sources from the microSD card.
+`08-network-web/web-server`: the Waveshare ESP32-P4-ETH board serves its sources from the microSD card.
 
 <!-- @code-block language="json" label="composer.json" -->
 ```json
@@ -167,7 +167,7 @@ echo "</body></html>\n";
 ```
 <!-- @endcode-block -->
 
-`new_examples/08-network-web/json-api` routes on `$_SERVER` and reads a JSON body from `php://input`:
+`08-network-web/json-api` routes on `$_SERVER` and reads a JSON body from `php://input`:
 
 <!-- @code-block language="php" label="project-src/index.php" -->
 ```php

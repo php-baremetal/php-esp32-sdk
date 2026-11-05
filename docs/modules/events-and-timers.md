@@ -48,8 +48,8 @@ The full signatures, options and exceptions are in the
 
 ## A timer and a button
 
-`new_examples/07-event-driven/event-driven-hello` is the example of the [event-driven](../runtime/event-driven.md)
-page. `new_examples/07-event-driven/gpio-interrupt` toggles an LED from the BOOT button (GPIO 0 on the
+`07-event-driven/event-driven-hello` is the example of the [event-driven](../runtime/event-driven.md)
+page. `07-event-driven/gpio-interrupt` toggles an LED from the BOOT button (GPIO 0 on the
 Waveshare ESP32-S3-Zero):
 
 <!-- @code-block language="json" label="composer.json, require and extra.baremetal" -->

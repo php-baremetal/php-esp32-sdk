@@ -59,7 +59,7 @@ See the [ext-web package](https://repository.php-baremetal.com/packages/php-bare
 
 ## HTTP as events
 
-`new_examples/07-event-driven/http-events` opens an access point, then serves a page, a JSON status and an echo.
+`07-event-driven/http-events` opens an access point, then serves a page, a JSON status and an echo.
 Its `composer.json` requires `ext-events`, `ext-wifi` and `ext-web` on the Waveshare ESP32-S3-Zero (N8R8) with
 `"runtime": "event-driven"`.
 
@@ -114,7 +114,7 @@ printf("AP '%s' up at %s -- join it and open http://%s/\n", AP_SSID, wifi_ap_ip(
 Register the listener and bring the network up before `serve_http()`, which throws without a network interface.
 `$requests` keeps counting between requests because the script never restarts.
 
-Two more examples in `new_examples/08-network-web`:
+Two more examples in `08-network-web`:
 
 - `sensor-webpage` (Waveshare ESP32-S3-Touch-LCD-1.85B): a listener reads an I2C magnetometer on each request and
   answers an HTML page that refreshes itself, or JSON at `/heading`. It ties Wi-Fi, HTTP and a sensor together;
@@ -124,7 +124,7 @@ Two more examples in `new_examples/08-network-web`:
 
 ## The same JSON API on the web-server runtime
 
-`new_examples/08-network-web/json-api` needs no extension: it runs fresh for each request on the
+`08-network-web/json-api` needs no extension: it runs fresh for each request on the
 [web-server](../runtime/web-server.md) runtime of a wired board and answers JSON.
 
 <!-- @code-block language="php" label="project-src/index.php" -->

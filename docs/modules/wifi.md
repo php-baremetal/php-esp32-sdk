@@ -60,7 +60,7 @@ details are in the [ext-wifi package](https://repository.php-baremetal.com/packa
 
 ## Join a network
 
-`new_examples/08-network-web/wifi-connect` scans, then connects with the credentials of the project's env file.
+`08-network-web/wifi-connect` scans, then connects with the credentials of the project's env file.
 Copy its `.env.example` to `.env` and fill it in; the file is baked into the firmware and read as `$_ENV`, and it
 stays out of the sources and out of git (see the
 [env file](https://github.com/php-baremetal/phpbm/blob/master/docs/guide/project.md)).
@@ -131,7 +131,7 @@ can come from [ext-store](./saving-data.md), for example collected by a setup pa
 
 ## Open an access point
 
-`new_examples/08-network-web/wifi-ap` opens a network and reports how many devices joined. Join it with a phone
+`08-network-web/wifi-ap` opens a network and reports how many devices joined. Join it with a phone
 or laptop: the board runs a DHCP server, and with the ESP-IDF defaults its own address is `192.168.4.1`.
 
 <!-- @code-block language="php" label="project-src/index.php" -->
@@ -163,7 +163,7 @@ An access point password shorter than 8 characters is not an error: the network 
 <!-- @endcallout -->
 
 For an access point with a web page on it, combine ext-wifi with [ext-web](./web.md) in the `event-driven`
-runtime: `new_examples/08-network-web/wifi-ap-s3-rgb-manage` serves a colour control page for the onboard RGB LED
+runtime: `08-network-web/wifi-ap-s3-rgb-manage` serves a colour control page for the onboard RGB LED
 over HTTP and WebSocket from the board's own access point.
 
 ## Behaviour on the board

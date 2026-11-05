@@ -92,7 +92,7 @@ An uncaught exception in `setup()`, `loop()` or the garbage collection follows `
 
 ## Example
 
-`new_examples/00-hello`: a loop that prints a line every five ticks and waits a second between calls.
+`00-hello`: a loop that prints a line every five ticks and waits a second between calls.
 
 <!-- @code-block language="json" label="composer.json" -->
 ```json

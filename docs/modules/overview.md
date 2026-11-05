@@ -29,8 +29,8 @@ How to create a project and flash it is in [Your first firmware](../getting-star
 
 ## Packages
 
-All packages are `php-baremetal/<name>`. The example folders are in the `new_examples` tree of the
-SDK repository.
+All packages are `php-baremetal/<name>`. The Examples column names each example by its category folder and
+project, such as `08-network-web/wifi-ap`.
 
 | Package | What it does | Page | Examples |
 | --- | --- | --- | --- |

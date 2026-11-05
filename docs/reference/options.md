@@ -69,7 +69,7 @@ in, so their text leaves the app. It does not change:
 - the backtrace printed by a crash;
 - the lines of the ROM and of the bootloader before the app starts.
 
-App size of `new_examples/08-network-web/wifi-ap-s3-rgb-manage` (`waveshare-esp32-s3-zero-n8r8`, PHP 8.5,
+App size of `08-network-web/wifi-ap-s3-rgb-manage` (`waveshare-esp32-s3-zero-n8r8`, PHP 8.5,
 `optimization` `size`):
 
 | `log` | App | Against `info` |
