@@ -75,9 +75,11 @@ If red and green come out swapped, the strip is not GRB: pass `Ws2812::RGB`. For
 
 Many boards carry one WS2812 on a data pin. The example `04-gpio-led/s3-rgb-show` runs a rainbow on the LED of the
 `waveshare-esp32-s3-zero-n8r8`, on GPIO 48. That LED is a single WS2812 in RGB order, so the order is passed
-explicitly. The pin differs on other boards (the example comment mentions 38 on some ESP32-S3 boards): check the
-schematic of yours. The `composer.json` requires `ext-sys`, `ext-led` and `led-ws2812`, with the `init-loop`
-runtime.
+explicitly. The pin and the colour order differ between boards: the `espressif-esp32-s3-devkitc-1-*` and
+`freenove-esp32-s3-wroom-lite-*` boards have a WS2812 on GPIO 48 in GRB order, and some ESP32-S3 boards use
+GPIO 38. On a board whose file has a `led` block, `Ws2812::onboard()` takes the pin and the order from it;
+otherwise check the schematic of yours. The `composer.json` requires `ext-sys`, `ext-led` and `led-ws2812`, with
+the `init-loop` runtime.
 
 <!-- @code-block language="php" label="04-gpio-led/s3-rgb-show/project-src/index.php" -->
 ```php

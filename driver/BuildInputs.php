@@ -6,6 +6,7 @@ namespace PhpBaremetal\Esp32;
 
 use PhpBaremetal\Spec\Manifest\Manifest;
 use PhpBaremetal\Spec\Sdk\BuildPlan;
+use PhpBaremetal\Spec\Sdk\Descriptor\Board;
 use PhpBaremetal\Spec\SpecException;
 
 final class BuildInputs
@@ -74,6 +75,7 @@ final class BuildInputs
             'APP_ENTRY' => $plan->entry(),
             'INCLUDE_DIR' => self::cmakePath("{$build}/include"),
             'ENV_C' => self::cmakePath("{$build}/env.c"),
+            'BOARD_C' => self::cmakePath("{$build}/phpbm_board.c"),
             'BOARD_SDKCONFIG' => self::cmakePath("{$build}/board.sdkconfig"),
             'SOURCES' => implode(';', array_keys($plan->sourceDirs)),
         ];
@@ -88,6 +90,7 @@ final class BuildInputs
         $vars['PHP_EXT_DEFINES'] = implode(';', $extensions->definitions());
         $vars['PHP_EXT_IDF_REQUIRES'] = implode(';', $extensions->idfRequires);
         self::checkSdmmcPins($plan);
+        $boardSource = self::boardSource($board);
         $peripherals = $board->peripherals;
         ksort($peripherals);
         $vars['PERIPHERALS'] = implode(';', array_keys($peripherals));
@@ -119,9 +122,11 @@ final class BuildInputs
         self::ensureDir($build);
         self::put("{$build}/board.sdkconfig", "CONFIG_ESPTOOLPY_FLASHSIZE_{$board->flash}=y\nCONFIG_ESPTOOLPY_FLASHSIZE=\"{$board->flash}\"\n");
         self::put("{$build}/env.c", $envSource);
+        self::put("{$build}/phpbm_board.c", $boardSource);
         self::ensureDir("{$build}/include");
         self::put("{$build}/include/phpbm_options.h", self::optionsHeader($plan, $network, $driver));
-        $packages->writeComponent("{$build}/" . Packages::COMPONENT);
+        // phpbm may still vendor a spec whose BuildPlan has no `fonts` property: read it defensively.
+        $packages->writeComponent("{$build}/" . Packages::COMPONENT, $plan->fonts ?? []);
         $table = "{$build}/" . PhpExtensions::TABLE;
         if ($extensions->extensions !== []) {
             self::put($table, $extensions->tableSource());
@@ -321,11 +326,71 @@ final class BuildInputs
         return "#include <stddef.h>\n\nconst char *const phpbm_env[] = {\n{$entries}    NULL,\n};\nconst size_t phpbm_env_count = " . count($env) . ";\n";
     }
 
+    /** The board blocks as a C table read by packages through bm_board.h. */
+    private static function boardSource(Board $board): string
+    {
+        $peripherals = $board->peripherals;
+        ksort($peripherals);
+        $entries = '';
+        foreach ($peripherals as $block => $keys) {
+            ksort($keys);
+            foreach ($keys as $key => $value) {
+                if (is_bool($value)) {
+                    $value = (int) $value;
+                }
+                if (is_int($value)) {
+                    $entries .= sprintf("    { \"%s\", \"%s\", true, %d, NULL },\n", self::c((string) $block), self::c((string) $key), $value);
+                } elseif (is_string($value)) {
+                    $entries .= sprintf("    { \"%s\", \"%s\", false, 0, \"%s\" },\n", self::c((string) $block), self::c((string) $key), self::c($value));
+                } elseif (is_float($value)) {
+                    throw new SpecException("board {$board->id}: {$block}.{$key} must be an integer or a string");
+                } else {
+                    self::scalar($board->id, "{$block}.{$key}", $value);
+                }
+            }
+        }
+        if ($entries === '') {
+            $entries = "    { NULL, NULL, false, 0, NULL },\n";
+        }
+        $id = self::c($board->id);
+        return <<<C
+            #include <stdbool.h>
+            #include <stddef.h>
+            #include <string.h>
+
+            typedef struct { const char *block, *key; bool is_int; int i; const char *s; } phpbm_board_value_t;
+
+            static const phpbm_board_value_t values[] = {
+            {$entries}};
+
+            const char *bm_board_id(void) { return "{$id}"; }
+
+            static const phpbm_board_value_t *find(const char *block, const char *key)
+            {
+                for (size_t i = 0; i < sizeof values / sizeof values[0]; i++) {
+                    if (!values[i].block) { continue; }
+                    if (strcmp(values[i].block, block) == 0 && strcmp(values[i].key, key) == 0) {
+                        return &values[i];
+                    }
+                }
+                return NULL;
+            }
+
+            const char *bm_board_type(const char *block) { const phpbm_board_value_t *v = find(block, "type"); return v ? v->s : NULL; }
+            bool bm_board_int(const char *block, const char *key, int *out) { const phpbm_board_value_t *v = find(block, key); if (!v || !v->is_int || !out) { return false; } *out = v->i; return true; }
+            const char *bm_board_str(const char *block, const char *key) { const phpbm_board_value_t *v = find(block, key); return v && !v->is_int ? v->s : NULL; }
+
+            C;
+    }
+
     private static function optionsHeader(BuildPlan $plan, string $network, string $driver): string
     {
         $sources = ['the sdk' => $plan->sdk->descriptor->options, "runtime {$plan->runtime->id}" => $plan->runtime->options, "storage {$plan->storage->id}" => $plan->storage->options];
         foreach ($plan->phpExtensions as $extension) {
             $sources["php extension {$extension->name}"] = $extension->options;
+        }
+        foreach ($plan->manifest->packages as $package) {
+            $sources["package {$package->name}"] = $package->options();
         }
         $declared = [];
         $owners = [];
@@ -388,7 +453,7 @@ final class BuildInputs
         return $header;
     }
 
-    private static function c(string $value): string
+    public static function c(string $value): string
     {
         $escaped = strtr($value, ['\\' => '\\\\', '"' => '\"', "\n" => '\n', "\r" => '\r', "\t" => '\t']);
         return (string) preg_replace_callback('/[\x00-\x1F\x7F]/', static fn (array $m): string => sprintf('\x%02x""', ord($m[0])), $escaped);

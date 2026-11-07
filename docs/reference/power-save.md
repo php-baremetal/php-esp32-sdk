@@ -7,7 +7,7 @@ see_also:
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/ext-sys', meta: 'Package', label: 'ext-sys' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/ext-events', meta: 'Package', label: 'ext-events' }
 prev: { label: 'Memory, flash and partitions', href: './memory-and-flash.md' }
-next: { label: 'Toolchain', href: './toolchain.md' }
+next: { label: 'Fonts', href: './fonts.md' }
 ---
 
 # Power saving
@@ -53,7 +53,7 @@ board wakes on a timer, an interrupt or network activity. Nothing changes in PHP
 | Cause | Detail |
 | --- | --- |
 | `init-loop` with `loop-interval` 0 | `loop()` never waits, so the board never sleeps. |
-| A USB data cable on the USB-Serial-JTAG console | The firmware sets `CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION` on purpose, otherwise the console port goes silent. To measure real sleep, power the board from 5 V without the data cable. The boards with this console are `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-zero` and `waveshare-esp32-s3-zero-n8r8`. |
+| A USB data cable on the USB-Serial-JTAG console | The firmware sets `CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION` on purpose, otherwise the console port goes silent. To measure real sleep, power the board from 5 V without the data cable. The boards with this console are `freenove-esp32-s3-wroom-lite-n16r8`, `freenove-esp32-s3-wroom-lite-n16r16`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-zero` and `waveshare-esp32-s3-zero-n8r8`. |
 | The W5500 network (`waveshare-esp32-s3-eth`) | The firmware forbids light sleep for as long as the W5500 runs, and prints `w5500: power save: no light sleep while the W5500 runs`. The W5500 signals a packet with an edge that cannot wake the chip, so a sleeping board answered pings in about 200 ms and HTTP requests in up to 1 s. Only the clock still scales. Light sleep would save little on this board anyway: the W5500 and its PHY draw most of the current (measured from 5 V: 127 mA with the USB data cable, 111 mA with light sleep, 122 mA with only the clock scaling). |
 | `power_hold()` | Forbids light sleep until the matching `power_release()`; the calls nest. In `event-driven` a hold still standing when an event's listeners return is released. |
 | Periodic work | An `every()` timer wakes the board each period; a button watch wakes it every 10 ms while it runs; an ext-i2c sampler wakes it once per sampling period for as long as it runs (esp32-executor 1.0.2 and later; earlier versions woke it every millisecond). |

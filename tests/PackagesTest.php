@@ -29,6 +29,12 @@ final class PackagesTest extends TestCase
         return PackageSpec::fromPackage(new Package($name, $type, '1.0.0', self::fixtures() . "/{$fixture}", $meta), '/project', sdkName: 'esp32');
     }
 
+    public function test_accepts_the_options_key(): void
+    {
+        $spec = self::spec('hello', ['options' => ['x-size' => ['type' => 'int', 'description' => 'X.', 'default' => 1, 'min' => 0, 'max' => 3]]]);
+        $this->assertInstanceOf(PackageSpec::class, $spec);
+    }
+
     public function test_builtin_modules_follow_the_php_minor(): void
     {
         $package = new Package('php-baremetal/x', 'bm-ext', '1.0.0', self::fixtures() . '/hello', ['module' => 'uri']);
@@ -62,6 +68,12 @@ final class PackagesTest extends TestCase
         $cfg = self::spec('cfg');
         self::assertSame([], $cfg->sources);
         self::assertSame([], $cfg->includeDirs);
+    }
+
+    public function test_accepts_board_blocks(): void
+    {
+        $spec = self::spec('hal', ['board-blocks' => ['led:ws2812']]);
+        self::assertSame(self::fixtures() . "/hal", $spec->dir);
     }
 
     public function test_full_contract(): void
@@ -115,7 +127,7 @@ final class PackagesTest extends TestCase
             'bad entry' => ['hello', ['module' => 'hello', 'entry' => 'a-b'], 'bm-ext', "package php-baremetal/esp32-x: 'entry' must be the C symbol of the zend_module_entry (omit it for hello_module_entry)"],
             'entry on a hal' => ['hal', ['entry' => 'x_module_entry'], 'bm-hal', "package php-baremetal/esp32-x: 'entry' is only allowed for type bm-ext, not bm-hal"],
             'unknown type' => ['hal', [], 'bm-extension', "package php-baremetal/esp32-x: unknown type 'bm-extension' (allowed: bm-ext, bm-hal, bm-lib, bm-php-ext)"],
-            'unknown key' => ['hal', ['src-dir' => 'src'], 'bm-hal', "package php-baremetal/esp32-x: unknown key 'src-dir' in extra.baremetal (allowed: defines, entry, idf-dependencies, idf-requires, include-dirs, module, partitions, platform, priority, register, registries, sdkconfig, sources)"],
+            'unknown key' => ['hal', ['src-dir' => 'src'], 'bm-hal', "package php-baremetal/esp32-x: unknown key 'src-dir' in extra.baremetal (allowed: board-blocks, defines, entry, fonts, idf-dependencies, idf-requires, include-dirs, module, options, partitions, platform, priority, register, registries, sdkconfig, sources)"],
             'priority not int' => ['hal', ['priority' => '1'], 'bm-hal', "package php-baremetal/esp32-x: 'priority' must be an integer"],
             'glob without matches' => ['hal', ['sources' => ['src/*.cpp']], 'bm-hal', "package php-baremetal/esp32-x: 'sources' pattern 'src/*.cpp' matches no file"],
             'missing file' => ['hal', ['sources' => ['src/c.c']], 'bm-hal', "package php-baremetal/esp32-x: 'sources' pattern 'src/c.c' matches no file"],
@@ -157,6 +169,9 @@ final class PackagesTest extends TestCase
             'hal platform not a name' => ['hal', ['platform' => 'ESP-32'], 'bm-hal', "package php-baremetal/esp32-x: 'platform' must be the platform name ([a-z][a-z0-9]*)"],
             'hal platform not the sdk' => ['hal', ['platform' => 'stm32'], 'bm-hal', "package php-baremetal/esp32-x: 'platform' is 'stm32' but the project's sdk is 'esp32'"],
             'platform on a lib' => ['lib', ['platform' => 'esp32'], 'bm-lib', "package php-baremetal/esp32-x: 'platform' is only allowed for type bm-hal, not bm-lib"],
+            'fonts not an object' => ['hal', ['fonts' => ['a.h']], 'bm-hal', "package php-baremetal/esp32-x: 'fonts' must be an object of font names to header paths"],
+            'fonts path not a string' => ['hal', ['fonts' => ['a' => 1]], 'bm-hal', "package php-baremetal/esp32-x: 'fonts' must be an object of font names to header paths"],
+            'fonts empty path' => ['hal', ['fonts' => ['a' => '']], 'bm-hal', "package php-baremetal/esp32-x: 'fonts' must be an object of font names to header paths"],
             'partition keys' => ['hal', ['partitions' => [['name' => 'p', 'size' => '4K']]], 'bm-hal', 'package php-baremetal/esp32-x: partitions[0] must have exactly the keys name, subtype and size'],
         ];
     }
@@ -242,6 +257,7 @@ final class PackagesTest extends TestCase
                     "{$f}/lib/src/lib.c"
                     "modules.c"
                     "registries.c"
+                    "fonts.c"
                 INCLUDE_DIRS
                     "{$f}/hal/src"
                     "{$f}/hello/src"
@@ -261,9 +277,10 @@ final class PackagesTest extends TestCase
                 "{$f}/lib/src/lib.c"
                 PROPERTIES OBJECT_DEPENDS "\${CMAKE_CURRENT_LIST_DIR}/stamps/php-baremetal__lib.stamp;\${CMAKE_CURRENT_LIST_DIR}/stamps/headers.stamp")
             set_source_files_properties("modules.c" "registries.c" PROPERTIES OBJECT_DEPENDS "\${CMAKE_CURRENT_LIST_DIR}/stamps/headers.stamp")
+            set_source_files_properties("fonts.c" PROPERTIES OBJECT_DEPENDS "\${CMAKE_CURRENT_LIST_DIR}/stamps/fonts.stamp;\${CMAKE_CURRENT_LIST_DIR}/stamps/headers.stamp")
 
             CMAKE, file_get_contents("{$dir}/CMakeLists.txt"));
-        self::assertSame(['headers.stamp', 'php-baremetal__esp32-hal.stamp', 'php-baremetal__hello.stamp', 'php-baremetal__lib.stamp'], array_map('basename', glob("{$dir}/stamps/*.stamp")));
+        self::assertSame(['fonts.stamp', 'headers.stamp', 'php-baremetal__esp32-hal.stamp', 'php-baremetal__hello.stamp', 'php-baremetal__lib.stamp'], array_map('basename', glob("{$dir}/stamps/*.stamp")));
 
         self::assertSame(<<<'C'
             /* Generated by phpbm from the project's packages. */
@@ -342,8 +359,9 @@ final class PackagesTest extends TestCase
         file_put_contents("{$dir}/idf_component.yml", "stale\n");
         (new Packages([]))->writeComponent($dir);
 
-        self::assertSame("idf_component_register(\n    SRCS\n        \"modules.c\"\n        \"registries.c\"\n    REQUIRES php\n    WHOLE_ARCHIVE)\n"
-            . "set_source_files_properties(\"modules.c\" \"registries.c\" PROPERTIES OBJECT_DEPENDS \"\${CMAKE_CURRENT_LIST_DIR}/stamps/headers.stamp\")\n", file_get_contents("{$dir}/CMakeLists.txt"));
+        self::assertSame("idf_component_register(\n    SRCS\n        \"modules.c\"\n        \"registries.c\"\n        \"fonts.c\"\n    REQUIRES php\n    WHOLE_ARCHIVE)\n"
+            . "set_source_files_properties(\"modules.c\" \"registries.c\" PROPERTIES OBJECT_DEPENDS \"\${CMAKE_CURRENT_LIST_DIR}/stamps/headers.stamp\")\n"
+            . "set_source_files_properties(\"fonts.c\" PROPERTIES OBJECT_DEPENDS \"\${CMAKE_CURRENT_LIST_DIR}/stamps/fonts.stamp;\${CMAKE_CURRENT_LIST_DIR}/stamps/headers.stamp\")\n", file_get_contents("{$dir}/CMakeLists.txt"));
         self::assertSame(<<<'C'
             /* Generated by phpbm from the project's packages. */
             #include <stddef.h>
@@ -549,6 +567,79 @@ final class PackagesTest extends TestCase
             const size_t bus_drivers_count = 3;
 
             C, $set->registriesSource());
+    }
+
+    private static function fontDir(): string
+    {
+        return BuildInputs::cmakePath(__DIR__ . '/fixtures/fonts');
+    }
+
+    public function test_generates_an_empty_fonts_table(): void
+    {
+        self::assertSame(<<<'C'
+            #include <stddef.h>
+
+            #ifndef DISPLAY_FONT_ENTRY_DEFINED
+            #define DISPLAY_FONT_ENTRY_DEFINED
+            struct display_font_entry { const char *name; const void *gfx; const void *ext; };
+            #endif
+            const struct display_font_entry display_fonts[1] = { { NULL, NULL, NULL } };
+            const size_t display_fonts_count = 0;
+
+            C, (new Packages([]))->fontsSource([]));
+    }
+
+    public function test_generates_the_fonts_table_in_name_order(): void
+    {
+        $dir = self::fontDir();
+        self::assertSame(<<<C
+            #include <stddef.h>
+            #define PROGMEM
+            #include "display_font.h"
+            #include "{$dir}/gfx-demo.h"
+            #include "{$dir}/ext-demo.h"
+
+            #ifndef DISPLAY_FONT_ENTRY_DEFINED
+            #define DISPLAY_FONT_ENTRY_DEFINED
+            struct display_font_entry { const char *name; const void *gfx; const void *ext; };
+            #endif
+            const struct display_font_entry display_fonts[] = {
+                { "ext-demo", NULL, &ext_demo },
+                { "gfx-demo", &GfxDemo, NULL },
+            };
+            const size_t display_fonts_count = 2;
+
+            C, (new Packages([]))->fontsSource(['gfx-demo' => "{$dir}/gfx-demo.h", 'ext-demo' => "{$dir}/ext-demo.h"]));
+    }
+
+    public function test_rejects_a_font_header_without_a_font(): void
+    {
+        $file = Plans::tempDir() . '/bad.h';
+        file_put_contents($file, "int x;\n");
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("font file '{$file}' is not a GFX font header");
+        (new Packages([]))->fontsSource(['bad' => $file]);
+    }
+
+    public function test_the_fonts_stamp_follows_the_header_contents(): void
+    {
+        $dir = Plans::tempDir() . '/phpbm_packages';
+        $copy = Plans::tempDir() . '/gfx.h';
+        copy(self::fontDir() . '/gfx-demo.h', $copy);
+        $set = new Packages([]);
+        $set->writeComponent($dir, ['gfx' => $copy]);
+        $before = file_get_contents("{$dir}/stamps/fonts.stamp");
+        self::assertFileExists("{$dir}/fonts.c");
+        file_put_contents($copy, "\n", FILE_APPEND);
+        $set->writeComponent($dir, ['gfx' => $copy]);
+        self::assertNotSame($before, file_get_contents("{$dir}/stamps/fonts.stamp"));
+        $set->writeComponent($dir);
+        self::assertStringContainsString('display_fonts_count = 0;', (string) file_get_contents("{$dir}/fonts.c"));
+    }
+
+    public function test_accepts_fonts_in_a_package(): void
+    {
+        self::assertSame('php-baremetal/esp32-x', self::spec('hal', ['fonts' => ['a' => 'fonts/a.h']])->name);
     }
 
     public function test_registries_are_sorted_and_accept_tagged_types(): void

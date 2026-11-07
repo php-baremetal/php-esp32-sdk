@@ -38,7 +38,7 @@ final class Plans
         self::$created = [];
     }
 
-    /** @param array{board?: string|Board, runtime?: string, storage?: string, env?: array<string,string>, sources?: array<string,string>, clean?: bool, options?: array<string,string|int|bool>, packages?: list<Package>, sdk?: \PhpBaremetal\Spec\Sdk\Sdk, php?: string, phpExtensions?: list<\PhpBaremetal\Spec\Sdk\Descriptor\PhpExtension>} $with */
+    /** @param array{board?: string|Board, runtime?: string, storage?: string, env?: array<string,string>, sources?: array<string,string>, clean?: bool, options?: array<string,string|int|bool>, packages?: list<Package>, sdk?: \PhpBaremetal\Spec\Sdk\Sdk, php?: string, phpExtensions?: list<\PhpBaremetal\Spec\Sdk\Descriptor\PhpExtension>, fonts?: array<string,string>} $with */
     public static function plan(array $with = []): BuildPlan
     {
         $sdk = $with['sdk'] ?? SdkDescriptorsTest::sdk();
@@ -81,6 +81,7 @@ final class Plans
             $with['clean'] ?? false,
             $options,
             $with['phpExtensions'] ?? [],
+            fonts: $with['fonts'] ?? [],
         );
     }
 }

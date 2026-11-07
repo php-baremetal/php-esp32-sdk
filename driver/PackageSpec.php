@@ -11,7 +11,7 @@ use PhpBaremetal\Spec\SpecException;
 final readonly class PackageSpec
 {
     public const TYPES = ['bm-ext', 'bm-hal', 'bm-lib', 'bm-php-ext'];
-    public const KEYS = ['defines', 'entry', 'idf-dependencies', 'idf-requires', 'include-dirs', 'module', 'partitions', 'platform', 'priority', 'register', 'registries', 'sdkconfig', 'sources'];
+    public const KEYS = ['board-blocks', 'defines', 'entry', 'fonts', 'idf-dependencies', 'idf-requires', 'include-dirs', 'module', 'options', 'partitions', 'platform', 'priority', 'register', 'registries', 'sdkconfig', 'sources'];
     public const PARTITION_SUBTYPES = ['nvs', 'nvs_keys', 'fat', 'spiffs', 'littlefs', 'coredump', 'efuse', 'undefined', 'phy'];
     public const RESERVED_PARTITIONS = ['factory', 'nvs', 'phy_init', 'storage'];
 
@@ -193,6 +193,17 @@ final readonly class PackageSpec
                 throw $fail("'idf-dependencies' names {$component} twice");
             }
             $idfDependencies[$component] = $constraint;
+        }
+
+        // Fonts reach the build resolved, in the BuildPlan: the declaration is only checked here.
+        $fonts = $meta['fonts'] ?? [];
+        if (!is_array($fonts) || ($fonts !== [] && array_is_list($fonts))) {
+            throw $fail("'fonts' must be an object of font names to header paths");
+        }
+        foreach ($fonts as $path) {
+            if (!is_string($path) || $path === '') {
+                throw $fail("'fonts' must be an object of font names to header paths");
+            }
         }
 
         $sdkconfig = null;

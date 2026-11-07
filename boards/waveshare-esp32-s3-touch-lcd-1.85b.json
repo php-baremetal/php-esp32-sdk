@@ -13,5 +13,7 @@
     },
     "network": {
         "type": "wifi"
-    }
+    },
+    "display": { "type": "st77916", "sclk": 40, "d0": 46, "d1": 45, "d2": 42, "d3": 41, "cs": 21, "rst": 3, "bl": 5, "width": 360, "height": 360, "te": 18 },
+    "i2c": { "type": "i2c", "sda": 11, "scl": 10 }
 }

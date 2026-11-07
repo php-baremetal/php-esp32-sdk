@@ -164,8 +164,9 @@ echo json_encode($reply, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n";
 
 - **One request at a time.** The HTTP server is one task on core 0 that never calls PHP: it reads the whole
   request, hands it to the reactor and waits. While PHP handles one request the server serves nothing else.
-- **The queue.** Requests share the 32-message event queue with every other event. A request that finds it full
-  is answered 503 at once; a WebSocket frame waits up to 2 s for room, then is dropped.
+- **Event slots.** Requests and frames take the same small event slots as every other event (ext-events option
+  `events-small`). A request that finds none free is answered 503 at once; a WebSocket frame waits up to 2 s
+  for one, then is dropped.
 - **Requests read in full.** The header block is limited to 2048 bytes (431), the body to `post_max_size` (413),
   and it must arrive within 10 s plus 1 s per 16 KB (408). The body is held in RAM.
 - **Headers.** Only eight request headers reach PHP: `Host`, `Content-Type`, `User-Agent`, `Accept`, `Cookie`,
@@ -217,6 +218,6 @@ Wi-Fi call such as `wifi_connect()` inside a handler counts against the same lim
 | `serve_http(): the server already runs on port ..` | The server was started on another port, also by `serve_ws()` (port 80). |
 | `serve_ws(): cannot register the WS handler` | The path is already registered, or every route slot is used. |
 | 500 `handler did not return a Response` | The first listener that returned an object did not return a `Response`. |
-| 503 for every request | The program has stopped (fatal error, `exit()`, restart), the queue is full, or no `Request` listener is registered. |
+| 503 for every request | The program has stopped (fatal error, `exit()`, restart), no event slot is free, or no `Request` listener is registered. |
 | 503 after a delay | No answer within `request-timeout` plus 5 s. |
 | `\ValueError` from `Response::header()` | An invalid header name, `Content-Length` or `Transfer-Encoding` (set by the server), or a value with CR, LF or NUL. |

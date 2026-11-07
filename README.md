@@ -69,6 +69,8 @@ project format and every command.
 | `espressif-esp32-s3-devkitc-1-n8r2` | Espressif ESP32-S3-DevKitC-1 (N8R2) | ESP32-S3 | Wi-Fi |
 | `espressif-esp32-s3-devkitc-1-n8r8` | Espressif ESP32-S3-DevKitC-1 (N8R8) | ESP32-S3 | Wi-Fi |
 | `espressif-esp32-s3-devkitc-1-n16r8` | Espressif ESP32-S3-DevKitC-1 (N16R8) | ESP32-S3 | Wi-Fi |
+| `freenove-esp32-s3-wroom-lite-n16r8` | Freenove ESP32-S3 WROOM Board Lite (N16R8) | ESP32-S3 | Wi-Fi |
+| `freenove-esp32-s3-wroom-lite-n16r16` | Freenove ESP32-S3 WROOM Board Lite (N16R16) | ESP32-S3 | Wi-Fi |
 | `waveshare-esp32-s3-zero` | Waveshare ESP32-S3-Zero | ESP32-S3 | Wi-Fi |
 | `waveshare-esp32-s3-zero-n8r8` | Waveshare ESP32-S3-Zero (N8R8) | ESP32-S3 | Wi-Fi |
 | `waveshare-esp32-s3-eth` | Waveshare ESP32-S3-ETH | ESP32-S3 | Ethernet (W5500) |

@@ -144,8 +144,8 @@ $imu->poll(hz: 10, depth: 32, event: SamplesReady::class);   // 10 Hz
 ```
 <!-- @endcode-block -->
 
-If the event queue is full the event is lost, but the sample stays in the ring, so a handler that calls `drain()`
-catches up. `05-i2c-sensors/imu-ws-stream` sends the samples to a browser over a WebSocket.
+If no event slot is free the event is dropped (and counted in `Events::stats()`), but the sample stays in the
+ring, so a handler that calls `drain()` catches up. `05-i2c-sensors/imu-ws-stream` sends the samples to a browser over a WebSocket.
 
 ## Bus::SYNC and Bus::CORE1
 
@@ -164,8 +164,8 @@ transactions serialised with them on one task. The example `05-i2c-sensors/i2c-c
 <!-- @callout variant="warning" title="Power saving" -->
 With the `power-save` option on, `new Bus(..., owner: Bus::CORE1)` throws
 `Bus::CORE1 is not available with the power-save option; use Bus::SYNC`. A sampler on a `SYNC` bus wakes
-the chip once per period, so the board never sleeps longer than `1000 / $hz` ms, and a sampler cannot be stopped:
-start one only when you need it. See [Power saving](../reference/power-save.md).
+the chip once per period, so the board never sleeps longer than `1000 / $hz` ms, and a running sampler keeps doing so:
+stop it with the `Poller` that `poll()` returns, and start one only when you need it. See [Power saving](../reference/power-save.md).
 <!-- @endcallout -->
 
 ## What the ESP32 does

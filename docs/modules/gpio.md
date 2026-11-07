@@ -150,7 +150,7 @@ idle, so it suits light sleep ([Power saving](../reference/power-save.md)).
 | `Call to undefined function delay()` | `delay()` comes from ext-sys |
 | An input reads 1 with nothing connected | The pull-up is on; wire the button to GND, or read an idle 1 as "not pressed" |
 | Nothing happens on a pin and the console shows an ESP-IDF error | The pin number is not a valid GPIO of the chip |
-| `watch_gpio(): unknown class '...' or too many sources` | The event class does not exist, or 16 source classes are already in use |
+| `watch_gpio(): unknown class '...' or too many sources` | The event class does not exist, or 32 source classes are already in use |
 | `Events::listen() must be called in setup(); the listener table is frozen afterwards` | Listeners can only be added while the script first runs in `event-driven` |
 
 The full API is on the [ext-gpio](https://repository.php-baremetal.com/packages/php-baremetal/ext-gpio) package

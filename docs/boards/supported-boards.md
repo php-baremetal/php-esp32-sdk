@@ -23,6 +23,8 @@ port. How a board file is built is in [Board files](./board-files.md).
 | `espressif-esp32-s3-devkitc-1-n16r8` | Espressif ESP32-S3-DevKitC-1 (N16R8) | ESP32-S3 | octal | 16 MB | uart |
 | `espressif-esp32-s3-devkitc-1-n8r2` | Espressif ESP32-S3-DevKitC-1 (N8R2) | ESP32-S3 | quad | 8 MB | uart |
 | `espressif-esp32-s3-devkitc-1-n8r8` | Espressif ESP32-S3-DevKitC-1 (N8R8) | ESP32-S3 | octal | 8 MB | uart |
+| `freenove-esp32-s3-wroom-lite-n16r8` | Freenove ESP32-S3 WROOM Board Lite (N16R8) | ESP32-S3 | octal | 16 MB | usb-jtag |
+| `freenove-esp32-s3-wroom-lite-n16r16` | Freenove ESP32-S3 WROOM Board Lite (N16R16) | ESP32-S3 | octal | 16 MB | usb-jtag |
 | `generic-esp32s3-quad` | ESP32-S3 (quad PSRAM, generic) | ESP32-S3 | quad | 4 MB | uart |
 | `generic-esp32s3-octal` | ESP32-S3 (octal PSRAM, generic) | ESP32-S3 | octal | 8 MB | uart |
 | `generic-esp32p4` | ESP32-P4 (generic) | ESP32-P4 | hex | 32 MB | uart |
@@ -36,6 +38,11 @@ port. How a board file is built is in [Board files](./board-files.md).
 
 The P4 boards also set `revision` to `v1` (see [Board files](./board-files.md)).
 
+The two Freenove ESP32-S3 WROOM Board Lite files differ only in the module: ESP32-S3-WROOM-1-N16R8 (8 MB of
+octal PSRAM) or ESP32-S3-WROOM-1-N16R16V (16 MB of octal PSRAM, 1.8 V; the firmware reads the PSRAM size and the
+voltage from the module). Both have an on-board WS2812 on GPIO 48 in GRB order (the `led` block), like the three
+Espressif ESP32-S3-DevKitC-1 boards, and the console on the native USB port. The N16R8 has been run; the N16R16 has not.
+
 ## Peripherals
 
 A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
@@ -45,6 +52,8 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
 | `espressif-esp32-s3-devkitc-1-n16r8` | none | `wifi` |
 | `espressif-esp32-s3-devkitc-1-n8r2` | none | `wifi` |
 | `espressif-esp32-s3-devkitc-1-n8r8` | none | `wifi` |
+| `freenove-esp32-s3-wroom-lite-n16r8` | none | `wifi` |
+| `freenove-esp32-s3-wroom-lite-n16r16` | none | `wifi` |
 | `generic-esp32s3-quad` | none | `wifi` |
 | `generic-esp32s3-octal` | none | `wifi` |
 | `generic-esp32p4` | none | none |

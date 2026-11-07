@@ -85,6 +85,53 @@ function loop(int $tick): void
 ```
 <!-- @endcode-block -->
 
+### Asynchronous flush
+
+`St77916` implements `Baremetal\Output\Display` (from `ext-display`): drawing calls write a framebuffer in memory
+and `flush()` sends the region that changed. `flush()` starts the transfer and returns at once, while the
+panel's DMA reads the framebuffer. On the Waveshare ESP32-S3-Touch-LCD-1.85B a full-frame `flush()` returns in
+about 1.5 ms and the transfer takes about 30 ms; a 60 x 60 square returns in about 0.6 ms and takes about 2 ms.
+
+- A drawing that touches rows not yet sent waits until they are; a drawing elsewhere does not wait.
+- A `flush()` while another is in flight is pending and starts when the first ends; at most one region is
+  pending, and another `flush()` merges into it.
+- `flushWait()` returns when nothing is in flight or pending. Call it before anything that must see the frame on
+  the panel. A wait longer than 2000 ms throws `\RuntimeException` `St77916: flush timed out`.
+- A transfer that fails throws its `push failed` error at the next call on the display.
+- `onFlushed(string $event)` raises a `Baremetal\Display\Flushed` subclass at the end of every region (`$x0`, `$y0`,
+  `$x1`, `$y1`, `$us`). `onVsync(string $event)` raises a `Baremetal\TimerEvent` subclass at every pulse of the
+  panel's TE pin, so the panel is the metronome of the animation. Both are event sources of `ext-events`.
+
+Two options of `St77916::onboard(string $block = 'display', bool $buffered = false, bool $vsync = false)` (and of
+the constructor, with `int $te = -1`) change how the flush behaves:
+
+| Option | Effect |
+| --- | --- |
+| `vsync: true` | Every region starts at the next TE pulse, so a region shorter than one frame is not torn. Needs the TE pin: `onboard()` reads the `te` key of the board's `display` block (GPIO 18 on this board), and without it the constructor throws `\ValueError` `vsync needs the TE pin (te:)`. |
+| `buffered: true` | A second framebuffer (259 200 bytes at 360 x 360): `flush()` copies the region there and the panel reads the copy, so drawing never waits. A full-frame `flush()` returns only after the copy (about 13.6 ms), so it pays off when drawing overlaps the transfer, not for `clear()` plus `flush()` of the whole screen (about 30 fps buffered against 34 fps without). |
+
+`onVsync()` needs the TE pin but not the `vsync` option. The example `06-display/display-vsync` runs a
+rectangle on `onVsync()` frames and prints the transfer time from `onFlushed()`; `06-display/display-hello-event-driven`
+uses `onVsync()` as its frame clock.
+
+<!-- @code-block language="php" label="the panel as metronome" -->
+```php
+<?php
+use Baremetal\Events;
+use Baremetal\Spi\Driver\St77916;
+use Baremetal\TimerEvent;
+
+final class Frame extends TimerEvent {}
+
+$lcd = St77916::onboard(vsync: true);
+$lcd->onVsync(Frame::class);
+Events::listen(Frame::class, function (Frame $e) use ($lcd): void {
+    $lcd->fillRect(0, 0, 60, 60, $lcd->rgb(255, 0, 0));
+    $lcd->flush(0, 0, 60, 60);   // returns before the transfer ends
+});
+```
+<!-- @endcode-block -->
+
 The panel memory is not cleared at start: call `fill()` first. The driver owns the wire, so `transfer()`, `write()`
 and `read()` on an `St77916` always fail with `ESP_ERR_INVALID_STATE`.
 

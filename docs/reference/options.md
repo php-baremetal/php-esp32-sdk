@@ -122,6 +122,38 @@ FAT stores modification times with a 2-second resolution, and without a set cloc
 time: a file rewritten within 2 seconds, or while the clock is unset, may not be detected.
 <!-- @endcallout -->
 
+## Package options
+
+A native package (`bm-ext`, `bm-hal`, `bm-lib`) declares its own options in `extra.baremetal.options` of its
+`composer.json`, in the same format as the SDK options: each name maps to an object with `type` (`int`, `bool` or
+`string`) and, for an `int`, `min`/`max`, or with `values` for an enum; plus a `description` and a `default`.
+
+```json
+{
+  "extra": {
+    "baremetal": {
+      "options": {
+        "demo-size": { "type": "int", "description": "Size.", "default": 2, "min": 1, "max": 16 }
+      }
+    }
+  }
+}
+```
+
+Every option name must start with the package's prefix followed by `-`: the module name for an extension, the
+package name without vendor and without `esp32-` for a HAL or a library (`acme/esp32-demo` gives `demo-`). A
+project sets the option under `extra.baremetal.options` like any other, and the build defines
+`PHPBM_OPTION_<NAME>` for it in `phpbm_options.h` (`PHPBM_OPTION_DEMO_SIZE`), with the same rules as above, including
+the `_<VALUE>` macros of an enum. The package's C code reads it like any define:
+
+```c
+#include "phpbm_options.h"
+
+#if PHPBM_OPTION_DEMO_SIZE > 8
+/* the large table */
+#endif
+```
+
 ## Validation errors
 
 phpbm checks `extra.baremetal.options` before it builds, and reports every problem at once under

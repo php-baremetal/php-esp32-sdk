@@ -22,6 +22,10 @@ default. Previews are not ready for use: anything can still change.
   version it uses in `phpbm.lock`.
 
 ### Added
+- Package options: native packages declare options; the build defines PHPBM_OPTION_<NAME> for each.
+- init-loop runtime: calls bm_events_service() of ext-events (when the firmware has it) after each loop(), so object releases run, the slots of undelivered events go back and event warnings are printed. Docs: events, web and I2C pages describe the event slots of ext-events 1.0.3 instead of a 32-message queue.
+- Fonts: the build compiles the fonts phpbm resolves (BuildPlan::$fonts) into the display_fonts[] table read by ext-display; packages may declare extra.baremetal.fonts.
+- Board blocks display, i2c and led (Waveshare ESP32-S3-Touch-LCD-1.85B, Waveshare ESP32-S3-Zero), readable by packages through bm_board.h; the build writes them into phpbm_board.c.
 - Runtimes `init-loop`, `event-driven` and `web-server`; storages `embedded` and `microsd`, the latter
   synced over the serial port with `phpbm sync`.
 - PHP 8.3, 8.4 and 8.5, each with the optional extensions bcmath, ctype, date, filter, mbstring, opcache,
@@ -31,11 +35,12 @@ default. Previews are not ready for use: anything can still change.
   (`init-loop`) and `init` / `port` (`web-server`).
 - Networks: on-chip Wi-Fi, Ethernet through the ESP32-P4 EMAC or a W5500, and Wi-Fi through an ESP32-C6
   companion.
-- Boards: Espressif ESP32-S3-DevKitC-1 (N8R2, N8R8, N16R8), Waveshare ESP32-S3-Zero (and N8R8),
-  ESP32-S3-ETH, ESP32-S3-Touch-LCD-1.85B, ESP32-P4-ETH, ESP32-P4-Pico, ESP32-P4-WIFI6, and generic
-  ESP32-S3 (quad or octal PSRAM) and ESP32-P4 boards.
+- Boards: Espressif ESP32-S3-DevKitC-1 (N8R2, N8R8, N16R8), Freenove ESP32-S3 WROOM Board Lite
+  (N16R8, N16R16), Waveshare ESP32-S3-Zero (and N8R8), ESP32-S3-ETH, ESP32-S3-Touch-LCD-1.85B, ESP32-P4-ETH,
+  ESP32-P4-Pico, ESP32-P4-WIFI6, and generic ESP32-S3 (quad or octal PSRAM) and ESP32-P4 boards.
 - `phpbm_runtime_request_scoped()` in the host API (`phpbm.h`), implemented by each runtime: true in
   `web-server`. esp32-events-hal 1.0.2 passes it to ext-events, which refuses event sources there.
+- Packages may declare extra.baremetal.board-blocks (used by phpbm to offer board features).
 - [Documentation](docs/overview.md) for users and for SDK development.
 
 ### Removed

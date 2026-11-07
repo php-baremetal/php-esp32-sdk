@@ -1,5 +1,5 @@
 include("$ENV{PHPBM_INPUTS}")
-set(_srcs "boot.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}")
+set(_srcs "boot.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}" "${PHPBM_BOARD_C}")
 set(_priv esp_pm esp_hw_support esp_driver_gpio esp_app_format esp_netif esp_event esp_timer fatfs)
 if(PHPBM_STORAGE STREQUAL "microsd")
     list(APPEND _srcs "sync.c")

@@ -5,7 +5,7 @@ see_also:
   - { href: 'https://github.com/php-baremetal/phpbm/blob/master/docs/guide/toolchains.md', meta: 'phpbm', label: 'phpbm toolchains guide' }
   - { href: './troubleshooting.md', meta: 'Reference' }
   - { href: 'https://github.com/php-baremetal/phpbm/blob/master/docs/reference/files-and-environment.md', meta: 'phpbm', label: 'Files and environment' }
-prev: { label: 'Power saving', href: './power-save.md' }
+prev: { label: 'Fonts', href: './fonts.md' }
 next: { label: 'Troubleshooting', href: './troubleshooting.md' }
 ---
 

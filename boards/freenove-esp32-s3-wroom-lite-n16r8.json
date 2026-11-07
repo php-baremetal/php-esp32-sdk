@@ -1,0 +1,15 @@
+{
+    "name": "Freenove ESP32-S3 WROOM Board Lite (N16R8)",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "16MB",
+    "console": "usb-jtag",
+    "network": {
+        "type": "wifi"
+    },
+    "led": {
+        "type": "ws2812",
+        "pin": 48,
+        "order": "grb"
+    }
+}

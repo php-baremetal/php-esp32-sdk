@@ -141,7 +141,7 @@ At boot the partition is mapped into memory and mounted read-only at `/app`. Wit
 | `generic-esp32s3-quad`, `waveshare-esp32-s3-zero` | 4 MB | quad |
 | `espressif-esp32-s3-devkitc-1-n8r2` | 8 MB | quad |
 | `espressif-esp32-s3-devkitc-1-n8r8`, `generic-esp32s3-octal`, `waveshare-esp32-s3-zero-n8r8` | 8 MB | octal |
-| `espressif-esp32-s3-devkitc-1-n16r8`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b` | 16 MB | octal |
+| `espressif-esp32-s3-devkitc-1-n16r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `freenove-esp32-s3-wroom-lite-n16r16`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b` | 16 MB | octal |
 | `generic-esp32p4`, `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `waveshare-esp32-p4-wifi6` | 32 MB | hex |
 
 <!-- @callout variant="note" title="Only 16 MB are used on a 32 MB board" -->

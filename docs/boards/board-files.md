@@ -80,20 +80,31 @@ the chip does not list is rejected when the SDK is loaded. Messages are listed a
 
 ## Peripheral blocks
 
-A block is named after a capability. Its `type` says which kind of that peripheral the board has, and it must be
-one the chip supports. `chips/<chip>/chip.json` lists the supported types:
+A block is named after a peripheral, and its `type` says which kind the board has. Two kinds of block exist:
+
+- **Blocks the SDK implements**, `microsd` and `network`: the firmware has its own code for each type, so the type
+  must be one the chip supports. `chips/<chip>/chip.json` lists them, and any other type is an error.
+- **Blocks read by packages**, such as `display`, `i2c` and `led`: the type is the name of a driver, checked by
+  the driver's `onboard()` when the script runs. The chip does not list them, so a new driver needs no SDK change.
+  Two blocks of the same kind take different names, for example `led` and `led-2`.
 
 | Chip | `microsd` types | `network` types |
 | --- | --- | --- |
 | `esp32s3` | `spi` | `w5500`, `wifi` |
 | `esp32p4` | `sdio` | `emac`, `wifi-c6` |
 
-A block the chip has no capability for, or a type it does not list, is an error. The block is also what makes a
-runtime or storage available: `storage: microsd` needs a `microsd` block, `runtime: web-server` needs a
-`network` block.
+The `microsd` and `network` blocks also make runtimes and storages available: `storage: microsd` needs a
+`microsd` block, `runtime: web-server` needs a `network` block.
+
+A device wired to the board by hand is not a board block: build it with its constructor and explicit pins, for
+example `new Ws2812(pin: 5, count: 30)`.
 
 All keys of a block other than `type` reach the build as `PHPBM_<BLOCK>_<KEY>` (upper case). A value must be a
 number, a string or a boolean.
+
+Packages read a block through `bm_board.h` (bm-common): the build writes every block into `phpbm_board.c`, and a
+package calls `bm_board_type()`, `bm_board_int()` or `bm_board_str()` with the block and key. Values must be
+integers (a boolean becomes 1 or 0) or strings there. Drivers offer `onboard()` to build from the board's block.
 
 ### microsd
 
@@ -115,6 +126,25 @@ Every `sdio` pin must be an integer from 0 to 54 (`pwr_en` may also be `-1`) whe
 
 [Network](../runtime/network.md) describes how each type is brought up.
 
+### display
+
+| Type | Keys | Notes |
+| --- | --- | --- |
+| `st77916` | `sclk`, `d0`, `d1`, `d2`, `d3`, `cs`, `rst`, `bl`, `width`, `height`, `te` | QSPI panel: clock, four data lines, chip select, reset, backlight, the size in pixels and the panel's TE (tearing effect) pin, which pulses once per refresh; `te` is optional; `onVsync()` and `St77916::onboard(vsync: true)` need it. Used by Waveshare ESP32-S3-Touch-LCD-1.85B (TE on GPIO 18). |
+
+### i2c
+
+| Type | Keys | Notes |
+| --- | --- | --- |
+| `i2c` | `sda`, `scl` | The board's on-board I2C bus (touch controller, sensors). Used by Waveshare ESP32-S3-Touch-LCD-1.85B. |
+
+### led
+
+| Type | Keys | Notes |
+| --- | --- | --- |
+| `ws2812` | `pin`, `order` | One addressable LED on `pin`; `order` is the colour order (`rgb`, `grb`). Used by Waveshare ESP32-S3-Zero (GPIO 48, `rgb`), Espressif ESP32-S3-DevKitC-1 and Freenove ESP32-S3 WROOM Board Lite (GPIO 48, `grb`). |
+| `sk6812` | `pin`, `order` | Same wiring as `ws2812`, for SK6812 LEDs. |
+
 ## Error messages
 
 | Message | Cause |
@@ -123,11 +153,12 @@ Every `sdio` pin must be an integer from 0 to 54 (`pwr_en` may also be `-1`) whe
 | `boards/x.json: 'microsd.type' must be a non-empty string` | A peripheral block without a `type`. |
 | `boards/x.json: chip 'abc' does not exist` | `chip` names no directory in `chips/`. |
 | `boards/x.json: chip 'esp32s3' does not support psram 'hex'` | The `psram` is not in the chip's list. |
-| `boards/x.json: chip 'esp32s3' does not support microsd 'sdio'` | The block, or its type, is not in the chip's capabilities. |
+| `boards/x.json: chip 'esp32s3' does not support microsd 'sdio'` | A `microsd` or `network` type the chip does not list. |
 | `board x: unsupported flash size '16' (use e.g. 4MB)` | `flash` is not a whole number followed by `MB`. |
 | `board x: chip 'esp32s3' has no revision 'v1'` | `revision` with no matching fragment for the chip. |
 | `board x: chip 'esp32p4' does not support flash-mode 'octal'` | `flash-mode` with no matching fragment for the chip. |
 | `board x: microsd.clk must be a GPIO number from 0 to 54` | An `sdio` pin outside the range, with `microsd` storage. |
 | `board x: network.cs must be a number or a string` | A block value that is an array or an object. |
+| `board x: led.gain must be an integer or a string` | A block value that is a decimal number: `phpbm_board.c` holds integers and strings only. |
 
 To change a pin in a project without editing the board file, use [board overrides](./board-overrides.md).

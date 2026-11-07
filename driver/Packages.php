@@ -13,6 +13,7 @@ final readonly class Packages
     public const COMPONENT = 'phpbm_packages';
     public const STAMPS = 'stamps';
     public const HEADERS_STAMP = 'headers';
+    public const FONTS_STAMP = 'fonts';
 
     /**
      * @param list<PackageSpec>                  $specs                    sorted by name
@@ -234,13 +235,15 @@ final readonly class Packages
         return $dependencies;
     }
 
-    public function writeComponent(string $dir): void
+    /** @param array<string,string> $fonts font name => absolute path of a GFX font header */
+    public function writeComponent(string $dir, array $fonts = []): void
     {
         BuildInputs::ensureDir($dir);
-        $this->writeStamps("{$dir}/" . self::STAMPS);
+        $this->writeStamps("{$dir}/" . self::STAMPS, $fonts);
         BuildInputs::put("{$dir}/CMakeLists.txt", $this->cmakeLists());
         BuildInputs::put("{$dir}/modules.c", $this->modulesSource());
         BuildInputs::put("{$dir}/registries.c", $this->registriesSource());
+        BuildInputs::put("{$dir}/fonts.c", $this->fontsSource($fonts));
         $yaml = $this->componentManifest();
         if ($yaml === null) {
             if (is_file("{$dir}/idf_component.yml") && !@unlink("{$dir}/idf_component.yml")) {
@@ -256,10 +259,10 @@ final readonly class Packages
      * their files' mtimes (composer reinstall, archives), so ninja alone can keep objects of an older copy:
      * the sources depend on these stamps, which are rewritten (new mtime) only when the content changes.
      */
-    public function writeStamps(string $dir): void
+    public function writeStamps(string $dir, array $fonts = []): void
     {
         BuildInputs::ensureDir($dir);
-        $stamps = [self::HEADERS_STAMP . '.stamp' => $this->headersHash() . "\n"];
+        $stamps = [self::HEADERS_STAMP . '.stamp' => $this->headersHash() . "\n", self::FONTS_STAMP . '.stamp' => self::fontsHash($fonts) . "\n"];
         foreach ($this->specs as $spec) {
             if ($spec->sources !== []) {
                 $stamps[self::stampName($spec) . '.stamp'] = self::packageHash($spec) . "\n";
@@ -289,6 +292,20 @@ final readonly class Packages
         $hash = hash_init('sha256');
         hash_update($hash, "{$spec->name}\0{$spec->version}\0");
         self::hashFiles($hash, $spec->dir, $files);
+        return hash_final($hash);
+    }
+
+    /** @param array<string,string> $fonts */
+    public static function fontsHash(array $fonts): string
+    {
+        ksort($fonts, SORT_STRING);
+        $hash = hash_init('sha256');
+        foreach ($fonts as $name => $path) {
+            $content = @file_get_contents($path);
+            hash_update($hash, $content === false
+                ? "{$name}\0missing\0"
+                : "{$name}\0" . strlen($content) . "\0" . hash('sha256', $content) . "\0");
+        }
         return hash_final($hash);
     }
 
@@ -373,7 +390,7 @@ final readonly class Packages
             $properties .= " OBJECT_DEPENDS \"{$stamp(self::stampName($spec))};{$headers}\")\n";
         }
         $cmake = "idf_component_register(\n    SRCS\n";
-        foreach ([...$sources, 'modules.c', 'registries.c'] as $source) {
+        foreach ([...$sources, 'modules.c', 'registries.c', 'fonts.c'] as $source) {
             $cmake .= "        {$q($source)}\n";
         }
         if ($includes !== []) {
@@ -384,6 +401,7 @@ final readonly class Packages
         }
         $cmake .= '    REQUIRES ' . implode(' ', $this->idfRequires()) . "\n    WHOLE_ARCHIVE)\n";
         $properties .= "set_source_files_properties(\"modules.c\" \"registries.c\" PROPERTIES OBJECT_DEPENDS \"{$headers}\")\n";
+        $properties .= "set_source_files_properties(\"fonts.c\" PROPERTIES OBJECT_DEPENDS \"{$stamp(self::FONTS_STAMP)};{$headers}\")\n";
         return $cmake . $properties;
     }
 
@@ -440,6 +458,33 @@ final readonly class Packages
             $source .= "    NULL,\n};\nconst size_t {$registry}_count = " . count($symbols) . ";\n";
         }
         return $source;
+    }
+
+    /**
+     * The table ext-display reads: GFX fonts (const GFXfont) and ext fonts (const display_font_t), by name.
+     *
+     * @param array<string,string> $fonts font name => absolute path of the font header
+     */
+    public function fontsSource(array $fonts): string
+    {
+        $includes = '';
+        $rows = [];
+        foreach ($fonts as $name => $path) {
+            $content = @file_get_contents($path);
+            if ($content === false || !preg_match('/\bconst\s+(GFXfont|display_font_t)\s+([A-Za-z_]\w*)/', $content, $match)) {
+                throw new SpecException("font file '{$path}' is not a GFX font header");
+            }
+            $includes .= '#include "' . BuildInputs::c(BuildInputs::cmakePath($path)) . "\"\n";
+            $rows[$name] = '    { "' . BuildInputs::c($name) . '", ' . ($match[1] === 'GFXfont' ? "&{$match[2]}, NULL" : "NULL, &{$match[2]}") . " },\n";
+        }
+        ksort($rows, SORT_STRING);
+        $struct = "#ifndef DISPLAY_FONT_ENTRY_DEFINED\n#define DISPLAY_FONT_ENTRY_DEFINED\n"
+            . "struct display_font_entry { const char *name; const void *gfx; const void *ext; };\n#endif\n";
+        if ($fonts === []) {
+            return "#include <stddef.h>\n\n{$struct}const struct display_font_entry display_fonts[1] = { { NULL, NULL, NULL } };\nconst size_t display_fonts_count = 0;\n";
+        }
+        return "#include <stddef.h>\n#define PROGMEM\n#include \"display_font.h\"\n{$includes}\n{$struct}"
+            . "const struct display_font_entry display_fonts[] = {\n" . implode('', $rows) . "};\nconst size_t display_fonts_count = " . count($fonts) . ";\n";
     }
 
     public function componentManifest(): ?string

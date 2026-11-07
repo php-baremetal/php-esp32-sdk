@@ -100,7 +100,7 @@ final class SdkDescriptorsTest extends TestCase
     public function test_every_board_loads(): void
     {
         $boards = self::sdk()->boards;
-        self::assertCount(13, $boards);
+        self::assertCount(15, $boards);
         self::assertSame(['microsd' => 'spi', 'network' => 'w5500'], $boards['waveshare-esp32-s3-eth']->capabilities());
         self::assertSame(14, $boards['waveshare-esp32-s3-eth']->peripherals['network']['cs']);
         self::assertSame('octal', $boards['waveshare-esp32-s3-eth']->psram);
@@ -113,6 +113,15 @@ final class SdkDescriptorsTest extends TestCase
         }
         self::assertSame(['network' => 'wifi'], $boards['generic-esp32s3-quad']->capabilities());
         self::assertSame('4MB', $boards['generic-esp32s3-quad']->flash);
+        self::assertEqualsCanonicalizing(['display' => 'st77916', 'i2c' => 'i2c', 'microsd' => 'spi', 'network' => 'wifi'], $boards['waveshare-esp32-s3-touch-lcd-1.85b']->capabilities());
+        self::assertSame(360, $boards['waveshare-esp32-s3-touch-lcd-1.85b']->peripherals['display']['width']);
+        foreach (['espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8', 'espressif-esp32-s3-devkitc-1-n16r8', 'freenove-esp32-s3-wroom-lite-n16r8', 'freenove-esp32-s3-wroom-lite-n16r16'] as $id) {
+            self::assertEqualsCanonicalizing(['led' => 'ws2812', 'network' => 'wifi'], $boards[$id]->capabilities(), $id);
+            self::assertSame(['type' => 'ws2812', 'pin' => 48, 'order' => 'grb'], $boards[$id]->peripherals['led'], $id);
+        }
+        foreach (['waveshare-esp32-s3-zero', 'waveshare-esp32-s3-zero-n8r8'] as $id) {
+            self::assertEqualsCanonicalizing(['led' => 'ws2812', 'network' => 'wifi'], $boards[$id]->capabilities(), $id);
+        }
     }
 
     public function test_the_sdk_declares_the_firmware_options(): void

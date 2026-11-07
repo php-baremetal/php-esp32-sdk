@@ -32,6 +32,7 @@
   - [PHP versions and extensions](./reference/php.md)
   - [Memory, flash and partitions](./reference/memory-and-flash.md)
   - [Power saving](./reference/power-save.md)
+  - [Fonts](./reference/fonts.md)
   - [Toolchain](./reference/toolchain.md)
   - [Troubleshooting](./reference/troubleshooting.md)
 - SDK development

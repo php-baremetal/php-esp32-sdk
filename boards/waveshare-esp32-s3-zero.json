@@ -6,5 +6,6 @@
     "console": "usb-jtag",
     "network": {
         "type": "wifi"
-    }
+    },
+    "led": { "type": "ws2812", "pin": 48, "order": "rgb" }
 }

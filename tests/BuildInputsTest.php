@@ -62,6 +62,7 @@ final class BuildInputsTest extends TestCase
             set(PHPBM_APP_ENTRY "index.php")
             set(PHPBM_INCLUDE_DIR "{$build}/include")
             set(PHPBM_ENV_C "{$build}/env.c")
+            set(PHPBM_BOARD_C "{$build}/phpbm_board.c")
             set(PHPBM_BOARD_SDKCONFIG "{$build}/board.sdkconfig")
             set(PHPBM_SOURCES "sqlite")
             set(PHPBM_SOURCE_SQLITE "/cache/trees/sqlite-1")
@@ -93,6 +94,29 @@ final class BuildInputsTest extends TestCase
         self::assertFileExists("{$build}/phpbm_packages/CMakeLists.txt");
         self::assertStringContainsString('const int phpbm_package_module_count = 0;', (string) file_get_contents("{$build}/phpbm_packages/modules.c"));
         self::assertSame("CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y\nCONFIG_ESPTOOLPY_FLASHSIZE=\"16MB\"\n", file_get_contents("{$build}/board.sdkconfig"));
+    }
+
+    public function test_writes_the_fonts_of_the_plan(): void
+    {
+        $font = Plans::tempDir() . '/gfx-demo.h';
+        copy(__DIR__ . '/fixtures/fonts/gfx-demo.h', $font);
+        $plan = Plans::plan(['fonts' => ['gfx-demo' => $font]]);
+        BuildInputs::write($plan);
+        $source = (string) file_get_contents("{$plan->buildDir}/phpbm_packages/fonts.c");
+        self::assertStringContainsString("{ \"gfx-demo\", &GfxDemo, NULL },", $source);
+        self::assertStringContainsString('display_fonts_count = 1;', $source);
+    }
+
+    public function test_writes_package_options_into_the_header(): void
+    {
+        $demo = new Package('acme/esp32-demo', 'bm-hal', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['platform' => 'esp32', 'options' => [
+            'demo-size' => ['type' => 'int', 'description' => 'Size.', 'default' => 2, 'min' => 1, 'max' => 16],
+            'demo-mode' => ['type' => 'enum', 'description' => 'Mode.', 'values' => ['fast', 'slow'], 'default' => 'fast'],
+        ]]);
+        $plan = Plans::plan(['packages' => [$demo], 'options' => ['demo-size' => 4]]);
+        BuildInputs::write($plan);
+        $header = (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
+        self::assertStringContainsString("#define PHPBM_OPTION_DEMO_MODE \"fast\"\n#define PHPBM_OPTION_DEMO_MODE_FAST 1\n#define PHPBM_OPTION_DEMO_MODE_SLOW 0\n#define PHPBM_OPTION_DEMO_SIZE 4\n", $header);
     }
 
     public function test_writes_the_options_header(): void
@@ -565,6 +589,68 @@ final class BuildInputsTest extends TestCase
             const size_t phpbm_env_count = 1;
 
             C, file_get_contents($plan->buildDir . '/env.c'));
+    }
+
+    public function test_writes_the_board_blocks_for_the_packages(): void
+    {
+        $board = self::board(['peripherals' => [
+            'led' => ['type' => 'ws2812', 'pin' => 48, 'order' => 'rgb', 'invert' => true],
+            'display' => ['type' => 'st77916', 'width' => 360, 'bl' => 5],
+        ]])->withOverrides(['display' => ['bl' => 7]]);
+        $plan = Plans::plan(['board' => $board]);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        self::assertStringContainsString('set(PHPBM_DISPLAY_BL "7")', $inputs);
+        self::assertStringContainsString('set(PHPBM_LED_PIN "48")', $inputs);
+        self::assertSame(<<<'C'
+            #include <stdbool.h>
+            #include <stddef.h>
+            #include <string.h>
+
+            typedef struct { const char *block, *key; bool is_int; int i; const char *s; } phpbm_board_value_t;
+
+            static const phpbm_board_value_t values[] = {
+                { "display", "bl", true, 7, NULL },
+                { "display", "type", false, 0, "st77916" },
+                { "display", "width", true, 360, NULL },
+                { "led", "invert", true, 1, NULL },
+                { "led", "order", false, 0, "rgb" },
+                { "led", "pin", true, 48, NULL },
+                { "led", "type", false, 0, "ws2812" },
+            };
+
+            const char *bm_board_id(void) { return "waveshare-esp32-s3-eth"; }
+
+            static const phpbm_board_value_t *find(const char *block, const char *key)
+            {
+                for (size_t i = 0; i < sizeof values / sizeof values[0]; i++) {
+                    if (!values[i].block) { continue; }
+                    if (strcmp(values[i].block, block) == 0 && strcmp(values[i].key, key) == 0) {
+                        return &values[i];
+                    }
+                }
+                return NULL;
+            }
+
+            const char *bm_board_type(const char *block) { const phpbm_board_value_t *v = find(block, "type"); return v ? v->s : NULL; }
+            bool bm_board_int(const char *block, const char *key, int *out) { const phpbm_board_value_t *v = find(block, key); if (!v || !v->is_int || !out) { return false; } *out = v->i; return true; }
+            const char *bm_board_str(const char *block, const char *key) { const phpbm_board_value_t *v = find(block, key); return v && !v->is_int ? v->s : NULL; }
+
+            C, file_get_contents($plan->buildDir . '/phpbm_board.c'));
+    }
+
+    public function test_a_board_without_blocks_gets_a_sentinel(): void
+    {
+        $plan = Plans::plan(['board' => self::board(['peripherals' => []])]);
+        BuildInputs::write($plan);
+        self::assertStringContainsString("values[] = {\n    { NULL, NULL, false, 0, NULL },\n};", (string) file_get_contents($plan->buildDir . '/phpbm_board.c'));
+    }
+
+    public function test_a_float_board_value_is_rejected_in_the_c_table(): void
+    {
+        $plan = Plans::plan(['board' => self::board(['peripherals' => ['led' => ['type' => 'ws2812', 'gain' => 1.5]]])]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage('board waveshare-esp32-s3-eth: led.gain must be an integer or a string');
+        BuildInputs::write($plan);
     }
 
     public function test_empty_env(): void

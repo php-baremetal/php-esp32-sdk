@@ -5,5 +5,10 @@
     "flash": "8MB",
     "network": {
         "type": "wifi"
+    },
+    "led": {
+        "type": "ws2812",
+        "pin": 48,
+        "order": "grb"
     }
 }

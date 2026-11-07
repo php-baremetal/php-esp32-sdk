@@ -31,7 +31,7 @@ and does not need ext-events.
 
 | Network type | Boards | ext-wifi |
 | --- | --- | --- |
-| `wifi` | `espressif-esp32-s3-devkitc-1-n16r8`, `-n8r2`, `-n8r8`, `generic-esp32s3-quad`, `generic-esp32s3-octal`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-zero`, `waveshare-esp32-s3-zero-n8r8` | Required to get any network |
+| `wifi` | `espressif-esp32-s3-devkitc-1-n16r8`, `-n8r2`, `-n8r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `-n16r16`, `generic-esp32s3-quad`, `generic-esp32s3-octal`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-zero`, `waveshare-esp32-s3-zero-n8r8` | Required to get any network |
 | `wifi-c6` | `waveshare-esp32-p4-wifi6`: an ESP32-C6 companion chip over SDIO | Required; the firmware starts the link to the companion whenever ext-wifi is installed |
 | `w5500` | `waveshare-esp32-s3-eth`: wired, and the ESP32-S3 has a radio | Optional: Wi-Fi then runs next to Ethernet |
 | none or wired without a radio | `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `generic-esp32p4` | Not supported: the build fails with `board '...' has no Wi-Fi: remove php-baremetal/ext-wifi` |
@@ -45,14 +45,17 @@ builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet.
 
 | Function | Returns | Meaning |
 | --- | --- | --- |
-| `wifi_scan()` | `array` or `false` | Networks in range, up to 48: `ssid`, `bssid`, `rssi`, `channel`, `auth`. |
-| `wifi_connect(string $ssid, ?string $password = null, int $timeout_ms = 30000)` | `bool` | Join a network and wait for an IP address. |
+| `wifi_scan(bool $wait = true)` | `array` or `bool` | Networks in range, up to 48: `ssid`, `bssid`, `rssi`, `channel`, `auth`. With `wait: false` it starts the scan and returns `true`; the result comes as `ScanDone`. |
+| `wifi_connect(string $ssid, ?string $password = null, int $timeout_ms = 30000, bool $wait = true, int $retries = 10)` | `bool` | Join a network. By default it waits for an IP address; with `wait: false` it returns at once and the outcome comes as events. `$retries` is how many times the driver retries a failed or dropped association (`-1` forever); two password refusals in a row give up at once. |
 | `wifi_disconnect()` | `bool` | Leave the network. |
 | `wifi_connected()` | `bool` | Whether the station has an IP address. |
+| `wifi_state()`, `wifi_ssid()` | `Baremetal\Wifi\State`, `?string` | `idle`, `connecting`, `connected` or `online`, and the network asked for. |
+| `wifi_events()` | `Baremetal\Wifi\Events` | Turns on the Wi-Fi events (`event-driven` runtime). |
 | `wifi_ip()`, `wifi_rssi()` | `?string`, `?int` | Station address and signal in dBm; `null` when not connected. |
 | `wifi_ap_start(string $ssid, ?string $password = null, int $channel = 1, int $max_conn = 4)` | `bool` | Open the board's own network. |
 | `wifi_ap_stop()` | `bool` | Close it. |
 | `wifi_ap_ip()`, `wifi_ap_clients()` | `?string`, `int` | Access point address and number of joined stations. |
+| `wifi_ap_active()` | `bool` | Whether the access point is up. |
 | `wifi_available()` | `bool` | Whether the radio comes up. |
 
 No function throws for a Wi-Fi failure: each reports it in its return value. Signatures and the other
@@ -166,12 +169,24 @@ For an access point with a web page on it, combine ext-wifi with [ext-web](./web
 runtime: `08-network-web/wifi-ap-s3-rgb-manage` serves a colour control page for the onboard RGB LED
 over HTTP and WebSocket from the board's own access point.
 
+## Events
+
+In the `event-driven` runtime, `wifi_events()` makes the radio report what happens instead of being polled:
+`StateChanged`, `Online`, `ConnectFailed`, `Disconnected` and `ScanDone` for the station, `ApStarted`,
+`ApStopped`, `ClientJoined` and `ClientLeft` for the access point. Pair it with `wifi_scan(wait: false)` and
+`wifi_connect(..., wait: false, retries: -1)` (started from the `ScanDone` listener: the driver refuses a scan
+while the station joins) and nothing blocks while the board joins and keeps rejoining a network. A start the
+driver refuses returns `false` and raises no event. `08-network-web/wifi-events` prints every event. The classes, the states and the failure reasons are
+in the ext-wifi package, page `usage/events.md`. `wifi_events()` throws in the `web-server` runtime, where no
+events are delivered.
+
 ## Behaviour on the board
 
 - **Blocking.** `wifi_scan()` waits up to 15 s and `wifi_connect()` up to `$timeout_ms` (a value of 0 or less
-  means 30000; 15000 before ext-wifi 1.0.2). The script is blocked meanwhile: under `init-loop` the next
+  means 30000; 15000 before ext-wifi 1.0.2). The script is blocked while it waits: under `init-loop` the next
   `loop()` runs after the call; under `event-driven` no event is delivered, and HTTP requests queue up and may
-  time out. The other functions return within milliseconds.
+  time out. With `wait: false` both return at once and the outcome comes as events (`ScanDone`, `Online`,
+  `ConnectFailed`). The other functions return within milliseconds.
 - **The first call sets up the radio.** The first `wifi_available()`, scan, connect or access point call initialises the `nvs`
   partition and the Wi-Fi driver. If the partition is full or in a newer format it is erased and formatted
   again. If setup fails, every function reports failure (`false`, `null` or `0`).
@@ -179,10 +194,15 @@ over HTTP and WebSocket from the board's own access point.
   If the executor queue stays full for 1 s the call fails.
 - **Connecting.** All channels are scanned and the strongest access point with that SSID is chosen. With a
   password the minimum is WPA2-PSK, and WPA3 is accepted. The SSID is 1 to 32 bytes and the password 8 to 63
-  characters or 64 hex digits; a longer value or a NUL byte throws `\ValueError`. A dropped association during the attempt is retried up to 10 times.
-- **When the link drops.** The driver reconnects on its own, up to 10 times, and the count starts again at
-  every address it gets; after 10 failures in a row (about 25 s) the station stays down. Watch `wifi_connected()` and call
-  `wifi_connect()` again.
+  characters or 64 hex digits; a longer value or a NUL byte throws `\ValueError`. A failed or dropped
+  association is retried up to `$retries` times (10 by default, `-1` forever), except a refused password:
+  while the connect has never had an address, two refusals in a row give up at once (`ConnectFailed` with
+  `wrong-password`), whatever `$retries` is. A single refusal is retried, because a weak link can cause one
+  with a correct password; before ext-wifi 1.1.0 a wrong password was retried up to 10 times.
+- **When the link drops.** The driver reconnects on its own, up to `$retries` times (10 by default), and the
+  count starts again at every address it gets; with the default, after 10 failures in a row (about 25 s) the
+  station stays down (`ConnectFailed` in `event-driven` with `wifi_events()`). Watch `wifi_connected()` and
+  call `wifi_connect()` again, or pass `retries: -1` to `wifi_connect()` to keep trying forever.
 - **Credentials stay in RAM.** The driver does not write SSIDs or passwords to flash.
 - **Access point.** The radio follows the station's channel while the station is connected. `$max_conn`
   defaults to 4.
@@ -215,7 +235,8 @@ echo "online at ", wifi_ip(), "\n";
 ```
 <!-- @endcode-block -->
 
-With `event-driven` and ext-web, connect or open the access point in the entry script before `serve_http()`.
+With `event-driven` and ext-web, connect or open the access point in the entry script before `serve_http()`;
+a `wifi_connect(..., wait: false)` there returns before the address exists, so use the blocking form.
 
 ## Common errors
 

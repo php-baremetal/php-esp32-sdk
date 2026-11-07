@@ -48,6 +48,7 @@ firmware image built with ESP-IDF v6.1.
 | Options | `network`, `on-error`, `restart-delay`, `firmware-reserve`, `optimization`, `power-save`, `request-timeout`; runtimes add `loop-interval`, `port` and `init` ([Options](./reference/options.md)) |
 
 Memory, flash layout and the partition table are in [Memory, flash and partitions](./reference/memory-and-flash.md);
+fonts for ext-display are in [Fonts](./reference/fonts.md);
 the toolchain phpbm installs for the SDK is in [Toolchain](./reference/toolchain.md).
 
 ## Requirements

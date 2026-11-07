@@ -36,10 +36,11 @@ requires ext-events, so the build fails without it. `ext-i2c` and `ext-web` brin
 | `Baremetal\Event` | Base class of every event. `$device` holds the object that raised it, or `null`. |
 | `Events::listen(string $event, callable $listener)` | Register a listener for one exact class. Returning `false` stops the later listeners of that event. |
 | `Events::now(Event $event)` | Deliver at once, on the caller's stack. |
-| `Events::dispatch(Event $event)` | Deliver breadth-first: events dispatched by listeners run after the current batch. |
-| `every(int $ms, string $event)` | Raise `$event` every `$ms` milliseconds. |
-| `watch_gpio(int $pin, string $event)` | Raise `$event` on each falling edge of `$pin`, with a 200 ms debounce. |
-| `watch_button(int $pin, array $on, array $opts = [])` | Raise events for button gestures: `pressed`, `released`, `held`, `click`, `repeat`, `double`. |
+| `Events::dispatch(Event $event): bool` | Deliver breadth-first: events dispatched by listeners run after the current batch. `false` when no event slot is free or beyond 16 levels. |
+| `Events::stats(): array` | Event slots in use, per-class counters (queued, delivered, dropped, coalesced) and cascade depths since boot. |
+| `every(int\|float $ms, string $event, bool $coalesce = true): Baremetal\Timer` | Raise `$event` every `$ms` milliseconds, from 0.1 ms, rounded to the microsecond: `every(1000 / 60, Frame::class)` is 60 per second. A tick waits at most once. |
+| `watch_gpio(int $pin, string $event, bool $coalesce = false): Baremetal\GpioWatch` | Raise `$event` on each falling edge of `$pin`, with a 200 ms debounce. |
+| `watch_button(int $pin, array $on, array $opts = []): Baremetal\Button` | Raise events for button gestures: `pressed`, `released`, `held`, `click`, `repeat`, `double`. |
 | `button_sampling(bool $on)` | Pause or resume the button sampler. |
 | `power_hold()`, `power_release()` | Forbid or allow automatic light sleep. |
 
@@ -105,7 +106,7 @@ each press. `$on` keeps its value between events, because the script stays resid
 | Runtime | Timers, pin and button events | `Events::now()` and `dispatch()` | Listener table |
 | --- | --- | --- | --- |
 | `event-driven` | Delivered by the runtime, one at a time on the PHP task | Work | Frozen when the entry script returns |
-| `init-loop` | Never delivered: the sources run, but nothing reads the queue | Work | Never frozen |
+| `init-loop` | Never delivered: the sources run, and after each `loop()` the runtime gives their slots back | Work | Never frozen |
 | `web-server` | Refused: the source functions throw | Work, inside the request | One per request, dropped when it ends |
 
 <!-- @callout variant="warning" title="Sources need the event-driven runtime" -->
@@ -121,12 +122,17 @@ the entry script.
 
 ## Behaviour on the board
 
-- **The queue.** One queue of 32 messages carries every event from outside the PHP task: timers, pin edges,
-  buttons, sensor samples, HTTP requests, WebSocket frames. A timer or pin event that finds it full is dropped
-  without notice. An HTTP request that finds it full is answered 503.
+- **Event slots.** Every event from outside the PHP task (timers, pin edges, buttons, sensor samples, HTTP
+  requests, WebSocket frames) and every event waiting in a `dispatch()` cascade takes a slot allocated at boot:
+  64 small slots by default, set with the ext-events options `events-small`, `events-medium` and
+  `events-large`. A timer or pin event that finds no free slot is dropped and counted, and the first drop of
+  its class prints a warning; an HTTP request is answered 503. `Events::stats()` and `phpinfo()` show the
+  counters.
 - **Timers.** `every()` starts an `esp_timer`; its callback runs on the `esp_timer` task (core 0) and only posts
-  to the queue. A timer, a pin watch or a button watch cannot be stopped once started; only the button sampler
-  can be paused.
+  to the queue. The period goes down to 0.1 ms, but each event costs a PHP call of tens of microseconds: a
+  timer faster than its listener coalesces its ticks (one waits at a time), or with `coalesce: false` runs out
+  of slots and drops them. `every()`, `watch_gpio()` and `watch_button()` return a handle: `stop()` pauses the timer, pin watch or
+  button watch and `start()` resumes it (a dropped handle leaves it running; `button_sampling()` pauses all buttons).
 - **Pins.** `watch_gpio()` makes the pin an input with the internal pull-up and catches the falling edge by
   interrupt. Wire the button between the pin and GND. The 200 ms debounce is per event class, so two pins that
   share a class share it.
@@ -137,7 +143,7 @@ the entry script.
   `every()`.
 - **Matching.** A listener matches the exact class: a listener on a parent class receives nothing from its
   subclasses. Events raised by a source are created without calling their constructor.
-- **Limits.** Sources can use at most 16 distinct event classes in the whole firmware, shared with the sample
+- **Limits.** Sources can use at most 32 distinct event classes in the whole firmware, shared with the sample
   events of ext-i2c.
 
 ## Power: power_hold() and power_release()
@@ -158,7 +164,7 @@ tight timing loop.
 | Message | Cause |
 | --- | --- |
 | `Events::listen() must be called in setup(); the listener table is frozen afterwards` | A listener registered after the entry script returned. |
-| `every(): unknown class '...' or too many sources` | The event class does not exist, or 16 source classes are already in use. The same message exists for `watch_gpio()` and `watch_button()`. |
+| `every(): unknown class '...' or too many sources` | The event class does not exist, or 32 source classes are already in use. The same message exists for `watch_gpio()` and `watch_button()`. |
 | `every(): cannot start the timer` | The timer could not be created or started. |
 | `watch_button(): too many buttons` | Four buttons are already watched. |
 | `phpbm: cannot create the event queue` | The runtime could not create the queue; the program ends. |
