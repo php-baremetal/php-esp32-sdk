@@ -62,6 +62,7 @@ the toolchain phpbm installs for the SDK is in [Toolchain](./reference/toolchain
 ## Where next
 
 - [Your first firmware](./getting-started/first-firmware.md): from `phpbm sdk:install esp32` to a running board.
+- [IDE support](./getting-started/ide-support.md): completion and signatures for the SDK in PhpStorm and VS Code.
 - [Supported boards](./boards/supported-boards.md) and [Board files](./boards/board-files.md): what a board id means.
 - [Runtimes](./runtime/runtimes.md): how your script is run.
 - [Troubleshooting](./reference/troubleshooting.md).

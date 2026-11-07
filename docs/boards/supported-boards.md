@@ -6,7 +6,7 @@ see_also:
   - { href: './board-overrides.md', meta: 'Reference' }
   - { href: '../runtime/storage.md', meta: 'Storage' }
   - { href: '../runtime/network.md', meta: 'Network' }
-prev: { label: 'Your first firmware', href: '../getting-started/first-firmware.md' }
+prev: { label: 'IDE support', href: '../getting-started/ide-support.md' }
 next: { label: 'Board files', href: './board-files.md' }
 ---
 

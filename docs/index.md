@@ -3,6 +3,7 @@
 - Overview
   - [Overview](./overview.md)
   - [Your first firmware](./getting-started/first-firmware.md)
+  - [IDE support](./getting-started/ide-support.md)
 - Boards
   - [Supported boards](./boards/supported-boards.md)
   - [Board files](./boards/board-files.md)

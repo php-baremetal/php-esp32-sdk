@@ -6,7 +6,7 @@ see_also:
   - { href: '../reference/troubleshooting.md', meta: 'Reference' }
   - { href: 'https://github.com/php-baremetal/phpbm/blob/master/docs/guide/getting-started.md', meta: 'CLI', label: 'phpbm: Getting started' }
 prev: { label: 'Overview', href: '../overview.md' }
-next: { label: 'Supported boards', href: '../boards/supported-boards.md' }
+next: { label: 'IDE support', href: './ide-support.md' }
 ---
 
 # Your first firmware
