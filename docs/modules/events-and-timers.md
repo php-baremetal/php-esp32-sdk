@@ -6,7 +6,7 @@ see_also:
   - { href: '../reference/power-save.md', meta: 'Reference' }
   - { href: './web.md', meta: 'Module' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/ext-events', meta: 'Extension', label: 'ext-events' }
-prev: { label: 'SPI and displays', href: './spi-and-displays.md' }
+prev: { label: 'Touch input', href: './touch.md' }
 next: { label: 'Wi-Fi', href: './wifi.md' }
 ---
 

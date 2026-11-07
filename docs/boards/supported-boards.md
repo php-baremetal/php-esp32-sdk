@@ -65,6 +65,8 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
 | `waveshare-esp32-p4-pico` | `sdio` | none |
 | `waveshare-esp32-p4-wifi6` | `sdio` | `wifi-c6` |
 
+- `waveshare-esp32-s3-touch-lcd-1.85b` also has a `touch` block (CST816S: INT on GPIO 4, reset on GPIO 1, 360 x 360) next to
+  its `display` and `i2c` blocks; see [Touch input](../modules/touch.md).
 - `sdio` boards use SDMMC slot 0. The pins not named in the table take the defaults clk 43, cmd 44, d0 39,
   d1 40, d2 41, d3 42; `pwr_en` is absent unless the board sets it.
 - The microSD slot is what the `microsd` storage needs, and a network block is what the `web-server` runtime

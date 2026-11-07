@@ -7,7 +7,7 @@ see_also:
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/ext-spi', meta: 'Package', label: 'ext-spi' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/esp32-display-st77916', meta: 'Package', label: 'esp32-display-st77916' }
 prev: { label: 'I2C and sensors', href: './i2c-and-sensors.md' }
-next: { label: 'Events and timers', href: './events-and-timers.md' }
+next: { label: 'Touch input', href: './touch.md' }
 ---
 
 # SPI and displays

@@ -113,7 +113,7 @@ final class SdkDescriptorsTest extends TestCase
         }
         self::assertSame(['network' => 'wifi'], $boards['generic-esp32s3-quad']->capabilities());
         self::assertSame('4MB', $boards['generic-esp32s3-quad']->flash);
-        self::assertEqualsCanonicalizing(['display' => 'st77916', 'i2c' => 'i2c', 'microsd' => 'spi', 'network' => 'wifi'], $boards['waveshare-esp32-s3-touch-lcd-1.85b']->capabilities());
+        self::assertEqualsCanonicalizing(['display' => 'st77916', 'i2c' => 'i2c', 'microsd' => 'spi', 'network' => 'wifi', 'touch' => 'cst816s'], $boards['waveshare-esp32-s3-touch-lcd-1.85b']->capabilities());
         self::assertSame(360, $boards['waveshare-esp32-s3-touch-lcd-1.85b']->peripherals['display']['width']);
         foreach (['espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8', 'espressif-esp32-s3-devkitc-1-n16r8', 'freenove-esp32-s3-wroom-lite-n16r8', 'freenove-esp32-s3-wroom-lite-n16r16'] as $id) {
             self::assertEqualsCanonicalizing(['led' => 'ws2812', 'network' => 'wifi'], $boards[$id]->capabilities(), $id);

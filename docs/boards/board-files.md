@@ -84,7 +84,7 @@ A block is named after a peripheral, and its `type` says which kind the board ha
 
 - **Blocks the SDK implements**, `microsd` and `network`: the firmware has its own code for each type, so the type
   must be one the chip supports. `chips/<chip>/chip.json` lists them, and any other type is an error.
-- **Blocks read by packages**, such as `display`, `i2c` and `led`: the type is the name of a driver, checked by
+- **Blocks read by packages**, such as `display`, `i2c`, `touch` and `led`: the type is the name of a driver, checked by
   the driver's `onboard()` when the script runs. The chip does not list them, so a new driver needs no SDK change.
   Two blocks of the same kind take different names, for example `led` and `led-2`.
 
@@ -137,6 +137,12 @@ Every `sdio` pin must be an integer from 0 to 54 (`pwr_en` may also be `-1`) whe
 | Type | Keys | Notes |
 | --- | --- | --- |
 | `i2c` | `sda`, `scl` | The board's on-board I2C bus (touch controller, sensors). Used by Waveshare ESP32-S3-Touch-LCD-1.85B. |
+
+### touch
+
+| Type | Keys | Notes |
+| --- | --- | --- |
+| `cst816s` | `width`, `height`, `int`, `rst`, `address`, `mirror-x`, `mirror-y`, `swap-xy`, `double-tap` | CST816S capacitive touch controller on the board's `i2c` bus: the screen size in pixels, the INT and reset GPIOs and the orientation; `address` defaults to `0x15`, `double-tap` (bool, default `true`) turns the chip's double tap detection on or off (on: a single tap is reported about 260 ms after the release), and only `width` and `height` are required. `events()` needs `int`. Used by Waveshare ESP32-S3-Touch-LCD-1.85B (INT on GPIO 4, reset on GPIO 1, 360 x 360). See [Touch input](../modules/touch.md). |
 
 ### led
 
