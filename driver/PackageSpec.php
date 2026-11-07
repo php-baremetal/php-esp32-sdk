@@ -11,7 +11,7 @@ use PhpBaremetal\Spec\SpecException;
 final readonly class PackageSpec
 {
     public const TYPES = ['bm-ext', 'bm-hal', 'bm-lib', 'bm-php-ext'];
-    public const KEYS = ['board-blocks', 'defines', 'entry', 'fonts', 'idf-dependencies', 'idf-requires', 'include-dirs', 'module', 'options', 'partitions', 'platform', 'priority', 'register', 'registries', 'sdkconfig', 'sources'];
+    public const KEYS = ['board-blocks', 'defines', 'entry', 'fonts', 'ide-stubs', 'idf-dependencies', 'idf-requires', 'include-dirs', 'module', 'options', 'partitions', 'platform', 'priority', 'register', 'registries', 'sdkconfig', 'sources'];
     public const PARTITION_SUBTYPES = ['nvs', 'nvs_keys', 'fat', 'spiffs', 'littlefs', 'coredump', 'efuse', 'undefined', 'phy'];
     public const RESERVED_PARTITIONS = ['factory', 'nvs', 'phy_init', 'storage'];
 

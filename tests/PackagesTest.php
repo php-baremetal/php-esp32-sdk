@@ -100,6 +100,12 @@ final class PackagesTest extends TestCase
         self::assertSame('hello', self::spec('hello', ['module' => 'hello'], 'bm-ext')->module);
     }
 
+    public function test_ide_stubs_key_is_accepted(): void
+    {
+        $spec = self::spec('hello', ['module' => 'hello', 'ide-stubs' => ['ide/hello.stub']], 'bm-ext');
+        self::assertSame('hello', $spec->module);
+    }
+
     public function test_relative_package_paths_resolve_against_the_project(): void
     {
         $f = self::fixtures();
@@ -127,7 +133,7 @@ final class PackagesTest extends TestCase
             'bad entry' => ['hello', ['module' => 'hello', 'entry' => 'a-b'], 'bm-ext', "package php-baremetal/esp32-x: 'entry' must be the C symbol of the zend_module_entry (omit it for hello_module_entry)"],
             'entry on a hal' => ['hal', ['entry' => 'x_module_entry'], 'bm-hal', "package php-baremetal/esp32-x: 'entry' is only allowed for type bm-ext, not bm-hal"],
             'unknown type' => ['hal', [], 'bm-extension', "package php-baremetal/esp32-x: unknown type 'bm-extension' (allowed: bm-ext, bm-hal, bm-lib, bm-php-ext)"],
-            'unknown key' => ['hal', ['src-dir' => 'src'], 'bm-hal', "package php-baremetal/esp32-x: unknown key 'src-dir' in extra.baremetal (allowed: board-blocks, defines, entry, fonts, idf-dependencies, idf-requires, include-dirs, module, options, partitions, platform, priority, register, registries, sdkconfig, sources)"],
+            'unknown key' => ['hal', ['src-dir' => 'src'], 'bm-hal', "package php-baremetal/esp32-x: unknown key 'src-dir' in extra.baremetal (allowed: board-blocks, defines, entry, fonts, ide-stubs, idf-dependencies, idf-requires, include-dirs, module, options, partitions, platform, priority, register, registries, sdkconfig, sources)"],
             'priority not int' => ['hal', ['priority' => '1'], 'bm-hal', "package php-baremetal/esp32-x: 'priority' must be an integer"],
             'glob without matches' => ['hal', ['sources' => ['src/*.cpp']], 'bm-hal', "package php-baremetal/esp32-x: 'sources' pattern 'src/*.cpp' matches no file"],
             'missing file' => ['hal', ['sources' => ['src/c.c']], 'bm-hal', "package php-baremetal/esp32-x: 'sources' pattern 'src/c.c' matches no file"],
