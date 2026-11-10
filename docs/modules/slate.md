@@ -74,16 +74,42 @@ The options go in `extra.baremetal.options` of `composer.json`:
 ```
 <!-- @endcode-block -->
 
+## What it costs
+
+Measured on the Waveshare ESP32-S3-Touch-LCD-1.85B (ESP32-S3 at 240 MHz, 32 KB instruction cache, PSRAM, ST77916
+360 x 360 panel):
+
+- **A still screen** composes no frame: the profiler reads `0.0 fps`.
+- **A whole new screen** (a page change) takes about 13 ms for opaque shapes, gradients, text and arcs, which is
+  about the time the panel needs to receive it; a full-screen radial gradient takes about 42 ms, a translucent
+  full-screen group about 50 ms, and a shadow or a blur is built once, at its first frame (about 30 ms for a
+  240 x 240 card's shadow, more for a blurred group), then reused.
+- **Moving parts** are composed alone: only the part of the screen that changed is drawn, and what does not change
+  underneath is copied instead of drawn again.
+- **Memory:** the band buffers are in internal RAM (from the panel driver); a translucent group borrows a scratch
+  area of internal RAM (at most 43 KB on a 360-wide panel) while it is drawn and gives it back; elements, texts and
+  the images of shadows, blurs and cached groups live in PSRAM, within a budget of half the largest free block, at
+  most 2 MB. On a board without PSRAM nothing is cached, and shadows and group blur are not drawn.
+- **Effects** left out of `slate-effects` are not compiled and save their code (see Build options above).
+
 ## The examples
 
-Both examples run on `waveshare-esp32-s3-touch-lcd-1.85b` with the `event-driven` runtime.
+The examples run on `waveshare-esp32-s3-touch-lcd-1.85b` with the `event-driven` runtime.
 
 - `06-display/slate-hello` shows every kind of element and effect on one page: a card with a gradient and a shadow,
   a disc with a radial gradient, a progress ring with round caps, lines, centred text, a translucent group, a
   blurred group and a small canvas. Touching the screen shows a second page, and touching it again goes back.
 - `06-display/slate-gauge` has a `Gauge` component (an `Arc` and a `Text` in a `Group`) driven by the tilt of the
   QMI8658 IMU, polled at 100 Hz, and a dot orbiting at 60 Hz. It builds with `"slate-debug": true`, so the frames
-  per second and the timings of the compositor are visible while the board moves.
+  per second and the timings of the compositor are visible while the board moves. It runs at 60 frames per
+  second, with no torn frame and no frame delayed by the compositor.
+- `06-display/slate-stress` moves everything at once: a dozen translucent dots, a sliding card with a shadow, a
+  group whose opacity pulses, a progress ring and a frame counter, all changed at 60 Hz, with the IMU at 100 Hz,
+  a circle following the finger and Wi-Fi connecting in the background. It runs at about 55 frames per second,
+  Wi-Fi connected or not.
+- `06-display/slate-bench` shows thirteen full-screen scenes one after the other (opaque, translucent, gradients,
+  shapes, text, an arc, a shadow, translucent, blurred and shadowed groups) and prints the time each takes to fill
+  the screen.
 
 ```bash
 composer install

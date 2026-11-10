@@ -21,13 +21,14 @@ default. Previews are not ready for use: anything can still change.
 - **ESP32-S3 runs at 240 MHz** (`chips/esp32s3/sdkconfig`); the ESP-IDF default is 160 MHz.
 - **ESP32-S3 has a 32 KB instruction cache** (`chips/esp32s3/sdkconfig`); the ESP-IDF default is 16 KB. Code
   that runs from flash (PHP, drawing) is faster; it takes 16 KB of internal RAM.
+- **ESP32-S3 main task stack 16 KB** (`chips/esp32s3/sdkconfig`; 32 KB elsewhere, `host/sdkconfig.defaults`). The
+  main task only boots, mounts and unmounts the storage, restarts and sleeps (PHP has its own task); it uses under
+  1 KB of its stack (measured on the board, also after a PHP script with deep recursion, PCRE, JSON and sorting, and
+  before a deep sleep). The 16 KB go back to internal RAM: Wi-Fi starts next to a Slate scene with ~32 KB to spare.
 - **SDK releases are versioned archives** listed in a release index with their sha256. A project locks the
   version it uses in `phpbm.lock`.
 
 ### Added
-- `phpbm_options.h` defines `PHPBM_HOT_CODE`, a function attribute that places the function in internal RAM
-  (IRAM) instead of running it through the flash cache; a package uses it for a few hot paths (Slate's rasterizer,
-  about 20 KB) and defines it empty when it is missing (other platforms, the PC benches).
 - Package options: native packages declare options; the build defines PHPBM_OPTION_<NAME> for each.
 - Option type `set` (a list of allowed values): the build defines PHPBM_OPTION_<NAME>_<VALUE> as 1 or 0 for each allowed value and PHPBM_OPTION_<NAME> as the comma-separated chosen values (needs php-baremetal/spec 1.2).
 - init-loop runtime: calls bm_events_service() of ext-events (when the firmware has it) after each loop(), so object releases run, the slots of undelivered events go back and event warnings are printed. Docs: events, web and I2C pages describe the event slots of ext-events 1.0.3 instead of a 32-message queue.

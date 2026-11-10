@@ -149,7 +149,6 @@ final class BuildInputsTest extends TestCase
             #define PHPBM_OPTION_POWER_SAVE_ON 0
             #define PHPBM_OPTION_REQUEST_TIMEOUT 30
             #define PHPBM_OPTION_RESTART_DELAY 5
-            #define PHPBM_HOT_CODE __attribute__((section(".iram1.phpbm_hot")))
             #define PHPBM_PHP_STARTUP_KB 816
             #define PHPBM_PHP_EXT_STARTUP_KB 0
             #define PHPBM_NETWORK_ENABLED 0

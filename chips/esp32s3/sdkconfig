@@ -4,3 +4,7 @@ CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 # A 32 KB instruction cache (default 16 KB): code running from flash (PHP, drawing) misses the cache half as
 # often; it takes 16 KB of internal RAM.
 CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
+
+# The main task (boot, storage mount and unmount, restart, deep sleep; PHP has its own task) in 16 KB of internal
+# RAM instead of the 32 KB of host/sdkconfig.defaults: it uses about 1 KB, and the 16 KB go to Wi-Fi and drivers.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384

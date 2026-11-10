@@ -447,8 +447,6 @@ final class BuildInputs
             $extensionsKb += $extension->resolve($plan->options)['startupKb'];
         }
         $startupKb = $plan->php->startupKb ?? throw new SpecException("sdk.json php.{$plan->php->minor}: 'startup-kb' is required by the esp32 driver");
-        // Hot code: a function marked with it runs from internal RAM (IRAM), not through the flash cache.
-        $header .= "#define PHPBM_HOT_CODE __attribute__((section(\".iram1.phpbm_hot\")))\n";
         // Persistent PSRAM of the engine and of the optional extensions at startup (memory.c budgets it).
         $header .= sprintf("#define PHPBM_PHP_STARTUP_KB %d\n#define PHPBM_PHP_EXT_STARTUP_KB %d\n", $startupKb, $extensionsKb);
         if ($plan->storage->id === 'microsd') {

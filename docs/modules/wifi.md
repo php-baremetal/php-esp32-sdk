@@ -46,7 +46,7 @@ builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet.
 | Function | Returns | Meaning |
 | --- | --- | --- |
 | `wifi_scan(bool $wait = true)` | `array` or `bool` | Networks in range, up to 48: `ssid`, `bssid`, `rssi`, `channel`, `auth`. With `wait: false` it starts the scan and returns `true`; the result comes as `ScanDone`. |
-| `wifi_connect(string $ssid, ?string $password = null, int $timeout_ms = 30000, bool $wait = true, int $retries = 10)` | `bool` | Join a network. By default it waits for an IP address; with `wait: false` it returns at once and the outcome comes as events. `$retries` is how many times the driver retries a failed or dropped association (`-1` forever); two password refusals in a row give up at once. |
+| `wifi_connect(string $ssid, ?string $password = null, int $timeout_ms = 30000, bool $wait = true, int $retries = 10, PowerSave $power_save = PowerSave::Minimum)` | `bool` | Join a network. By default it waits for an IP address; with `wait: false` it returns at once and the outcome comes as events. `$retries` is how many times the driver retries a failed or dropped association (`-1` forever); two password refusals in a row give up at once. `$power_save` (`Baremetal\Wifi\PowerSave`: `None`, `Minimum`, `Maximum`) is how much the radio sleeps while connected. |
 | `wifi_disconnect()` | `bool` | Leave the network. |
 | `wifi_connected()` | `bool` | Whether the station has an IP address. |
 | `wifi_state()`, `wifi_ssid()` | `Baremetal\Wifi\State`, `?string` | `idle`, `connecting`, `connected` or `online`, and the network asked for. |
@@ -206,8 +206,10 @@ events are delivered.
 - **Credentials stay in RAM.** The driver does not write SSIDs or passwords to flash.
 - **Access point.** The radio follows the station's channel while the station is connected. `$max_conn`
   defaults to 4.
-- **Power.** ext-wifi does not change the radio's power mode: the ESP-IDF default (modem sleep while connected)
-  applies, with or without the `power-save` option. Wi-Fi with `power-save` on has not been verified on
+- **Power.** By default the station uses the ESP-IDF default, modem sleep while connected
+  (`PowerSave::Minimum`). On a weak access point (a phone hotspot) modem sleep can stall HTTP; pass
+  `power_save: PowerSave::None` to `wifi_connect()` to keep the radio on (ext-wifi 1.2.0 and later). This is
+  separate from the `power-save` option (light sleep); Wi-Fi with `power-save` on has not been verified on
   hardware. See [Power saving](../reference/power-save.md).
 
 ## With the web-server runtime
