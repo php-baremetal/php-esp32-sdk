@@ -22,6 +22,7 @@
   - [I2C and sensors](./modules/i2c-and-sensors.md)
   - [SPI and displays](./modules/spi-and-displays.md)
   - [Touch input](./modules/touch.md)
+  - [Slate](./modules/slate.md)
   - [Events and timers](./modules/events-and-timers.md)
   - [Wi-Fi](./modules/wifi.md)
   - [HTTP and the web](./modules/web.md)

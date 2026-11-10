@@ -18,11 +18,18 @@ default. Previews are not ready for use: anything can still change.
 - **Boards are JSON files** under `boards/`, selected by id (e.g. `waveshare-esp32-s3-eth`). `phpbm discover`
   lists the boards that match the connected chip.
 - **ESP-IDF v6.1**, installed by `phpbm toolchain:install`.
+- **ESP32-S3 runs at 240 MHz** (`chips/esp32s3/sdkconfig`); the ESP-IDF default is 160 MHz.
+- **ESP32-S3 has a 32 KB instruction cache** (`chips/esp32s3/sdkconfig`); the ESP-IDF default is 16 KB. Code
+  that runs from flash (PHP, drawing) is faster; it takes 16 KB of internal RAM.
 - **SDK releases are versioned archives** listed in a release index with their sha256. A project locks the
   version it uses in `phpbm.lock`.
 
 ### Added
+- `phpbm_options.h` defines `PHPBM_HOT_CODE`, a function attribute that places the function in internal RAM
+  (IRAM) instead of running it through the flash cache; a package uses it for a few hot paths (Slate's rasterizer,
+  about 20 KB) and defines it empty when it is missing (other platforms, the PC benches).
 - Package options: native packages declare options; the build defines PHPBM_OPTION_<NAME> for each.
+- Option type `set` (a list of allowed values): the build defines PHPBM_OPTION_<NAME>_<VALUE> as 1 or 0 for each allowed value and PHPBM_OPTION_<NAME> as the comma-separated chosen values (needs php-baremetal/spec 1.2).
 - init-loop runtime: calls bm_events_service() of ext-events (when the firmware has it) after each loop(), so object releases run, the slots of undelivered events go back and event warnings are printed. Docs: events, web and I2C pages describe the event slots of ext-events 1.0.3 instead of a 32-message queue.
 - Fonts: the build compiles the fonts phpbm resolves (BuildPlan::$fonts) into the display_fonts[] table read by ext-display; packages may declare extra.baremetal.fonts.
 - Board blocks display, i2c and led (Waveshare ESP32-S3-Touch-LCD-1.85B, Waveshare ESP32-S3-Zero), readable by packages through bm_board.h; the build writes them into phpbm_board.c.

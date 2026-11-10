@@ -126,7 +126,11 @@ time: a file rewritten within 2 seconds, or while the clock is unset, may not be
 
 A native package (`bm-ext`, `bm-hal`, `bm-lib`) declares its own options in `extra.baremetal.options` of its
 `composer.json`, in the same format as the SDK options: each name maps to an object with `type` (`int`, `bool` or
-`string`) and, for an `int`, `min`/`max`, or with `values` for an enum; plus a `description` and a `default`.
+`string`) and, for an `int`, `min`/`max`, or with `values` for an enum; plus a `description` and a `default`. The type
+`set` picks several features out of a list: `"type": "set"` with `values` (the allowed names) and a list of them as
+`default`, for example `"slate-effects": { "type": "set", "values": ["gradients", "shadows", "blur"], "default": ["gradients", "shadows", "blur"], "description": "..." }`.
+A project sets it with a list (`"slate-effects": ["shadows"]`; an empty list turns every value off), without
+duplicates and without `min`, `max` or `pattern`.
 
 ```json
 {
@@ -165,6 +169,7 @@ phpbm checks `extra.baremetal.options` before it builds, and reports every probl
 | `extra.baremetal.options.x: must be one of off, on, got "maybe"` | An enum option got a value outside its list. |
 | `extra.baremetal.options.x: must be an integer between 0 and 3600, got 4000` | An integer option got a non-integer or a value outside its range. |
 | `extra.baremetal.options.x: must be true or false, got "yes"` | A boolean option got something else. |
+| `extra.baremetal.options.x: must be a list of a, b, c, got ["d"]` | A `set` option got something other than a list of its allowed values without duplicates. |
 | `extra.baremetal.options.init: must be a string that must match ..., got "..."` | The `init` path is not a relative `.php` path. |
 
 A name declared by two owners (`option 'x' is declared by both ... and ...`) is reported too, but it is a defect
@@ -175,5 +180,7 @@ of the SDK, not of the project.
 Each option reaches the firmware as a `PHPBM_OPTION_<NAME>` macro in the generated `phpbm_options.h` (`NAME` is
 the option name in capitals with `_` for `-`): a string for an enum or a string option, `0` or `1` for a boolean,
 a number for an integer. An enum option also gets one `PHPBM_OPTION_<NAME>_<VALUE>` macro per value, `1` for the
-chosen one. A native package that lists `phpbm` in its `idf-requires` can include the header. See
+chosen one. A `set` option gets the same per-value macros (`1` for each value in the list, `0` for the others) and
+a `PHPBM_OPTION_<NAME>` string with the chosen values in the order of `values`, separated by commas
+(`PHPBM_OPTION_SLATE_EFFECTS "shadows,blur"`). A native package that lists `phpbm` in its `idf-requires` can include the header. See
 [Writing native packages](../development/firmware-rules.md).

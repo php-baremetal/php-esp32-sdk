@@ -424,6 +424,15 @@ final class BuildInputs
                     $define("{$macro}_" . self::name($allowed), (string) $name);
                     $header .= sprintf("#define %s_%s %d\n", $macro, self::name($allowed), $allowed === $value ? 1 : 0);
                 }
+            } elseif ($option->type === 'set') {
+                $chosen = array_values(array_filter($option->values, static fn (string $allowed): bool => in_array($allowed, (array) $value, true)));
+                $header .= sprintf("#define %s \"%s\"\n", $macro, self::c(implode(',', $chosen)));
+                $values = $option->values;
+                sort($values);
+                foreach ($values as $allowed) {
+                    $define("{$macro}_" . self::name($allowed), (string) $name);
+                    $header .= sprintf("#define %s_%s %d\n", $macro, self::name($allowed), in_array($allowed, $chosen, true) ? 1 : 0);
+                }
             } elseif ($option->type === 'string') {
                 $header .= sprintf("#define %s \"%s\"\n", $macro, self::c((string) $value));
             } elseif ($option->type === 'bool') {
@@ -438,6 +447,8 @@ final class BuildInputs
             $extensionsKb += $extension->resolve($plan->options)['startupKb'];
         }
         $startupKb = $plan->php->startupKb ?? throw new SpecException("sdk.json php.{$plan->php->minor}: 'startup-kb' is required by the esp32 driver");
+        // Hot code: a function marked with it runs from internal RAM (IRAM), not through the flash cache.
+        $header .= "#define PHPBM_HOT_CODE __attribute__((section(\".iram1.phpbm_hot\")))\n";
         // Persistent PSRAM of the engine and of the optional extensions at startup (memory.c budgets it).
         $header .= sprintf("#define PHPBM_PHP_STARTUP_KB %d\n#define PHPBM_PHP_EXT_STARTUP_KB %d\n", $startupKb, $extensionsKb);
         if ($plan->storage->id === 'microsd') {

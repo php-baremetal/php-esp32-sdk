@@ -1,0 +1,6 @@
+# The CPU at its top clock: the ESP-IDF default is 160 MHz.
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# A 32 KB instruction cache (default 16 KB): code running from flash (PHP, drawing) misses the cache half as
+# often; it takes 16 KB of internal RAM.
+CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y

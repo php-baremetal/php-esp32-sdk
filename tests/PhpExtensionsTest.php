@@ -58,7 +58,7 @@ final class PhpExtensionsTest extends TestCase
         $plan = self::plan();
         BuildInputs::write($plan);
         $header = (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
-        self::assertStringContainsString("#define PHPBM_PHP_EXT_BASE 1\n#define PHPBM_PHP_EXT_FAKE 1\n#define PHPBM_PHP_STARTUP_KB 816\n#define PHPBM_PHP_EXT_STARTUP_KB 0\n#define PHPBM_NETWORK_ENABLED", $header);
+        self::assertStringContainsString("#define PHPBM_PHP_EXT_BASE 1\n#define PHPBM_PHP_EXT_FAKE 1\n#define PHPBM_HOT_CODE __attribute__((section(\".iram1.phpbm_hot\")))\n#define PHPBM_PHP_STARTUP_KB 816\n#define PHPBM_PHP_EXT_STARTUP_KB 0\n#define PHPBM_NETWORK_ENABLED", $header);
         self::assertStringNotContainsString('PHPBM_STORAGE_MICROSD', $header);
 
         $plan = Plans::plan(['storage' => 'microsd']);
@@ -175,6 +175,7 @@ final class PhpExtensionsTest extends TestCase
         $header = (string) file_get_contents("{$build}/include/phpbm_options.h");
         self::assertStringContainsString("#define PHPBM_OPTION_FAKE_CJK 0\n", $header);
         self::assertStringContainsString("#define PHPBM_OPTION_FAKE_TABLES \"small\"\n", $header);
+        self::assertStringContainsString("#define PHPBM_HOT_CODE __attribute__((section(\".iram1.phpbm_hot\")))\n", $header);
 
         $plain = Plans::plan(['php' => $d . '/php-src']);
         $plain = new BuildPlan($plain->projectDir, $plain->manifest, $plain->sdk, $plain->board, $plain->chip, $plain->runtime, $plain->storage, $plain->php, $plain->phpSourceDir, [], [], $build, false, $plain->options);

@@ -8,7 +8,7 @@ see_also:
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/ext-input', meta: 'Package', label: 'ext-input' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/touch-cst816s', meta: 'Package', label: 'touch-cst816s' }
 prev: { label: 'SPI and displays', href: './spi-and-displays.md' }
-next: { label: 'Events and timers', href: './events-and-timers.md' }
+next: { label: 'Slate', href: './slate.md' }
 ---
 
 # Touch input

@@ -149,6 +149,7 @@ final class BuildInputsTest extends TestCase
             #define PHPBM_OPTION_POWER_SAVE_ON 0
             #define PHPBM_OPTION_REQUEST_TIMEOUT 30
             #define PHPBM_OPTION_RESTART_DELAY 5
+            #define PHPBM_HOT_CODE __attribute__((section(".iram1.phpbm_hot")))
             #define PHPBM_PHP_STARTUP_KB 816
             #define PHPBM_PHP_EXT_STARTUP_KB 0
             #define PHPBM_NETWORK_ENABLED 0
@@ -357,6 +358,38 @@ final class BuildInputsTest extends TestCase
         $inputs = (string) file_get_contents(BuildInputs::write($plan));
         self::assertStringContainsString("set(PHPBM_MICROSD_TYPE \"sdio\")\n", $inputs);
         self::assertStringNotContainsString('PHPBM_MICROSD_PWR_EN', $inputs);
+    }
+
+    public function test_set_options_become_one_macro_per_value_and_a_list_string(): void
+    {
+        $demo = new Package('acme/esp32-demo', 'bm-hal', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['platform' => 'esp32', 'options' => [
+            'slate-effects' => ['type' => 'set', 'description' => 'Effects.', 'values' => ['gradients', 'shadows', 'blur'], 'default' => ['gradients', 'shadows', 'blur']],
+        ]]);
+        $plan = Plans::plan(['packages' => [$demo], 'options' => ['slate-effects' => ['blur', 'shadows']]]);
+        BuildInputs::write($plan);
+        $header = (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
+        self::assertStringContainsString("#define PHPBM_OPTION_SLATE_EFFECTS \"shadows,blur\"\n#define PHPBM_OPTION_SLATE_EFFECTS_BLUR 1\n#define PHPBM_OPTION_SLATE_EFFECTS_GRADIENTS 0\n#define PHPBM_OPTION_SLATE_EFFECTS_SHADOWS 1\n", $header);
+
+        $plan = Plans::plan(['packages' => [$demo], 'options' => ['slate-effects' => []]]);
+        BuildInputs::write($plan);
+        $header = (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
+        self::assertStringContainsString("#define PHPBM_OPTION_SLATE_EFFECTS \"\"\n#define PHPBM_OPTION_SLATE_EFFECTS_BLUR 0\n", $header);
+
+        $plan = Plans::plan(['packages' => [$demo]]);
+        BuildInputs::write($plan);
+        self::assertStringContainsString('#define PHPBM_OPTION_SLATE_EFFECTS "gradients,shadows,blur"' . "\n", (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h'));
+    }
+
+    public function test_a_set_value_macro_that_collides_with_another_option_is_rejected(): void
+    {
+        $demo = new Package('acme/esp32-demo', 'bm-hal', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['platform' => 'esp32', 'options' => [
+            'slate-effects' => ['type' => 'set', 'description' => 'Effects.', 'values' => ['gradients', 'blur'], 'default' => ['blur']],
+            'slate-effects-blur' => ['type' => 'bool', 'description' => 'Blur.', 'default' => true],
+        ]]);
+        $plan = Plans::plan(['packages' => [$demo]]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("options 'slate-effects' and 'slate-effects-blur' both define the macro PHPBM_OPTION_SLATE_EFFECTS_BLUR");
+        BuildInputs::write($plan);
     }
 
     public function test_string_options_are_escaped_c_strings(): void

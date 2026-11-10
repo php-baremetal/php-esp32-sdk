@@ -100,6 +100,14 @@ A task with its stack in PSRAM must not touch the flash. That is the reason for 
 | `php` | 1 | 256 KB, PSRAM (128 KB under 4 MB of PSRAM) |
 | executor | 0 | 8 KB, internal RAM |
 
+## Hot code in internal RAM
+
+Code normally runs from flash through the instruction cache, which both cores share: while PHP runs on one core,
+the code of the other core is fetched again and again. The build defines `PHPBM_HOT_CODE` in `phpbm_options.h`, a
+function attribute that places a function in internal RAM (IRAM), where it runs at full speed whatever the other core
+does. A package uses it for a few hot paths only, since it takes internal RAM: Slate's rasterizer, about 20 KB. A
+package defines the macro empty when `phpbm_options.h` does not define it (another platform, the PC benches).
+
 ## Flash layout
 
 The partition table is generated at every build. The flash size comes from the board file; the partition offsets
