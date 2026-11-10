@@ -26,9 +26,10 @@
 > out of date or inconsistent. We apologise for the temporary inconvenience. When 2.0.0 is out, the `sdk`
 > branch will become `master`.
 >
-> **Want to try 2.0.0 early?** In mid-November we will run a general test of 2.0.0 before the release. If you
-> would like to take part, email me at [gianfri@php-baremetal.com](mailto:gianfri@php-baremetal.com).
-> Testers get early access to the phpbm repository and all the documentation material.
+> **Want to try 2.0.0 early?** The [`sdk` branch](https://github.com/php-baremetal/php-esp32-sdk/tree/sdk) and
+> [phpbm](https://github.com/php-baremetal/phpbm) are public: anyone can try them. 2.0 is still under
+> development, so expect rough edges. If you find a bug or something does not work as documented, please
+> [open an issue](https://github.com/php-baremetal/php-esp32-sdk/issues).
 
 Run the real PHP interpreter on a microcontroller. Not a lookalike, not a language subset, not a
 transpiler: the official Zend engine from php.net, cross-compiled for the chip, executing your
