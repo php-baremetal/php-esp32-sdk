@@ -113,7 +113,9 @@ integers (a boolean becomes 1 or 0) or strings there. Drivers offer `onboard()` 
 | `spi` | `cs`, `sclk`, `mosi`, `miso` | SPI card on explicit pins. |
 | `sdio` | `clk`, `cmd`, `d0`, `d1`, `d2`, `d3`, `pwr_en` | SDMMC slot 0, 4-bit. Defaults when absent: clk 43, cmd 44, d0 39, d1 40, d2 41, d3 42. `pwr_en` is the card power switch; absent or `-1` means none. |
 
-Every `sdio` pin must be an integer from 0 to 54 (`pwr_en` may also be `-1`) when the storage is `microsd`.
+Every pin of a `spi` slot is required. Every pin given must be a GPIO number of the chip: an integer from 0 to 48
+on the ESP32-S3, from 0 to 54 on the ESP32-P4 (`pwr_en` may also be `-1`). The build checks this before it compiles
+anything, whether the project uses the card or not.
 
 ### network
 
@@ -123,6 +125,10 @@ Every `sdio` pin must be an integer from 0 to 54 (`pwr_en` may also be `-1`) whe
 | `wifi-c6` | none | Wi-Fi through a companion ESP32-C6. Also connected with `ext-wifi`. |
 | `w5500` | `cs`, `int`, `rst`, `sclk`, `mosi`, `miso` | SPI Ethernet controller; the pins are those of its SPI wiring. |
 | `emac` | `rst` | The P4's on-chip Ethernet MAC; `rst` is the PHY reset pin. |
+
+Every key listed for `w5500` and `emac` is required, and each must be a GPIO number of the chip (0-48 on the
+ESP32-S3, 0-54 on the ESP32-P4); `rst` may also be `-1` when the reset pin is not wired. The build checks this
+before it compiles anything, whether the network is on or not.
 
 [Network](../runtime/network.md) describes how each type is brought up.
 
@@ -163,7 +169,10 @@ Every `sdio` pin must be an integer from 0 to 54 (`pwr_en` may also be `-1`) whe
 | `board x: unsupported flash size '16' (use e.g. 4MB)` | `flash` is not a whole number followed by `MB`. |
 | `board x: chip 'esp32s3' has no revision 'v1'` | `revision` with no matching fragment for the chip. |
 | `board x: chip 'esp32p4' does not support flash-mode 'octal'` | `flash-mode` with no matching fragment for the chip. |
-| `board x: microsd.clk must be a GPIO number from 0 to 54` | An `sdio` pin outside the range, with `microsd` storage. |
+| `board x: chip 'esp32s3' does not support microsd 'sdio' (it supports spi)` | A `microsd` or `network` block added by [board overrides](./board-overrides.md) with a type the chip does not list. |
+| `board x: microsd.cs is missing (a 'spi' microsd needs cs, sclk, mosi, miso)` | A pin the block's type needs is not there (here a `spi` slot without `cs`). |
+| `board x: microsd.clk must be a GPIO number from 0 to 54` | A pin that is not an integer in the chip's range. |
+| `board x: network.rst must be a GPIO number from 0 to 54, or -1 for none` | The same, for a pin that may also be `-1`. |
 | `board x: network.cs must be a number or a string` | A block value that is an array or an object. |
 | `board x: led.gain must be an integer or a string` | A block value that is a decimal number: `phpbm_board.c` holds integers and strings only. |
 

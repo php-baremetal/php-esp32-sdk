@@ -364,7 +364,11 @@ void app_main(void)
 {
     s_main = xTaskGetCurrentTaskHandle();
     /* phpbm sync reads it to tell a firmware without the microSD at once. */
+#if PHPBM_ASSETS_MICROSD && !PHPBM_STORAGE_MICROSD
+    printf("phpbm: storage %s, assets on microsd\n", PHPBM_STORAGE_NAME);
+#else
     printf("phpbm: storage %s\n", PHPBM_STORAGE_NAME);
+#endif
     phpbm_wake_cause_read();
 #if PHPBM_OPTION_POWER_SAVE_ON
     phpbm_power_save_start();

@@ -9,6 +9,7 @@ use PhpBaremetal\Esp32\ProjectVersion;
 use PhpBaremetal\Esp32\Tests\Support\Plans;
 use PhpBaremetal\Spec\Manifest\Package;
 use PhpBaremetal\Spec\Sdk\BuildPlan;
+use PhpBaremetal\Spec\Sdk\PreparedAsset;
 use PhpBaremetal\Spec\Sdk\Descriptor\Board;
 use PhpBaremetal\Spec\Sdk\Descriptor\Module;
 use PhpBaremetal\Spec\Sdk\Descriptor\Option;
@@ -60,6 +61,7 @@ final class BuildInputsTest extends TestCase
             set(PHPBM_PHP_SRC "/cache/trees/php-8.4.26-abc")
             set(PHPBM_APP_SRC "{$project}/project-src")
             set(PHPBM_APP_ENTRY "index.php")
+            set(PHPBM_ASSETS_MICROSD "0")
             set(PHPBM_INCLUDE_DIR "{$build}/include")
             set(PHPBM_ENV_C "{$build}/env.c")
             set(PHPBM_BOARD_C "{$build}/phpbm_board.c")
@@ -328,7 +330,7 @@ final class BuildInputsTest extends TestCase
         self::assertStringContainsString("set(PHPBM_MICROSD_CLK \"14\")\n", $inputs);
         self::assertStringContainsString("set(PHPBM_MICROSD_D3 \"18\")\n", $inputs);
         self::assertStringNotContainsString('PHPBM_MICROSD_CMD', $inputs, 'the component defaults the pins the board leaves out');
-        $cmake = (string) file_get_contents(SdkDescriptorsTest::sdk()->dir . '/storages/microsd/CMakeLists.txt');
+        $cmake = (string) file_get_contents(SdkDescriptorsTest::sdk()->dir . '/host/cmake/microsd.cmake');
         foreach (['CLK=43', 'CMD=44', 'D0=39', 'D1=40', 'D2=41', 'D3=42'] as $default) {
             self::assertStringContainsString("\"{$default}\"", $cmake);
         }
@@ -343,12 +345,191 @@ final class BuildInputsTest extends TestCase
                 BuildInputs::write($plan);
                 self::fail('accepted ' . json_encode($bad));
             } catch (SpecException $e) {
-                self::assertSame('board waveshare-esp32-p4-eth: microsd.' . array_key_first($bad) . ' must be a GPIO number from 0 to 54', $e->getMessage());
+                $pin = array_key_first($bad);
+                self::assertSame("board waveshare-esp32-p4-eth: microsd.{$pin} must be a GPIO number from 0 to 54" . ($pin === 'pwr_en' ? ', or -1 for none' : ''), $e->getMessage());
             }
         }
         BuildInputs::write(Plans::plan(['board' => $p4->withOverrides(['microsd' => ['pwr_en' => -1]]), 'storage' => 'microsd']));
         $plan = Plans::plan(['board' => $p4->withOverrides(['microsd' => ['clk' => 0, 'd3' => 54]]), 'storage' => 'microsd']);
         self::assertStringContainsString("set(PHPBM_MICROSD_D3 \"54\")\n", (string) file_get_contents(BuildInputs::write($plan)));
+    }
+
+    public function test_the_flash_image_is_the_folder_phpbm_staged(): void
+    {
+        $stage = Plans::tempDir() . '/stage';
+        $plan = Plans::plan([
+            'assetDirs' => [['dir' => 'assets/ui', 'storage' => 'embedded']],
+            'assets' => [new PreparedAsset('embedded', '/app/assets/ui/logo.sli', $stage . '/assets/ui/logo.sli')],
+            'imageDir' => $stage,
+        ]);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        self::assertStringContainsString('set(PHPBM_APP_SRC "' . BuildInputs::cmakePath($stage) . "\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_ASSETS_MICROSD \"0\")\n", $inputs, 'embedded assets do not need the card');
+        self::assertStringNotContainsString('PHPBM_ASSETS_MICROSD', (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h'));
+    }
+
+    public function test_the_image_folder_must_be_a_path_the_build_can_handle(): void
+    {
+        $plan = Plans::plan(['imageDir' => '/tmp/a=b']);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("the image directory (/tmp/a=b) contains ';' or '='");
+        BuildInputs::write($plan);
+    }
+
+    public function test_microsd_assets_mount_the_card_with_the_code_in_flash(): void
+    {
+        $plan = Plans::plan([
+            'assetDirs' => [['dir' => 'assets/ui', 'storage' => 'embedded'], ['dir' => 'assets/photos', 'storage' => 'microsd']],
+            'assets' => [
+                new PreparedAsset('embedded', '/app/assets/ui/logo.sli', '/stage/assets/ui/logo.sli'),
+                new PreparedAsset('microsd', '/sdcard/assets/photos/beans.sli', '/cache/beans.sli'),
+            ],
+        ]);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        self::assertStringContainsString("set(PHPBM_STORAGE \"embedded\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_ASSETS_MICROSD \"1\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_MICROSD_TYPE \"spi\")\n", $inputs);
+        $header = (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
+        self::assertStringContainsString("#define PHPBM_ASSETS_MICROSD 1\n", $header);
+        self::assertStringNotContainsString('PHPBM_STORAGE_MICROSD', $header);
+    }
+
+    public function test_a_declared_microsd_folder_mounts_the_card_even_when_empty(): void
+    {
+        // An emptied folder must still be served, so that the sync can clear its old files on the card.
+        $plan = Plans::plan(['assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']]]);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        self::assertStringContainsString("set(PHPBM_ASSETS_MICROSD \"1\")\n", $inputs);
+        self::assertStringContainsString("#define PHPBM_ASSETS_MICROSD 1\n", (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h'));
+        self::assertTrue(BuildInputs::assetsOnCard($plan));
+        self::assertFalse(BuildInputs::assetsOnCard(Plans::plan(['assetDirs' => [['dir' => 'assets/ui', 'storage' => 'embedded']]])));
+    }
+
+    public function test_microsd_assets_with_the_code_on_the_card(): void
+    {
+        $plan = Plans::plan([
+            'storage' => 'microsd',
+            'assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']],
+            'assets' => [new PreparedAsset('microsd', '/sdcard/assets/photos/beans.sli', '/cache/beans.sli')],
+        ]);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        self::assertStringContainsString("set(PHPBM_ASSETS_MICROSD \"1\")\n", $inputs);
+        self::assertStringContainsString("#define PHPBM_STORAGE_MICROSD 1\n#define PHPBM_ASSETS_MICROSD 1\n", (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h'));
+    }
+
+    public function test_microsd_assets_need_a_board_with_a_card_slot(): void
+    {
+        // phpbm refuses this project first; the driver still does not build a firmware that cannot mount the card.
+        $plan = Plans::plan([
+            'board' => 'espressif-esp32-s3-devkitc-1-n8r8',
+            'assets' => [new PreparedAsset('microsd', '/sdcard/assets/photos/beans.sli', '/cache/beans.sli')],
+        ]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("board 'espressif-esp32-s3-devkitc-1-n8r8' has no microSD slot for the assets of storage 'microsd'");
+        BuildInputs::write($plan);
+    }
+
+    public function test_sdmmc_pins_are_checked_for_microsd_assets_too(): void
+    {
+        $p4 = SdkDescriptorsTest::sdk()->board('waveshare-esp32-p4-eth');
+        $plan = Plans::plan([
+            'board' => $p4->withOverrides(['microsd' => ['clk' => 60]]),
+            'assets' => [new PreparedAsset('microsd', '/sdcard/assets/photos/beans.sli', '/cache/beans.sli')],
+        ]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage('board waveshare-esp32-p4-eth: microsd.clk must be a GPIO number from 0 to 54');
+        BuildInputs::write($plan);
+    }
+
+    private const ADDED_SD = ['type' => 'spi', 'cs' => 10, 'sclk' => 12, 'mosi' => 11, 'miso' => 13];
+
+    public function test_a_microsd_slot_added_by_the_overrides_mounts_the_card(): void
+    {
+        $board = SdkDescriptorsTest::sdk()->board('generic-esp32s3-octal')->withOverrides(['microsd' => self::ADDED_SD]);
+        $plan = Plans::plan(['board' => $board, 'assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']]]);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        self::assertStringContainsString("set(PHPBM_ASSETS_MICROSD \"1\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_MICROSD_TYPE \"spi\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_MICROSD_CS \"10\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_MICROSD_MISO \"13\")\n", $inputs);
+    }
+
+    public function test_a_spi_microsd_slot_needs_every_pin_before_the_build(): void
+    {
+        $generic = SdkDescriptorsTest::sdk()->board('generic-esp32s3-octal');
+        foreach (['cs', 'sclk', 'mosi', 'miso'] as $pin) {
+            $block = self::ADDED_SD;
+            unset($block[$pin]);
+            $plan = Plans::plan(['board' => $generic->withOverrides(['microsd' => $block]), 'assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']]]);
+            try {
+                BuildInputs::write($plan);
+                self::fail("accepted a slot without {$pin}");
+            } catch (SpecException $e) {
+                self::assertSame("board generic-esp32s3-octal: microsd.{$pin} is missing (a 'spi' microsd needs cs, sclk, mosi, miso)", $e->getMessage());
+            }
+            self::assertFalse(is_dir($plan->buildDir));
+        }
+    }
+
+    public function test_the_blocks_of_the_sdk_are_checked_even_when_the_build_does_not_use_them(): void
+    {
+        $board = SdkDescriptorsTest::sdk()->board('generic-esp32s3-octal')->withOverrides(['microsd' => ['type' => 'spi', 'cs' => 10]]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("board generic-esp32s3-octal: microsd.sclk is missing (a 'spi' microsd needs cs, sclk, mosi, miso)");
+        BuildInputs::write(Plans::plan(['board' => $board]));
+    }
+
+    public function test_the_pins_of_a_spi_microsd_slot_are_gpio_numbers_of_the_chip(): void
+    {
+        $generic = SdkDescriptorsTest::sdk()->board('generic-esp32s3-octal');
+        foreach ([['cs' => 49], ['sclk' => '12'], ['mosi' => -1], ['miso' => 1.0]] as $bad) {
+            $plan = Plans::plan(['board' => $generic->withOverrides(['microsd' => [...self::ADDED_SD, ...$bad]])]);
+            try {
+                BuildInputs::write($plan);
+                self::fail('accepted ' . json_encode($bad));
+            } catch (SpecException $e) {
+                self::assertSame('board generic-esp32s3-octal: microsd.' . array_key_first($bad) . ' must be a GPIO number from 0 to 48', $e->getMessage());
+            }
+        }
+    }
+
+    public function test_an_added_block_of_the_sdk_needs_a_type_the_chip_supports(): void
+    {
+        $board = SdkDescriptorsTest::sdk()->board('generic-esp32s3-octal')->withOverrides(['microsd' => ['type' => 'sdio']]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("board generic-esp32s3-octal: chip 'esp32s3' does not support microsd 'sdio' (it supports spi)");
+        BuildInputs::write(Plans::plan(['board' => $board]));
+    }
+
+    public function test_a_network_block_needs_the_pins_of_its_type(): void
+    {
+        $w5500 = self::board(['peripherals' => ['network' => ['type' => 'w5500', 'cs' => 14, 'int' => 10, 'rst' => 9, 'sclk' => 13, 'mosi' => 11]]]);
+        try {
+            BuildInputs::write(Plans::plan(['board' => $w5500]));
+            self::fail('accepted a w5500 without miso');
+        } catch (SpecException $e) {
+            self::assertSame("board waveshare-esp32-s3-eth: network.miso is missing (a 'w5500' network needs cs, int, rst, sclk, mosi, miso)", $e->getMessage());
+        }
+        $emac = SdkDescriptorsTest::sdk()->board('generic-esp32p4')->withOverrides(['network' => ['type' => 'emac']]);
+        try {
+            BuildInputs::write(Plans::plan(['board' => $emac]));
+            self::fail('accepted an emac without rst');
+        } catch (SpecException $e) {
+            self::assertSame("board generic-esp32p4: network.rst is missing (a 'emac' network needs rst)", $e->getMessage());
+        }
+        $plan = Plans::plan(['board' => $emac->withOverrides(['network' => ['rst' => -1]]), 'options' => ['network' => 'on']]);
+        self::assertStringContainsString("set(PHPBM_NETWORK_RST \"-1\")\n", (string) file_get_contents(BuildInputs::write($plan)), 'rst may be -1: no reset pin');
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage('board generic-esp32p4: network.rst must be a GPIO number from 0 to 54, or -1 for none');
+        BuildInputs::write(Plans::plan(['board' => $emac->withOverrides(['network' => ['rst' => 55]])]));
+    }
+
+    public function test_every_board_of_the_sdk_passes_the_block_checks(): void
+    {
+        foreach (SdkDescriptorsTest::sdk()->boards as $board) {
+            BuildInputs::write(Plans::plan(['board' => $board]));
+        }
+        $this->addToAssertionCount(1);
     }
 
     public function test_the_wifi6_microsd_slot_has_no_power_pin(): void
@@ -741,14 +922,14 @@ final class BuildInputsTest extends TestCase
 
     public function test_booleans_become_on_off_and_non_scalars_are_rejected(): void
     {
-        $plan = Plans::plan(['board' => self::board(['peripherals' => ['network' => ['type' => 'w5500', 'enabled' => true, 'dhcp' => false]]])]);
+        $plan = Plans::plan(['board' => self::board(['peripherals' => ['led' => ['type' => 'ws2812', 'enabled' => true, 'dhcp' => false]]])]);
         $inputs = (string) file_get_contents(BuildInputs::write($plan));
-        self::assertStringContainsString('set(PHPBM_NETWORK_ENABLED "ON")', $inputs);
-        self::assertStringContainsString('set(PHPBM_NETWORK_DHCP "OFF")', $inputs);
+        self::assertStringContainsString('set(PHPBM_LED_ENABLED "ON")', $inputs);
+        self::assertStringContainsString('set(PHPBM_LED_DHCP "OFF")', $inputs);
 
-        $plan = Plans::plan(['board' => self::board(['peripherals' => ['network' => ['type' => 'w5500', 'cs' => ['x']]]])]);
+        $plan = Plans::plan(['board' => self::board(['peripherals' => ['led' => ['type' => 'ws2812', 'pin' => ['x']]]])]);
         $this->expectException(SpecException::class);
-        $this->expectExceptionMessage('board waveshare-esp32-s3-eth: network.cs must be a number or a string');
+        $this->expectExceptionMessage('board waveshare-esp32-s3-eth: led.pin must be a number or a string');
         BuildInputs::write($plan);
     }
 

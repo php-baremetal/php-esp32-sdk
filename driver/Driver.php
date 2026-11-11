@@ -15,6 +15,10 @@ use PhpBaremetal\Spec\SpecException;
 
 final class Driver implements DriverContract
 {
+    /** The microSD card's mount point on the board, and the folder of the sources on it (code on microsd). */
+    private const CARD = '/sdcard';
+    private const CARD_CODE = 'app';
+
     private readonly Toolchain $toolchain;
     private readonly Idf $idf;
     private readonly SerialPorts $ports;
@@ -90,24 +94,83 @@ final class Driver implements DriverContract
         }
     }
 
+    /**
+     * Copies to the microSD card the sources (code on microsd, to /sdcard/app) and the microSD assets. The firmware
+     * changes only the managed folders: /sdcard/app with the code on the card and each microsd asset folder.
+     */
     public function sync(BuildPlan $plan, Port $port, Output $out): bool
     {
-        if ($plan->storage->id !== 'microsd') {
-            return false;
+        $code = $plan->storage->id === 'microsd';
+        $assets = self::cardAssets($plan, $code);
+        $json = "{$plan->buildDir}/sync-assets.json";
+        if ($assets === null) {
+            if (is_file($json)) {
+                @unlink($json);
+            }
+            if (!$code) {
+                return false;
+            }
         }
-        $out->step("syncing {$plan->manifest->project->src} to the microSD card on {$port->path}");
+        $what = implode(' and ', array_filter([$code ? $plan->manifest->project->src : '', $assets === null ? '' : implode(', ', $assets['roots'])]));
+        $out->step("syncing {$what} to the microSD card on {$port->path}");
         $args = ['-u', __DIR__ . '/tools/sync.py', '--port', $port->path];
-        if ($plan->manifest->project->env !== null) {
+        if ($code && $plan->manifest->project->env !== null) {
             $args[] = '--exclude';
             $args[] = $plan->projectDir . '/' . $plan->manifest->project->env;
         }
-        $args[] = $plan->srcDir();
+        if ($assets !== null) {
+            BuildInputs::ensureDir($plan->buildDir);
+            // files is an object for sync.py, also when the folders are empty.
+            BuildInputs::put($json, (string) json_encode(['roots' => $assets['roots'], 'files' => (object) $assets['files']], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n");
+            $args[] = '--assets';
+            $args[] = $json;
+        }
+        if ($code) {
+            $args[] = $plan->srcDir();
+        }
         $result = $this->idf->python($args, $plan->projectDir, $out, ['PYTHONIOENCODING' => 'utf-8']);
         if (!$result->successful()) {
             $why = (string) preg_replace('/^error: /', '', Toolchain::lastLine($result));
             throw new SpecException(sprintf('syncing to the microSD card on %s failed: %s', $port->path, $why));
         }
         return true;
+    }
+
+    /**
+     * The microsd asset folders (the managed roots, relative to /sdcard) and files (card path => local file) for
+     * sync.py; null when the project has none (BuildInputs::assetsOnCard, the same rule as the firmware's).
+     *
+     * @return array{roots: list<string>, files: array<string,string>}|null
+     */
+    private static function cardAssets(BuildPlan $plan, bool $code): ?array
+    {
+        if (!BuildInputs::assetsOnCard($plan)) {
+            return null;
+        }
+        $roots = [];
+        foreach ($plan->manifest->project->assets->dirs as $dir) {
+            if ($dir->storage !== 'microsd') {
+                continue;
+            }
+            // The card's names are case-insensitive: App/photos is inside app.
+            $folder = strtolower($dir->dir);
+            if ($code && ($folder === self::CARD_CODE || str_starts_with($folder, self::CARD_CODE . '/'))) {
+                throw new SpecException(sprintf("the microsd assets in %s would go inside %s/%s, the sources' folder on the card: move them to another folder", $dir->dir, self::CARD, self::CARD_CODE));
+            }
+            $roots[] = $dir->dir;
+        }
+        $files = [];
+        foreach ($plan->assets as $asset) {
+            if ($asset->storage !== 'microsd') {
+                continue;
+            }
+            if (!str_starts_with($asset->boardPath, self::CARD . '/')) {
+                throw new SpecException(sprintf('the microsd asset %s is not on the card (%s)', $asset->boardPath, self::CARD));
+            }
+            $files[substr($asset->boardPath, strlen(self::CARD) + 1)] = $asset->file;
+        }
+        ksort($files, SORT_STRING);
+        return ['roots' => $roots, 'files' => $files];
     }
 
     public function monitor(Port $port): int

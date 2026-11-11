@@ -13,8 +13,22 @@ final class BuildInputs
 {
     /** Network types the script connects with ext-wifi; the host only starts lwIP and the event loop. */
     private const WIFI_NETWORKS = ['wifi', 'wifi-c6'];
-    /** GPIO0-54: the P4, the only chip with an SDMMC microSD slot. */
-    private const SDMMC_MAX_GPIO = 54;
+    /** The highest GPIO number of each chip (a chip not listed: 54). */
+    private const MAX_GPIO = ['esp32s3' => 48, 'esp32p4' => 54];
+    /**
+     * The pins of the SDK's blocks per type: the ones the build needs ('required'), the ones that have a default
+     * ('optional'), and those of either that may be -1 for "not connected" ('none'). A type not listed takes no pin.
+     */
+    private const BLOCK_PINS = [
+        'microsd' => [
+            'spi' => ['required' => ['cs', 'sclk', 'mosi', 'miso']],
+            'sdio' => ['optional' => ['clk', 'cmd', 'd0', 'd1', 'd2', 'd3', 'pwr_en'], 'none' => ['pwr_en']],
+        ],
+        'network' => [
+            'w5500' => ['required' => ['cs', 'int', 'rst', 'sclk', 'mosi', 'miso'], 'none' => ['rst']],
+            'emac' => ['required' => ['rst'], 'none' => ['rst']],
+        ],
+    ];
 
     public static function cmakePath(string $path): string
     {
@@ -34,9 +48,11 @@ final class BuildInputs
         self::checkPath('the sdk directory', $plan->sdk->dir);
         self::checkPath('the PHP source directory', $plan->phpSourceDir);
         self::checkPath('the build directory', $plan->buildDir);
+        self::checkPath('the image directory', $plan->imageDir());
         foreach ($plan->sourceDirs as $name => $dir) {
             self::checkPath("the source {$name}", $dir);
         }
+        self::checkBlocks($plan);
         $build = $plan->buildDir;
         $board = $plan->board;
         $project = $plan->manifest->project;
@@ -71,8 +87,9 @@ final class BuildInputs
             'PHP_VERSION' => $plan->php->version,
             'PHP_MINOR' => $plan->php->minor,
             'PHP_SRC' => self::cmakePath($plan->phpSourceDir),
-            'APP_SRC' => self::cmakePath($plan->srcDir()),
+            'APP_SRC' => self::cmakePath($plan->imageDir()),
             'APP_ENTRY' => $plan->entry(),
+            'ASSETS_MICROSD' => self::assetsOnCard($plan) ? '1' : '0',
             'INCLUDE_DIR' => self::cmakePath("{$build}/include"),
             'ENV_C' => self::cmakePath("{$build}/env.c"),
             'BOARD_C' => self::cmakePath("{$build}/phpbm_board.c"),
@@ -89,7 +106,6 @@ final class BuildInputs
         $vars['PHP_EXT_INCLUDE_DIRS'] = implode(';', $extensions->includeDirs);
         $vars['PHP_EXT_DEFINES'] = implode(';', $extensions->definitions());
         $vars['PHP_EXT_IDF_REQUIRES'] = implode(';', $extensions->idfRequires);
-        self::checkSdmmcPins($plan);
         $boardSource = self::boardSource($board);
         $peripherals = $board->peripherals;
         ksort($peripherals);
@@ -234,17 +250,65 @@ final class BuildInputs
         return $board->revision;
     }
 
-    /** The SDMMC slot's pins (sdio microSD) must be GPIO numbers of the chip (the P4: 0-54). */
-    private static function checkSdmmcPins(BuildPlan $plan): void
+    /**
+     * Whether the project has assets on the microSD card: a declared microsd asset folder, even an empty one (its old
+     * files on the card are then cleared), or a prepared microsd asset. The firmware then mounts the card and serves
+     * the sync whatever the storage of the code; Driver::sync copies them.
+     */
+    public static function assetsOnCard(BuildPlan $plan): bool
+    {
+        foreach ($plan->manifest->project->assets->dirs as $dir) {
+            if ($dir->storage === 'microsd') {
+                return true;
+            }
+        }
+        foreach ($plan->assets as $asset) {
+            if ($asset->storage === 'microsd') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * The SDK's blocks of the board (microsd, network), as the build sees them after board-overrides: a type the
+     * chip supports, every pin the type needs, each a GPIO number of the chip. Checked whether the build uses the
+     * block or not, before anything is written, so that a missing pin is not a C compile error.
+     */
+    private static function checkBlocks(BuildPlan $plan): void
     {
         $board = $plan->board;
-        $slot = $board->peripherals['microsd'] ?? null;
-        if ($plan->storage->id !== 'microsd' || !is_array($slot) || ($slot['type'] ?? null) !== 'sdio') {
-            return;
+        if (self::assetsOnCard($plan) && !$board->has('microsd')) {
+            throw new SpecException("board '{$board->id}' has no microSD slot for the assets of storage 'microsd'");
         }
-        foreach (['clk', 'cmd', 'd0', 'd1', 'd2', 'd3', 'pwr_en'] as $pin) {
-            if (array_key_exists($pin, $slot) && !($pin === 'pwr_en' && $slot[$pin] === -1) && (!is_int($slot[$pin]) || $slot[$pin] < 0 || $slot[$pin] > self::SDMMC_MAX_GPIO)) {
-                throw new SpecException(sprintf('board %s: microsd.%s must be a GPIO number from 0 to %d', $board->id, $pin, self::SDMMC_MAX_GPIO));
+        $max = self::MAX_GPIO[$board->chip] ?? 54;
+        foreach (self::BLOCK_PINS as $name => $types) {
+            $block = $board->peripherals[$name] ?? null;
+            if (!is_array($block)) {
+                continue;
+            }
+            $type = (string) $block['type'];
+            $supported = $plan->chip->capabilities[$name] ?? null;
+            if ($supported !== null && !in_array($type, $supported, true)) {
+                throw new SpecException(sprintf("board %s: chip '%s' does not support %s '%s' (it supports %s)", $board->id, $board->chip, $name, $type, implode(', ', $supported)));
+            }
+            $pins = $types[$type] ?? [];
+            $required = $pins['required'] ?? [];
+            foreach ($required as $pin) {
+                if (!array_key_exists($pin, $block)) {
+                    throw new SpecException(sprintf("board %s: %s.%s is missing (a '%s' %s needs %s)", $board->id, $name, $pin, $type, $name, implode(', ', $required)));
+                }
+            }
+            $none = $pins['none'] ?? [];
+            foreach ([...$required, ...($pins['optional'] ?? [])] as $pin) {
+                if (!array_key_exists($pin, $block)) {
+                    continue;
+                }
+                $value = $block[$pin];
+                $ok = is_int($value) && (($value >= 0 && $value <= $max) || ($value === -1 && in_array($pin, $none, true)));
+                if (!$ok) {
+                    throw new SpecException(sprintf('board %s: %s.%s must be a GPIO number from 0 to %d%s', $board->id, $name, $pin, $max, in_array($pin, $none, true) ? ', or -1 for none' : ''));
+                }
             }
         }
     }
@@ -451,6 +515,9 @@ final class BuildInputs
         $header .= sprintf("#define PHPBM_PHP_STARTUP_KB %d\n#define PHPBM_PHP_EXT_STARTUP_KB %d\n", $startupKb, $extensionsKb);
         if ($plan->storage->id === 'microsd') {
             $header .= "#define PHPBM_STORAGE_MICROSD 1\n";
+        }
+        if (self::assetsOnCard($plan)) {
+            $header .= "#define PHPBM_ASSETS_MICROSD 1\n";
         }
         $header .= sprintf(
             "#define PHPBM_NETWORK_ENABLED %d\n#define PHPBM_NETWORK_ACTIVE \"%s\"\n#define PHPBM_NETWORK_UP %d\n#define PHPBM_NETWORK_COMPANION %d\n",

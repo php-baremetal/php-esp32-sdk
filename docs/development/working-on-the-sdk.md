@@ -49,7 +49,7 @@ does not support.
 | `toolchain()` | The `Toolchain` of ESP-IDF: finding it, installing it, the environment for `idf.py`. |
 | `build(BuildPlan, Output)` | Writes the build inputs, then runs `idf.py build`; returns the `Artifacts` (the flash files). |
 | `flash(Artifacts, BuildPlan, Port, Output)` | Runs esptool `write-flash` with the files of the build. |
-| `sync(BuildPlan, Port, Output)` | With `microsd` storage, copies the project sources to the card (`driver/tools/sync.py`); returns `false` and does nothing for other storages. |
+| `sync(BuildPlan, Port, Output)` | Copies to the microSD card the project sources (`microsd` storage) and the `microsd` assets (`driver/tools/sync.py`), changing only those folders; returns `false` and does nothing when there is neither. |
 | `monitor(Port)` | Runs `esp_idf_monitor` on the port at 115200 baud and returns its exit code. |
 | `identify(Port)` | Asks esptool for the chip on the port; `null` when it is not an ESP32. |
 | `ports()` | Lists the serial ports (pyserial, with a fallback listing). |

@@ -111,7 +111,7 @@ are left to ESP-IDF, so the application sits at `0x10000`.
 | `phy_init` | data, `phy` | 4K |
 | `factory` | app | the flash, minus 128K, minus the `storage` partition and the package partitions, rounded down to a multiple of 64K |
 | package partitions | data | as the packages declare them, after `factory` |
-| `storage` | data, `fat` | only with `embedded` storage |
+| `storage` | data, `fat` | only with `embedded` storage: the sources and the `embedded` assets |
 
 For example `factory` is 3840K on a 4 MB board, 7936K on 8 MB and 16128K on 16 MB or 32 MB, each with the smallest
 `storage` (128K) and no package partition.
@@ -125,14 +125,17 @@ packages cannot declare the same name, and each size is `<n>K` with `n` a multip
 
 ### The embedded storage image
 
-With `embedded` storage the PHP sources are packed into a read-only FAT image in the `storage` partition, written
-together with the application. Its size is computed from the source directory:
+With `embedded` storage the PHP sources and the `embedded` assets are packed into a read-only FAT image in the
+`storage` partition, written together with the application. Its size is computed from the folder phpbm prepares
+(the sources plus those assets, converted; see [Assets](../runtime/storage.md#assets)):
 
 - each file counts in 4096-byte units, each directory and the root count 4096 bytes: `used`;
 - the image is `used` plus 64 KB plus an eighth of `used`, rounded up to 64K, and at least 128K.
 
-At boot the partition is mapped into memory and mounted read-only at `/app`. With `microsd` storage there is no
-`storage` partition: the sources live on the card and `phpbm sync` copies them. See [Storage](../runtime/storage.md).
+At boot the partition is mapped into memory and mounted read-only at `/app`. Large images make the image, and the
+flash it takes from `factory`, grow: put them in a `microsd` asset folder to keep them out of flash. With `microsd`
+storage there is no `storage` partition: the sources live on the card and `phpbm sync` copies them. See
+[Storage](../runtime/storage.md).
 
 ### Flash sizes
 

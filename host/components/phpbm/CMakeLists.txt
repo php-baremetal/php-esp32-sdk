@@ -1,9 +1,10 @@
 include("$ENV{PHPBM_INPUTS}")
 set(_srcs "boot.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}" "${PHPBM_BOARD_C}")
 set(_priv esp_pm esp_hw_support esp_driver_gpio esp_app_format esp_netif esp_event esp_timer fatfs)
-if(PHPBM_STORAGE STREQUAL "microsd")
-    list(APPEND _srcs "sync.c")
-    list(APPEND _priv mbedtls esp_driver_usb_serial_jtag esp_driver_uart)
+include("${PHPBM_SDK_DIR}/host/cmake/microsd.cmake")
+if(PHPBM_MICROSD)
+    list(APPEND _srcs "microsd.c" "sync.c")
+    list(APPEND _priv mbedtls esp_driver_usb_serial_jtag esp_driver_uart ${PHPBM_MICROSD_REQUIRES})
 endif()
 if("session" IN_LIST PHPBM_PHP_EXTENSIONS)
     list(APPEND _srcs "session.c")
@@ -17,7 +18,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     PHPBM_PROJECT_NAME="${PHPBM_PROJECT_NAME}"
     PHPBM_BOARD_NAME="${PHPBM_BOARD_NAME}"
     PHPBM_STORAGE_NAME="${PHPBM_STORAGE}"
-    PHPBM_APP_ENTRY="${PHPBM_APP_ENTRY}")
+    PHPBM_APP_ENTRY="${PHPBM_APP_ENTRY}"
+    ${PHPBM_MICROSD_DEFINES})
 foreach(_fn stat lstat open opendir access mkdir unlink rmdir rename)
     idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=${_fn}" APPEND)
 endforeach()

@@ -38,7 +38,7 @@ final class Plans
         self::$created = [];
     }
 
-    /** @param array{board?: string|Board, runtime?: string, storage?: string, env?: array<string,string>, sources?: array<string,string>, clean?: bool, options?: array<string,string|int|bool>, packages?: list<Package>, sdk?: \PhpBaremetal\Spec\Sdk\Sdk, php?: string, phpExtensions?: list<\PhpBaremetal\Spec\Sdk\Descriptor\PhpExtension>, fonts?: array<string,string>} $with */
+    /** @param array{board?: string|Board, runtime?: string, storage?: string, env?: array<string,string>, sources?: array<string,string>, clean?: bool, options?: array<string,string|int|bool>, packages?: list<Package>, sdk?: \PhpBaremetal\Spec\Sdk\Sdk, php?: string, phpExtensions?: list<\PhpBaremetal\Spec\Sdk\Descriptor\PhpExtension>, fonts?: array<string,string>, assetDirs?: list<array{dir: string, storage: string}>, assets?: list<\PhpBaremetal\Spec\Sdk\PreparedAsset>, imageDir?: string} $with */
     public static function plan(array $with = []): BuildPlan
     {
         $sdk = $with['sdk'] ?? SdkDescriptorsTest::sdk();
@@ -50,6 +50,7 @@ final class Plans
             'runtime' => $with['runtime'] ?? 'init-loop',
             'storage' => $with['storage'] ?? 'embedded',
             ...(isset($with['envFile']) ? ['env' => $with['envFile']] : []),
+            ...(isset($with['assetDirs']) ? ['assets' => $with['assetDirs']] : []),
         ], '8.4.26');
         $dir = self::tempDir();
         $runtime = $sdk->runtime($project->runtime);
@@ -82,6 +83,8 @@ final class Plans
             $options,
             $with['phpExtensions'] ?? [],
             fonts: $with['fonts'] ?? [],
+            assets: $with['assets'] ?? [],
+            imageDir: $with['imageDir'] ?? null,
         );
     }
 }

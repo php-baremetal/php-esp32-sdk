@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "esp_err.h"
+
 struct _zval_struct;
 struct _zend_array;
 
@@ -15,9 +17,16 @@ void phpbm_runtime_run(const char *entry_script);
 bool phpbm_runtime_request_scoped(void);
 /* The directory the project sources are mounted at (where the options' relative paths start). */
 const char *phpbm_source_dir(void);
-/* microsd only: serves `phpbm sync` on the console for 1.5 s, copying the sources into dir
- * (free space reported for the volume at mount); true when a session ran, and the caller restarts. */
-bool phpbm_sync(const char *dir, const char *mount);
+/* With the microSD card (code on microsd, or assets on it): serves `phpbm sync` on the console for 1.5 s. Paths are
+ * relative to mount; the host declares the folders it manages (app for the sources, each microSD asset folder) and
+ * only those are listed, written and deleted. True when a session ran, and the caller restarts. */
+bool phpbm_sync(const char *mount);
+
+/* The microSD card at PHPBM_MICROSD_MOUNT, on the board's slot; built with the card (microsd storage or assets on
+ * microsd). Mount prints the card's name and size; on failure it frees the bus and returns the error. */
+#define PHPBM_MICROSD_MOUNT "/sdcard"
+esp_err_t phpbm_microsd_mount(void);
+void phpbm_microsd_unmount(void);
 
 /* Implemented by the board's network component (networks/<type>): brings the
  * network up and returns true with the IPv4 address in ip once it has one.

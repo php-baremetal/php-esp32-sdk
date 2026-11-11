@@ -55,6 +55,11 @@ A page is a class that extends `Scene`: its components are built in `build()`, a
 The complete API is on the [ext-slate](https://repository.php-baremetal.com/packages/php-baremetal/ext-slate)
 package page.
 
+**Images.** The image files a scene shows are project assets: declare their folders in `extra.baremetal.assets`,
+in flash (`embedded`) or on the microSD card (`microsd`). phpbm converts the PNG files to `.sli` and puts them on
+the board at the storage's mount point plus their path in the project, e.g. `/app/assets/ui/logo.sli` or
+`/sdcard/assets/photos/beans.sli`; see [Assets](../runtime/storage.md#assets).
+
 ## Build options
 
 The options go in `extra.baremetal.options` of `composer.json`:
@@ -86,8 +91,9 @@ Measured on the Waveshare ESP32-S3-Touch-LCD-1.85B (ESP32-S3 at 240 MHz, 32 KB i
   240 x 240 card's shadow, more for a blurred group), then reused.
 - **Moving parts** are composed alone: only the part of the screen that changed is drawn, and what does not change
   underneath is copied instead of drawn again.
-- **Memory:** the band buffers are in internal RAM (from the panel driver); a translucent group borrows a scratch
-  area of internal RAM (at most 43 KB on a 360-wide panel) while it is drawn and gives it back; elements, texts and
+- **Memory:** the band buffers are in internal RAM (from the panel driver); a translucent group takes a scratch
+  area of internal RAM (at most 43 KB on a 360-wide panel) when it is first drawn, and the Slate gives it back
+  when no frame has needed all of it for a second, or another scene is shown; elements, texts and
   the images of shadows, blurs and cached groups live in PSRAM, within a budget of half the largest free block, at
   most 2 MB. On a board without PSRAM nothing is cached, and shadows and group blur are not drawn.
 - **Effects** left out of `slate-effects` are not compiled and save their code (see Build options above).

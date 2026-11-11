@@ -73,9 +73,11 @@ not enforce this (`psram` is optional in the file); the review and your hardware
 | `network` | `wifi-c6` | none |
 
 Each key becomes `PHPBM_<BLOCK>_<KEY>` in `inputs.cmake`, and the storage and network components read it.
-A value is a number or a string. SDIO pins must be GPIO numbers from 0 to 54 (the ESP32-P4), or the build
-stops with `board <id>: microsd.<pin> must be a GPIO number from 0 to 54`. `board-overrides` in a project can
-change the keys of a block that the board declares, never its `type`.
+A value is a number or a string. The pins of the `microsd` and `network` blocks must be GPIO numbers of the chip
+(0-48 on the ESP32-S3, 0-54 on the ESP32-P4), and the keys of the table are required except the `sdio` ones, or the
+build stops with `board <id>: microsd.<pin> must be a GPIO number from 0 to 54` or `... is missing`.
+`board-overrides` in a project can change the keys of a block that the board declares, never its `type`, and can
+add a block the board does not declare.
 
 ### A sample board
 

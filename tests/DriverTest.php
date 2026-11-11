@@ -13,6 +13,7 @@ use PhpBaremetal\Esp32\Tests\Support\RecordingProcess;
 use PhpBaremetal\Spec\Sdk\Artifacts;
 use PhpBaremetal\Spec\Sdk\Context;
 use PhpBaremetal\Spec\Sdk\Port;
+use PhpBaremetal\Spec\Sdk\PreparedAsset;
 use PhpBaremetal\Spec\Sdk\Process;
 use PhpBaremetal\Spec\Sdk\ProcessResult;
 use PhpBaremetal\Spec\SpecException;
@@ -552,6 +553,124 @@ final class DriverTest extends TestCase
 
         self::assertCount($calls, $process->calls);
         self::assertSame([], $out->lines);
+    }
+
+    public function test_sync_copies_the_microsd_assets_with_the_code_in_flash(): void
+    {
+        $plan = Plans::plan([
+            'assetDirs' => [['dir' => 'assets/ui', 'storage' => 'embedded'], ['dir' => 'assets/photos', 'storage' => 'microsd'], ['dir' => 'media', 'storage' => 'microsd']],
+            'assets' => [
+                new PreparedAsset('embedded', '/app/assets/ui/logo.sli', '/stage/assets/ui/logo.sli'),
+                new PreparedAsset('microsd', '/sdcard/assets/photos/beans.sli', '/cache/beans.sli'),
+                new PreparedAsset('microsd', '/sdcard/assets/photos/sub/cup.sli', '/project/assets/photos/sub/cup.sli'),
+            ],
+        ]);
+        $tool = self::syncTool();
+        $process = new RecordingProcess($this->process()->on("{$this->python} -u {$tool}", new ProcessResult(0)));
+        $out = new BufferedOutput();
+
+        self::assertTrue($this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), $out));
+
+        $json = $plan->buildDir . '/sync-assets.json';
+        self::assertSame([$this->python, '-u', $tool, '--port', '/dev/ttyACM0', '--assets', $json], $process->last()['command']);
+        self::assertSame(
+            ['roots' => ['assets/photos', 'media'], 'files' => ['assets/photos/beans.sli' => '/cache/beans.sli', 'assets/photos/sub/cup.sli' => '/project/assets/photos/sub/cup.sli']],
+            json_decode((string) file_get_contents($json), true),
+        );
+        self::assertContains('step: syncing assets/photos, media to the microSD card on /dev/ttyACM0', $out->lines);
+    }
+
+    public function test_sync_copies_the_sources_and_the_microsd_assets(): void
+    {
+        $plan = Plans::plan([
+            'storage' => 'microsd',
+            'envFile' => 'config/prod.env',
+            'assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']],
+            'assets' => [new PreparedAsset('microsd', '/sdcard/assets/photos/beans.sli', '/cache/beans.sli')],
+        ]);
+        $tool = self::syncTool();
+        $process = new RecordingProcess($this->process()->on("{$this->python} -u {$tool}", new ProcessResult(0)));
+        $out = new BufferedOutput();
+
+        self::assertTrue($this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), $out));
+
+        self::assertSame(
+            [$this->python, '-u', $tool, '--port', '/dev/ttyACM0', '--exclude', $plan->projectDir . '/config/prod.env', '--assets', $plan->buildDir . '/sync-assets.json', $plan->srcDir()],
+            $process->last()['command'],
+        );
+        self::assertContains('step: syncing project-src and assets/photos to the microSD card on /dev/ttyACM0', $out->lines);
+    }
+
+    public function test_sync_without_microsd_assets_leaves_no_assets_file(): void
+    {
+        $plan = Plans::plan(['storage' => 'microsd']);
+        @mkdir($plan->buildDir, 0777, true);
+        file_put_contents($plan->buildDir . '/sync-assets.json', '{}');
+        $process = new RecordingProcess($this->process()->on("{$this->python} -u " . self::syncTool(), new ProcessResult(0)));
+
+        $this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput());
+
+        self::assertFileDoesNotExist($plan->buildDir . '/sync-assets.json');
+    }
+
+    public function test_sync_does_nothing_with_only_embedded_assets(): void
+    {
+        $plan = Plans::plan([
+            'assetDirs' => [['dir' => 'assets/ui', 'storage' => 'embedded']],
+            'assets' => [new PreparedAsset('embedded', '/app/assets/ui/logo.sli', '/stage/assets/ui/logo.sli')],
+        ]);
+        $process = $this->process();
+        $calls = count($process->calls);
+
+        self::assertFalse($this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput()));
+        self::assertCount($calls, $process->calls);
+    }
+
+    public function test_sync_refuses_an_asset_folder_inside_the_sources_folder_of_the_card(): void
+    {
+        $plan = Plans::plan([
+            'storage' => 'microsd',
+            'assetDirs' => [['dir' => 'app/img', 'storage' => 'microsd']],
+            'assets' => [new PreparedAsset('microsd', '/sdcard/app/img/a.sli', '/cache/a.sli')],
+        ]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("the microsd assets in app/img would go inside /sdcard/app, the sources' folder on the card: move them to another folder");
+        $this->driver($this->process())->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput());
+    }
+
+    public function test_sync_serves_an_empty_microsd_folder_to_clear_it(): void
+    {
+        $plan = Plans::plan(['assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']]]);
+        $tool = self::syncTool();
+        $process = new RecordingProcess($this->process()->on("{$this->python} -u {$tool}", new ProcessResult(0)));
+
+        self::assertTrue($this->driver($process)->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput()));
+
+        $json = (string) file_get_contents($plan->buildDir . '/sync-assets.json');
+        self::assertStringContainsString('"files": {}', $json, 'files is a JSON object even when empty');
+        self::assertSame([$this->python, '-u', $tool, '--port', '/dev/ttyACM0', '--assets', $plan->buildDir . '/sync-assets.json'], $process->last()['command']);
+    }
+
+    public function test_sync_compares_the_sources_folder_case_insensitively(): void
+    {
+        $plan = Plans::plan([
+            'storage' => 'microsd',
+            'assetDirs' => [['dir' => 'App/photos', 'storage' => 'microsd']],
+        ]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("the microsd assets in App/photos would go inside /sdcard/app");
+        $this->driver($this->process())->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput());
+    }
+
+    public function test_sync_refuses_a_microsd_asset_outside_the_card(): void
+    {
+        $plan = Plans::plan([
+            'assetDirs' => [['dir' => 'assets/photos', 'storage' => 'microsd']],
+            'assets' => [new PreparedAsset('microsd', '/app/assets/photos/a.sli', '/cache/a.sli')],
+        ]);
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage('the microsd asset /app/assets/photos/a.sli is not on the card (/sdcard)');
+        $this->driver($this->process())->sync($plan, new Port('/dev/ttyACM0'), new BufferedOutput());
     }
 
     public function test_failed_flash_explains(): void

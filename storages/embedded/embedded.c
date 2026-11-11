@@ -1,12 +1,15 @@
+#include <stdio.h>
 #include <string.h>
 
 #include "diskio_impl.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_partition.h"
+#include "esp_system.h"
 #include "esp_vfs_fat.h"
 #include "ff.h"
 #include "phpbm.h"
+#include "phpbm_options.h"
 
 #define MOUNT_POINT "/app"
 #define PARTITION "storage"
@@ -126,11 +129,27 @@ const char *phpbm_storage_mount(void)
         phpbm_storage_unmount();
         return NULL;
     }
+#if PHPBM_ASSETS_MICROSD
+    /* Assets on the microSD: the card is mounted after the image. Without it the program still runs; reading
+     * those assets then fails. phpbm sync copies them (its managed folders only) like the sources of microsd. */
+    err = phpbm_microsd_mount();
+    if (err != ESP_OK) {
+        printf("phpbm: microSD not mounted (%s): its assets are not available\n", esp_err_to_name(err));
+    } else if (phpbm_sync(PHPBM_MICROSD_MOUNT)) {
+        printf("phpbm: sync session over, restarting\n");
+        fflush(stdout);
+        phpbm_storage_unmount();
+        esp_restart();
+    }
+#endif
     return MOUNT_POINT;
 }
 
 void phpbm_storage_unmount(void)
 {
+#if PHPBM_ASSETS_MICROSD
+    phpbm_microsd_unmount();
+#endif
     if (s_pdrv != 0xFF) {
         char drive[3] = {(char) ('0' + s_pdrv), ':', 0};
         f_mount(NULL, drive, 0);

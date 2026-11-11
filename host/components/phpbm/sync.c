@@ -1,8 +1,11 @@
 /*
- * Serial sync of the project sources (phpbm sync), served from app_main on the console.
+ * Serial sync of the microSD card (phpbm sync): the project sources and the microSD assets, served from app_main
+ * on the console.
  *
- * host: PHPBM-SYNC 1            fw: PHPBM-SYNC READY <free bytes>
- * host: LIST                    fw: F <sha256> <size> <path> ... END
+ * host: PHPBM-SYNC 2            fw: PHPBM-SYNC READY <free bytes>
+ * host: ROOT <folder>           fw: OK | ERR <why>; a folder the host manages (app for the sources, each microSD
+ *                               asset folder); interrupted transfers inside it are cleaned up
+ * host: LIST                    fw: F <sha256> <size> <path> ... END (the files inside the managed folders)
  * host: PUT <size> <sha256> <path>   fw: OK | ERR <why>
  *       then <len>\n + len bytes (len <= 4096), each answered OK | ERR <why>
  *                               fw: DONE <path> | ERR <why>
@@ -10,9 +13,12 @@
  * host: BAUD <n>                fw: OK, then switches to n and waits SYNC_BAUD_MS for PING (answering PONG),
  *                               else goes back; ERR not needed (USB-JTAG console)
  * host: BYE                     fw: BYE (the caller restarts)
- * Paths are relative to dir, '/'-separated, without "", "." or ".." segments.
+ * Paths are relative to the card's mount point, '/'-separated, without "", "." or ".." segments. PUT and DEL
+ * accept only paths inside a managed folder: the rest of the card (the program's data, an OTA's files) is never
+ * listed, written or deleted.
  * PUT writes <path>.part, then renames the old file to <path>.old, .part to <path> and deletes .old;
- * the session start removes orphan .part files and puts back an .old whose file is missing.
+ * ROOT removes the folder's orphan .part files and puts back an .old whose file is missing. PUT creates the
+ * missing parent folders; DEL removes the folders it leaves empty, never the managed folder itself.
  */
 #include <dirent.h>
 #include <errno.h>
@@ -27,6 +33,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "esp_heap_caps.h"
 #include "esp_vfs_fat.h"
 #include "psa/crypto.h"
 #include "sdkconfig.h"
@@ -40,21 +47,36 @@
 #include "driver/uart_vfs.h"
 #endif
 
-#define SYNC_HELLO "PHPBM-SYNC 1"
+#define SYNC_HELLO "PHPBM-SYNC 2"
 #define SYNC_WINDOW_MS 1500
 #define SYNC_IDLE_MS 10000
 #define SYNC_CHUNK 4096
 #define SYNC_PATH_MAX 256
 #define SYNC_DEPTH 16
+#define SYNC_ROOTS 16
 #define SYNC_BAUD_MS 1000
 #define SYNC_RX_FULL 64 /* of the 128-byte UART RX FIFO: room for 0.7 ms of interrupt latency at 921600 */
 
-static char s_rx[SYNC_CHUNK];
+/* The buffers live on the heap (internal RAM, as the transfers and the card's driver expect) only while
+ * phpbm_sync() runs: the 1.5 s window at boot and a session. The program never pays for them. */
+typedef struct {
+    char rx[SYNC_CHUNK];
+    uint8_t buf[SYNC_CHUNK];
+    char full[SYNC_PATH_MAX + 64];
+    char tmp[SYNC_PATH_MAX + 64];
+    char line[SYNC_PATH_MAX + 96];
+    char roots[SYNC_ROOTS][SYNC_PATH_MAX]; /* the managed folders */
+} sync_mem_t;
+
+static sync_mem_t *s_mem;
+#define s_rx (s_mem->rx)
+#define s_buf (s_mem->buf)
+#define s_full (s_mem->full)
+#define s_tmp (s_mem->tmp)
+#define s_roots (s_mem->roots)
 static size_t s_rx_pos, s_rx_len;
-static uint8_t s_buf[SYNC_CHUNK];
-static char s_full[SYNC_PATH_MAX + 64];
-static char s_tmp[SYNC_PATH_MAX + 64];
 static const char *s_dir;
+static int s_root_count;
 
 /* --- console ------------------------------------------------------------------------------ */
 
@@ -227,6 +249,18 @@ static bool valid_path(const char *path)
     }
 }
 
+/* The length of the managed folder rel is inside (the card's names are case-insensitive), 0 for none. */
+static size_t root_of(const char *rel)
+{
+    for (int i = 0; i < s_root_count; i++) {
+        size_t n = strlen(s_roots[i]);
+        if (strncasecmp(rel, s_roots[i], n) == 0 && rel[n] == '/') {
+            return n;
+        }
+    }
+    return 0;
+}
+
 static void full_path(char *out, const char *rel, const char *suffix)
 {
     snprintf(out, sizeof(s_full), "%s/%s%s", s_dir, rel, suffix);
@@ -316,12 +350,13 @@ static bool make_parents(const char *rel)
     return true;
 }
 
-/* Removes the parents of rel left empty, up to s_dir. */
+/* Removes the parents of rel left empty, inside its managed folder (which stays). */
 static void remove_empty_parents(const char *rel)
 {
+    size_t root = root_of(rel);
     snprintf(s_tmp, sizeof(s_tmp), "%.*s", SYNC_PATH_MAX, rel); /* rel is a valid_path(): shorter */
     char *slash;
-    while ((slash = strrchr(s_tmp, '/')) != NULL) {
+    while ((slash = strrchr(s_tmp, '/')) != NULL && (size_t) (slash - s_tmp) > root) {
         *slash = '\0';
         full_path(s_full, s_tmp, "");
         if (rmdir(s_full) != 0) {
@@ -336,6 +371,10 @@ static bool cmd_del(const char *rel)
 {
     if (!valid_path(rel)) {
         reply("ERR invalid path");
+        return true;
+    }
+    if (root_of(rel) == 0) {
+        reply("ERR outside the managed folders");
         return true;
     }
     full_path(s_full, rel, "");
@@ -367,6 +406,10 @@ static bool cmd_put(char *args)
     sha[64] = '\0';
     if (!valid_path(rel)) {
         reply("ERR invalid path");
+        return true;
+    }
+    if (root_of(rel) == 0) {
+        reply("ERR outside the managed folders");
         return true;
     }
     char part[SYNC_PATH_MAX + 64];
@@ -492,6 +535,36 @@ static int recover_dir(char *rel, int depth)
     return fixed;
 }
 
+/* Adds a managed folder; folders may not overlap. */
+static void cmd_root(const char *root)
+{
+    if (!valid_path(root)) {
+        reply("ERR invalid path");
+        return;
+    }
+    size_t len = strlen(root);
+    for (int i = 0; i < s_root_count; i++) {
+        size_t n = strlen(s_roots[i]);
+        size_t m = n < len ? n : len;
+        if (strncasecmp(root, s_roots[i], m) == 0 && (n == len || (n < len ? root[n] : s_roots[i][len]) == '/')) {
+            reply("ERR overlaps %s", s_roots[i]);
+            return;
+        }
+    }
+    if (s_root_count == SYNC_ROOTS) {
+        reply("ERR too many folders");
+        return;
+    }
+    strcpy(s_roots[s_root_count++], root);
+    char rel[SYNC_PATH_MAX + 2];
+    snprintf(rel, sizeof(rel), "%.*s/", SYNC_PATH_MAX - 1, root); /* root is a valid_path(): shorter */
+    int fixed = recover_dir(rel, 0);
+    if (fixed > 0) {
+        printf("phpbm: sync cleaned up %d file(s) of an interrupted session in %s\n", fixed, root);
+    }
+    reply("OK");
+}
+
 static void cmd_baud(const char *arg)
 {
 #if CONFIG_ESP_CONSOLE_UART
@@ -535,15 +608,11 @@ static void cmd_baud(const char *arg)
 static const char *session(const char *mount)
 {
     char rel[SYNC_PATH_MAX + 2] = "";
-    int fixed = recover_dir(rel, 0);
-    if (fixed > 0) {
-        printf("phpbm: sync cleaned up %d file(s) of an interrupted session\n", fixed);
-    }
     uint64_t total = 0, free_bytes = 0;
     esp_vfs_fat_info(mount, &total, &free_bytes);
     reply("PHPBM-SYNC READY %" PRIu64, free_bytes);
-    static char line[SYNC_PATH_MAX + 96];
-    while (read_line(line, sizeof(line), SYNC_IDLE_MS)) {
+    char *line = s_mem->line;
+    while (read_line(line, sizeof(s_mem->line), SYNC_IDLE_MS)) {
         /* Queued hellos are not commands; PING is answered again so a lost PONG does not desync the speeds. */
         if (strcmp(line, "PING") == 0) {
             reply("PONG");
@@ -553,9 +622,13 @@ static const char *session(const char *mount)
             continue;
         }
         if (strcmp(line, "LIST") == 0) {
-            rel[0] = '\0';
-            list_dir(rel, 0);
+            for (int i = 0; i < s_root_count; i++) {
+                snprintf(rel, sizeof(rel), "%s/", s_roots[i]);
+                list_dir(rel, 0);
+            }
             reply("END");
+        } else if (strncmp(line, "ROOT ", 5) == 0) {
+            cmd_root(line + 5);
         } else if (strncmp(line, "PUT ", 4) == 0) {
             if (!cmd_put(line + 4)) {
                 return "phpbm: sync aborted (the host stopped sending)";
@@ -574,12 +647,19 @@ static const char *session(const char *mount)
     return "phpbm: sync timed out";
 }
 
-bool phpbm_sync(const char *dir, const char *mount)
+bool phpbm_sync(const char *mount)
 {
-    s_dir = dir;
+    s_dir = mount;
     s_rx_pos = s_rx_len = 0;
-    mkdir(dir, 0777);
+    s_root_count = 0;
+    s_mem = heap_caps_malloc(sizeof(*s_mem), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (s_mem == NULL) {
+        printf("phpbm: no memory for phpbm sync (%u bytes)\n", (unsigned) sizeof(*s_mem));
+        return false;
+    }
     if (!con_open()) {
+        free(s_mem);
+        s_mem = NULL;
         return false;
     }
     char line[32];
@@ -594,6 +674,9 @@ bool phpbm_sync(const char *dir, const char *mount)
     }
     const char *ended = hello ? session(mount) : NULL;
     con_close(); /* back at the console's baud rate */
+    free(s_mem);
+    s_mem = NULL;
+    s_root_count = 0;
     if (ended != NULL) {
         printf("%s\n", ended);
     }

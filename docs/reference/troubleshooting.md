@@ -53,7 +53,9 @@ A message with `<...>` stands for a value that changes. Run a command with `-vv`
 | `board <id>: chip '<chip>' does not support flash-mode '<mode>'` | `flash-mode` in the board file is a mode the chip has no fragment for. Only `octal` on the ESP32-S3 exists besides `quad`. |
 | `board <id>: chip '<chip>' has no revision '<rev>'` | The `revision` in the board file is not `v1` or `v3` for the ESP32-P4. |
 | `board <id>: unsupported flash size '<size>' (use e.g. 4MB)` | `flash` in the board file must be whole megabytes, like `16MB`. |
-| `board <id>: microsd.<pin> must be a GPIO number from 0 to 54` | A pin of the `sdio` microSD slot in the board file is not a GPIO of the ESP32-P4. |
+| `board <id>: <block>.<pin> must be a GPIO number from 0 to <max>` | A pin of the `microsd` or `network` block (board file or `board-overrides`) is not a GPIO of the chip: 0-48 on the ESP32-S3, 0-54 on the ESP32-P4. |
+| `board <id>: <block>.<pin> is missing (a '<type>' <block> needs ...)` | A `microsd` or `network` block, often one added by `board-overrides`, lacks a pin its type needs. Add it. |
+| `board <id>: chip '<chip>' does not support <block> '<type>' (it supports ...)` | `board-overrides` adds a `microsd` or `network` block with a type the chip does not have. |
 | `board <id>: <peripheral>.<key> must be a number or a string` | A value in a board file's peripheral is neither. |
 
 Boards with ESP32-P4 silicon of the wrong revision refuse to boot a build for the other revision: the board file's
@@ -69,15 +71,19 @@ Boards with ESP32-P4 silicon of the wrong revision refuse to boot a build for th
 
 The last two come from phpbm and are listed in its own troubleshooting page.
 
-## Sync (microsd storage)
+## Sync (microsd storage and microsd assets)
 
 `phpbm sync` ends with `syncing to the microSD card on <port> failed: <reason>`. The reasons:
 
 | Reason | Fix |
 | --- | --- |
-| `the board did not answer the sync: is it running a microSD firmware? (flash it first)` | The board does not run a `microsd` firmware, or it is not running. Flash first; check the port. |
+| `the board did not answer the sync: is it running a microSD firmware? (flash it first)` | The board does not run a firmware with the microSD (`microsd` storage or `microsd` assets), it is not running, or it was built by an older SDK preview, whose sync protocol differs. Flash first; check the port. |
 | `the firmware on <port> does not use the microSD (storage <name>): flash it first` | The board runs an `embedded` build. Flash a `microsd` build. |
 | `the board says: stopped: no microSD card` | Insert a formatted card and run `phpbm sync` again. |
+| `the firmware on <port> keeps the sources in flash (storage embedded): flash it first` | The board runs a build with the code in flash and assets on the card, and the project now has its code on the card. Flash it. |
+| `the board says: microSD not mounted (<error>)` | A firmware with the code in flash and assets on the card found no card. Insert a formatted card and retry. |
+| `the board refused the folder <folder>: <why>` | The firmware does not manage that folder (`too many folders`: at most 16 managed folders, `app` included). |
+| `the microsd assets in <folder> would go inside /sdcard/app, the sources' folder on the card: move them to another folder` | With the code on the card, an asset folder may not be `app` or inside it: rename the folder. |
 | `the board stopped answering` and `the board stopped answering while listing the card` | The board reset or hung during the transfer. Retry; if it repeats, flash again. |
 | `the board could not list the card: ...` | The card cannot be read: check it and its format, then retry. |
 | `not enough space on the card: <n> KB to send, <m> KB free` | Free space on the card or send less. |
