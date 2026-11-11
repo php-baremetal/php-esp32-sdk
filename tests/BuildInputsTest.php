@@ -405,6 +405,31 @@ final class BuildInputsTest extends TestCase
         self::assertFalse(BuildInputs::assetsOnCard(Plans::plan(['assetDirs' => [['dir' => 'assets/ui', 'storage' => 'embedded']]])));
     }
 
+    public function test_reads_a_spec_1_2_plan_without_assets(): void
+    {
+        // phpbm 0.2.x vendors spec 1.2: its BuildPlan has no imageDir() and no $assets, its Project no $assets.
+        $plan = new class () {
+            public string $projectDir = '/work/blink';
+            public object $manifest;
+
+            public function __construct()
+            {
+                $this->manifest = (object) ['project' => (object) ['src' => 'src', 'entry' => 'index.php']];
+            }
+
+            public function srcDir(): string
+            {
+                return $this->projectDir . '/' . $this->manifest->project->src;
+            }
+        };
+        self::assertSame('/work/blink/src', BuildInputs::imageDir($plan));
+        self::assertSame([], BuildInputs::assets($plan));
+        self::assertSame([], BuildInputs::assetDirs($plan));
+        self::assertFalse(BuildInputs::assetsOnCard($plan));
+        $current = Plans::plan(['imageDir' => '/work/blink/.phpbm/image']);
+        self::assertSame('/work/blink/.phpbm/image', BuildInputs::imageDir($current));
+    }
+
     public function test_microsd_assets_with_the_code_on_the_card(): void
     {
         $plan = Plans::plan([
@@ -522,6 +547,36 @@ final class BuildInputsTest extends TestCase
         $this->expectException(SpecException::class);
         $this->expectExceptionMessage('board generic-esp32p4: network.rst must be a GPIO number from 0 to 54, or -1 for none');
         BuildInputs::write(Plans::plan(['board' => $emac->withOverrides(['network' => ['rst' => 55]])]));
+    }
+
+    public function test_a_w5500_needs_its_interrupt_pin_but_may_leave_out_the_reset(): void
+    {
+        $eth = SdkDescriptorsTest::sdk()->board('waveshare-esp32-s3-eth');
+        $plan = Plans::plan(['board' => $eth->withOverrides(['network' => ['rst' => -1]]), 'options' => ['network' => 'on']]);
+        self::assertStringContainsString("set(PHPBM_NETWORK_RST \"-1\")\n", (string) file_get_contents(BuildInputs::write($plan)));
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage('board waveshare-esp32-s3-eth: network.int must be a GPIO number from 0 to 48');
+        BuildInputs::write(Plans::plan(['board' => $eth->withOverrides(['network' => ['int' => -1]])]));
+    }
+
+    public function test_a_block_cannot_set_a_variable_of_the_build(): void
+    {
+        foreach ([
+            ['php', ['type' => 'x', 'extensions' => 'evil'], 'PHPBM_PHP_EXTENSIONS'],
+            ['sdk', ['type' => 'x', 'dir' => '/tmp'], 'PHPBM_SDK_DIR'],
+            ['network', ['component' => '/tmp/x'], 'PHPBM_NETWORK_COMPONENT'],
+            ['packages', ['type' => 'x', 'component' => '/tmp/x'], 'PHPBM_PACKAGES_COMPONENT'],
+        ] as [$name, $block, $variable]) {
+            $plan = Plans::plan(['board' => SdkDescriptorsTest::sdk()->board('generic-esp32s3-octal')->withOverrides([$name => $block])]);
+            try {
+                BuildInputs::write($plan);
+                self::fail("accepted {$name}");
+            } catch (SpecException $e) {
+                $key = array_key_last($block);
+                self::assertSame("board generic-esp32s3-octal: {$name}.{$key} would set {$variable}, which the build sets itself: rename the block or the key", $e->getMessage());
+            }
+            self::assertFalse(is_dir($plan->buildDir));
+        }
     }
 
     public function test_every_board_of_the_sdk_passes_the_block_checks(): void

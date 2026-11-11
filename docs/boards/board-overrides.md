@@ -69,7 +69,13 @@ After changing `extra.baremetal`, run `composer update --lock` so Composer and t
 ## Adding a block
 
 An entry for a block the board does not have adds it, on any board. Write the block whole, with its `type`: the
-board has nothing to merge it with.
+board has nothing to merge it with. Repeat `type` in an entry only when you mean to add the block: on a board without
+it, `{"type": "spi", "cs": 9}` is a block with one pin, not a change of one pin.
+
+The name of an added block is a block kind: one used by the SDK's board files or chips (`microsd`, `network`,
+`display`, `i2c`, `touch`, `led`), or one an installed package declares in `extra.baremetal.board-blocks`. A second
+block of a kind takes a suffix, for example `led-2`. A name is lower-case letters and digits, with parts joined by
+`-`. Any other name, a typo such as `netwrok` or a word such as `php`, fails before the build.
 
 <!-- @code-block language="JSON" label="composer.json: a microSD slot on a generic ESP32-S3" -->
 ```json
@@ -107,8 +113,16 @@ What an added block is checked against depends on who reads it:
   `RuntimeException` that names the board, the block and the key, for example
   `board 'generic-esp32s3-octal': display.cs is missing`.
 
-When `phpbm board` changes the board, an override that adds a block stays as long as the new board does not have
-that block, and it counts for the runtime and storage check.
+When `phpbm board` changes the board, an override that adds a block stays on the new board and counts for the
+runtime and storage check: added when the new board does not have the block, merged over it when the new board has
+it with the same `type`. It is dropped (`phpbm board` lists it and asks first) when the new board has the block
+with another `type`, when the new chip does not support the type of an SDK block (a `spi` microSD slot on an
+ESP32-P4), and when it gave the `type` but only some keys of a block the old board had: such a partial block cannot
+stand alone on a board without it.
+
+Added `wifi-c6` and `emac` networks build on any ESP32-P4 board, but their wiring is that of the reference designs:
+only `rst` of `emac` can be set (the RMII pins and the IP101 PHY are fixed), and the `wifi-c6` link uses the
+SDIO wiring of the reference board.
 
 ## What it cannot change
 
@@ -133,3 +147,8 @@ error below.
 | `board x: chip 'esp32s3' does not support microsd 'sdio' (it supports spi)` | An added `microsd` or `network` block whose type the chip does not have. |
 | `board x: microsd.cs is missing (a 'spi' microsd needs cs, sclk, mosi, miso)` | A pin the block's type needs is not there. |
 | `board x: microsd.clk must be a GPIO number from 0 to 54` | A pin is not an integer in the chip's range (0-48 on the ESP32-S3, 0-54 on the ESP32-P4). |
+| `board x: network.rst must be a GPIO number from 0 to 48, or -1 for none` | The same, for a pin that may also be `-1` (`rst` of a network, `pwr_en` of an `sdio` slot). |
+| `board-overrides: 'Led_2' is not a block name (lower-case letters and digits, parts joined by '-', e.g. led-2)` | The name of an added block is not written as a block name. |
+| `board-overrides: 'netwrok' is not a block of sdk esp32 2.0.0 or of an installed package (blocks: ...); a second block of a kind takes a suffix, e.g. led-2` | phpbm: an added block whose name is no block kind (a typo, or a word such as `php`). |
+| `board-overrides: chip 'esp32p4' does not support microsd 'spi' (it supports sdio)` | phpbm: an added `microsd` or `network` block whose type the chip does not have. |
+| `board x: network.component would set PHPBM_NETWORK_COMPONENT, which the build sets itself: rename the block or the key` | A block key that would overwrite a variable of the build. |

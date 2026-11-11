@@ -48,7 +48,7 @@ final class BuildInputs
         self::checkPath('the sdk directory', $plan->sdk->dir);
         self::checkPath('the PHP source directory', $plan->phpSourceDir);
         self::checkPath('the build directory', $plan->buildDir);
-        self::checkPath('the image directory', $plan->imageDir());
+        self::checkPath('the image directory', self::imageDir($plan));
         foreach ($plan->sourceDirs as $name => $dir) {
             self::checkPath("the source {$name}", $dir);
         }
@@ -87,7 +87,7 @@ final class BuildInputs
             'PHP_VERSION' => $plan->php->version,
             'PHP_MINOR' => $plan->php->minor,
             'PHP_SRC' => self::cmakePath($plan->phpSourceDir),
-            'APP_SRC' => self::cmakePath($plan->imageDir()),
+            'APP_SRC' => self::cmakePath(self::imageDir($plan)),
             'APP_ENTRY' => $plan->entry(),
             'ASSETS_MICROSD' => self::assetsOnCard($plan) ? '1' : '0',
             'INCLUDE_DIR' => self::cmakePath("{$build}/include"),
@@ -110,10 +110,14 @@ final class BuildInputs
         $peripherals = $board->peripherals;
         ksort($peripherals);
         $vars['PERIPHERALS'] = implode(';', array_keys($peripherals));
+        $blockVars = [];
+        $blockKeys = [];
         foreach ($peripherals as $peripheral => $block) {
             ksort($block);
             foreach ($block as $key => $value) {
-                $vars[self::name($peripheral) . '_' . self::name((string) $key)] = self::scalar($board->id, "{$peripheral}.{$key}", $value);
+                $name = self::name($peripheral) . '_' . self::name((string) $key);
+                $blockVars[$name] = self::scalar($board->id, "{$peripheral}.{$key}", $value);
+                $blockKeys[$name] = "{$peripheral}.{$key}";
             }
         }
 
@@ -129,6 +133,13 @@ final class BuildInputs
             $maps[] = "{$dir}={$name}";
         }
         $vars['PREFIX_MAPS'] = implode(';', $maps);
+        // A block (board-overrides can add any) must not set a variable of the build itself, such as
+        // PHPBM_SDK_DIR or PHPBM_NETWORK_COMPONENT. The block variables follow PERIPHERALS.
+        foreach (array_intersect_key($blockVars, $vars) as $name => $value) {
+            throw new SpecException("board {$board->id}: {$blockKeys[$name]} would set PHPBM_{$name}, which the build sets itself: rename the block or the key");
+        }
+        $at = array_search('PERIPHERALS', array_keys($vars), true) + 1;
+        $vars = array_slice($vars, 0, $at, true) + $blockVars + array_slice($vars, $at, null, true);
 
         $cmake = '';
         foreach ($vars as $name => $value) {
@@ -250,19 +261,42 @@ final class BuildInputs
         return $board->revision;
     }
 
+    /*
+     * phpbm 0.2.x vendors spec 1.2, whose BuildPlan has no imageDir() and no $assets and whose Project has no $assets:
+     * the driver reads them through these, so that such a phpbm still builds projects without assets.
+     */
+
+    /** The folder that goes into the flash image (sources + embedded assets); the sources with spec 1.2. */
+    public static function imageDir(object $plan): string
+    {
+        return method_exists($plan, 'imageDir') ? $plan->imageDir() : $plan->srcDir();
+    }
+
+    /** @return list<\PhpBaremetal\Spec\Sdk\PreparedAsset> every prepared asset of the plan; none with spec 1.2 */
+    public static function assets(object $plan): array
+    {
+        return $plan->assets ?? [];
+    }
+
+    /** @return list<object{dir: string, storage: string}> the declared asset folders; none with spec 1.2 */
+    public static function assetDirs(object $plan): array
+    {
+        return ($plan->manifest->project->assets ?? null)?->dirs ?? [];
+    }
+
     /**
      * Whether the project has assets on the microSD card: a declared microsd asset folder, even an empty one (its old
      * files on the card are then cleared), or a prepared microsd asset. The firmware then mounts the card and serves
      * the sync whatever the storage of the code; Driver::sync copies them.
      */
-    public static function assetsOnCard(BuildPlan $plan): bool
+    public static function assetsOnCard(object $plan): bool
     {
-        foreach ($plan->manifest->project->assets->dirs as $dir) {
+        foreach (self::assetDirs($plan) as $dir) {
             if ($dir->storage === 'microsd') {
                 return true;
             }
         }
-        foreach ($plan->assets as $asset) {
+        foreach (self::assets($plan) as $asset) {
             if ($asset->storage === 'microsd') {
                 return true;
             }

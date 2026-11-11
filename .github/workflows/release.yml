@@ -14,7 +14,7 @@ concurrency:
 env:
   # php-baremetal/spec tag this release is tested and built against: set it to the released spec tag
   # before tagging, and keep the tests job's spec-ref below equal to it
-  SPEC_REF: v1.2.0
+  SPEC_REF: v1.3.0
 
 jobs:
   tag:
@@ -33,7 +33,7 @@ jobs:
     needs: tag
     uses: ./.github/workflows/tests.yml
     with:
-      spec-ref: v1.2.0
+      spec-ref: v1.3.0
 
   release:
     needs: tests

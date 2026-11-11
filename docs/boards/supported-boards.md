@@ -70,7 +70,8 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
 - `sdio` boards use SDMMC slot 0. The pins not named in the table take the defaults clk 43, cmd 44, d0 39,
   d1 40, d2 41, d3 42; `pwr_en` is absent unless the board sets it.
 - The microSD slot is what the `microsd` storage needs, and a network block is what the `web-server` runtime
-  needs. A board without the block cannot use them ([Storage](../runtime/storage.md), [Runtimes](../runtime/runtimes.md)).
+  needs. A board without the block cannot use them, unless the project adds the block with
+  [board overrides](./board-overrides.md#adding-a-block) ([Storage](../runtime/storage.md), [Runtimes](../runtime/runtimes.md)).
 - `wifi` and `wifi-c6` boards connect from PHP with `php-baremetal/ext-wifi`; `w5500` and `emac` come up
   before PHP starts when the network is on ([Network](../runtime/network.md)).
 - A different wiring of a slot or a network block is set in the project with

@@ -17,14 +17,14 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  SPEC_REF: v1.2.0
+  SPEC_REF: v1.3.0
   PREVIEW_TAG: sdk-preview
 
 jobs:
   tests:
     uses: ./.github/workflows/tests.yml
     with:
-      spec-ref: v1.2.0
+      spec-ref: v1.3.0
 
   preview:
     needs: tests

@@ -148,7 +148,7 @@ final class Driver implements DriverContract
             return null;
         }
         $roots = [];
-        foreach ($plan->manifest->project->assets->dirs as $dir) {
+        foreach (BuildInputs::assetDirs($plan) as $dir) {
             if ($dir->storage !== 'microsd') {
                 continue;
             }
@@ -160,7 +160,7 @@ final class Driver implements DriverContract
             $roots[] = $dir->dir;
         }
         $files = [];
-        foreach ($plan->assets as $asset) {
+        foreach (BuildInputs::assets($plan) as $asset) {
             if ($asset->storage !== 'microsd') {
                 continue;
             }

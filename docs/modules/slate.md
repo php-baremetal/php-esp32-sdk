@@ -58,7 +58,11 @@ package page.
 **Images.** The image files a scene shows are project assets: declare their folders in `extra.baremetal.assets`,
 in flash (`embedded`) or on the microSD card (`microsd`). phpbm converts the PNG files to `.sli` and puts them on
 the board at the storage's mount point plus their path in the project, e.g. `/app/assets/ui/logo.sli` or
-`/sdcard/assets/photos/beans.sli`; see [Assets](../runtime/storage.md#assets).
+`/sdcard/assets/photos/beans.sli`; see [Assets](../runtime/storage.md#assets). Images are held in the PSRAM left outside PHP's
+`memory_limit`, which the [`firmware-reserve`](../reference/options.md) option sizes (default 1024 KB, about 1066 KB
+free after the start on an ESP32-S3 with 8 MB of PSRAM), shared with the Slate's caches: raise it for large images,
+or an image fails with `no-memory` (for example `"firmware-reserve": 3072` for a 1024 x 600 background on a board
+with 32 MB of PSRAM; the reserve is at most 4096 KB and at most a quarter of the free PSRAM, about 1.9 MB with 8 MB).
 
 ## Build options
 
@@ -67,6 +71,7 @@ The options go in `extra.baremetal.options` of `composer.json`:
 | Option | Default | What it does |
 | --- | --- | --- |
 | `slate-effects` | `["gradients", "shadows", "blur"]` | The graphic effects compiled into the firmware. An effect left out is not built, and the PHP call that uses it throws `\ValueError`. |
+| `slate-images` | `["png"]` | The image formats decoded on the board. `.sli` images are always supported; without `png`, a `.png` path throws `\ValueError` and the PNG decoder is not built. |
 | `slate-debug` | `false` | Builds the profiler: frames per second on screen and a line of timings per second on the console. |
 
 <!-- @code-block language="json" label="composer.json" -->

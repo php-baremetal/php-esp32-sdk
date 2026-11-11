@@ -56,7 +56,8 @@ the scripts' own data.
 ### Boards and pins
 
 The board file describes the slot (see [Board files](../boards/board-files.md)); a board without a `microsd`
-block cannot use this storage. The chip decides the type:
+block cannot use this storage, unless the project adds one with
+[board overrides](../boards/board-overrides.md#adding-a-block). The chip decides the type:
 
 | Board | Slot type | Pins |
 | --- | --- | --- |
@@ -147,6 +148,8 @@ On the board a file is at the storage's mount point plus its path in the project
   board's slot (see [Boards and pins](#boards-and-pins)), and listens for `phpbm sync` for 1.5 seconds, like a
   `microsd` firmware. The board needs a microSD slot. Without a card the program still runs: the firmware prints
   `phpbm: microSD not mounted (<error>): its assets are not available`, and reading those files fails.
+  With the code in flash, `is_dir('/sdcard')` returns `false` even when the card is mounted, while the files under
+  it (`/sdcard/assets/photos/beans.sli`) work: to check for the card, check for one of its files instead.
 - **Copying to the card.** `phpbm flash` copies the `microsd` assets after flashing, and `phpbm sync` copies them
   without building, as for the sources. A folder may not be inside `/sdcard/app` when the code is on the card.
 
