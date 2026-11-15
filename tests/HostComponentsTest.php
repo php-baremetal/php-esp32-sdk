@@ -15,6 +15,13 @@ final class HostComponentsTest extends TestCase
         self::assertContains('-fno-strict-aliasing', preg_split('/\s+/', trim($m[1])));
     }
 
+    public function test_phpbm_header_has_c_linkage_for_cpp_packages(): void
+    {
+        $header = (string) file_get_contents(__DIR__ . '/../host/components/phpbm/include/phpbm.h');
+        self::assertSame(1, preg_match('/#ifdef __cplusplus\nextern "C" \{\n#endif\n(.*)#ifdef __cplusplus\n\}\n#endif\n$/s', $header, $m), 'phpbm.h is not wrapped in extern "C"');
+        self::assertStringContainsString('const char *phpbm_source_dir(void);', $m[1]);
+    }
+
     public function test_the_card_is_mounted_for_microsd_code_or_microsd_assets(): void
     {
         $cmake = (string) file_get_contents(__DIR__ . '/../host/cmake/microsd.cmake');

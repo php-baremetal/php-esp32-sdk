@@ -12,9 +12,9 @@ next: { label: 'Releases and previews', href: './releases.md' }
 
 # Writing native packages
 
-A native package is C code compiled into the firmware: an extension (`bm-ext`) with a PHP API, a HAL (`bm-hal`), a
-device driver or a support library (`bm-lib`). This page lists the rules the firmware imposes on it and the keys the
-SDK reads from the package.
+A native package is C or C++ code compiled into the firmware: an extension (`bm-ext`) with a PHP API, a HAL
+(`bm-hal`), a device driver or a support library (`bm-lib`). This page lists the rules the firmware imposes on it and
+the keys the SDK reads from the package.
 
 ## The flash rule
 
@@ -79,7 +79,7 @@ All the native code of a project is compiled into one ESP-IDF component with its
 
 | Type | Role | Keys it may use |
 | --- | --- | --- |
-| `bm-ext` | PHP extension in C | `module` (required), `entry`, `registries`, and the common keys |
+| `bm-ext` | PHP extension in C or C++ | `module` (required), `entry`, `registries`, and the common keys |
 | `bm-hal` | Platform layer under an extension | `platform` (required), and the common keys |
 | `bm-lib` | Support library or device driver | the common keys |
 | `bm-php-ext` | Selects an optional PHP extension of the SDK | only `php-ext`, the extension name |
@@ -93,9 +93,9 @@ The common keys are `sources`, `include-dirs`, `defines`, `idf-requires`, `idf-d
 | `entry` | The C symbol of the `zend_module_entry`, `bm-ext` only. Default `<module>_module_entry`. |
 | `platform` | `bm-hal` only: the SDK name, `esp32`. The package name must start with `<vendor>/esp32-`. |
 | `priority` | Integer, default 100. Modules register in order of priority, then module name. |
-| `sources` | Source files relative to the package, `*` and `?` allowed in the last path segment; every pattern must match. Default `src/*.c`. |
+| `sources` | Source files relative to the package, `*` and `?` allowed in the last path segment; every pattern must match. Default `src/*.c` and `src/*.cpp`. |
 | `include-dirs` | Include directories relative to the package. Default `include` and `src`, where they exist. |
-| `defines` | Object of C defines, each an integer or a string without `;`, compiled into the package's sources. |
+| `defines` | Object of C and C++ defines, each an integer or a string without `;`, compiled into the package's sources. |
 | `idf-requires` | List of ESP-IDF component names the package uses, for example `esp_timer` or `nvs_flash`. Use `phpbm` to include `phpbm.h` and the option header; `php` is always required. |
 | `idf-dependencies` | Object of ESP-IDF registry components and constraints, for example `{ "espressif/led_strip": "==3.1.0~1" }`. A name without a namespace is read as `espressif/<name>`. Two packages that need the same component with different constraints stop the build. |
 | `sdkconfig` | A file of `CONFIG_` lines, relative to the package, added to the project's sdkconfig. |
@@ -131,6 +131,50 @@ registry `i2c_drivers`, and each I2C device driver registers its descriptor ther
 same registry, and a package that registers into a registry nobody declares stops the build with
 `registers into 'name', which no installed package declares`. See the ext-i2c page
 [Writing a driver](https://repository.php-baremetal.com/packages/php-baremetal/ext-i2c) for a worked example.
+
+### Writing the package in C++
+
+ESP-IDF compiles the C++ files of a package (`.cpp` in `src/` by default, any file listed in `sources`) with its
+own C++ compiler and flags, next to the C ones. The SDK's generated files (`modules.c`, `registries.c`) are C, so
+every symbol they reach must have C linkage:
+
+- the `zend_module_entry` of a `bm-ext` (`<module>_module_entry`, or `entry`);
+- each object listed in `register`, defined as `extern "C" const <type> <symbol> = { … };`. Without the leading
+  `extern "C"` (and inside an `extern "C" { … }` block too) a `const` object at namespace scope has internal
+  linkage in C++, and the link fails;
+- the header of a registry (`registries.<name>.header`), which `registries.c` includes: it must compile as C, and a
+  C++ file that reads the registry needs its `<name>[]` and `<name>_count` declared `extern "C"`.
+
+Zend's `BEGIN_EXTERN_C()` / `END_EXTERN_C()` give C linkage to a non-`const` definition such as the module
+entry. `phpbm.h` and the Zend headers already declare their functions with C linkage; wrap your own headers that
+C files include in `#ifdef __cplusplus` / `extern "C"`.
+
+<!-- @code-block language="cpp" label="src/hello.cpp" -->
+```cpp
+#include "php.h"
+
+static PHP_FUNCTION(hello_cpp) { RETURN_STRING("hi from C++"); }
+
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(arginfo_hello_cpp, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+
+static const zend_function_entry hello_functions[] = {
+    PHP_FE(hello_cpp, arginfo_hello_cpp)
+    PHP_FE_END
+};
+
+BEGIN_EXTERN_C()
+zend_module_entry hello_module_entry = {
+    STANDARD_MODULE_HEADER, "hello", hello_functions,
+    NULL, NULL, NULL, NULL, NULL, "1.0.0", STANDARD_MODULE_PROPERTIES,
+};
+END_EXTERN_C()
+```
+<!-- @endcode-block -->
+
+ESP-IDF builds C++ without exceptions and without RTTI. A package that needs them sets
+`CONFIG_COMPILER_CXX_EXCEPTIONS=y` or `CONFIG_COMPILER_CXX_RTTI=y` in its `sdkconfig` fragment; both make the
+firmware larger, and an exception must never cross into Zend or another C caller.
 
 ### Reading options
 

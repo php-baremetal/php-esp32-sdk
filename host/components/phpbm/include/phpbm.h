@@ -6,6 +6,11 @@
 
 #include "esp_err.h"
 
+/* C linkage for packages written in C++. */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct _zval_struct;
 struct _zend_array;
 
@@ -108,3 +113,7 @@ void phpbm_startup_time_limit(int seconds);
 void phpbm_ini_set(struct _zend_array *ini, const char *name, const char *value);
 /* With the session extension: registers the "memory" save handler, creates the session directory (microsd) and sets the session ini defaults. */
 void phpbm_session_setup(struct _zend_array *ini);
+
+#ifdef __cplusplus
+}
+#endif

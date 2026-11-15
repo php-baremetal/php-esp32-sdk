@@ -8,6 +8,9 @@ the `sdk` branch publishes a preview `2.0.0-alpha.N` on the `sdk-preview` pre-re
 default. Previews are not ready for use: anything can still change.
 
 ### Changed
+- **Native packages can be written in C++.** A package without `sources` compiles `src/*.c` and `src/*.cpp`;
+  `phpbm.h` has C linkage when included from C++. The rules (C linkage for the module entry and the registered
+  symbols) are in [Writing native packages](docs/development/firmware-rules.md#writing-the-package-in-c).
 - **A project is a `composer.json`.** `extra.baremetal` names the SDK (`"sdk": "esp32@^2.0"`), the `board`,
   the `runtime` and the `storage`, plus optional `src`, `entry`, `env`, `options` and `board-overrides`.
   `config.platform.php` is the PHP version of the firmware.

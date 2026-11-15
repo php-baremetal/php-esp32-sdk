@@ -70,6 +70,23 @@ final class PackagesTest extends TestCase
         self::assertSame([], $cfg->includeDirs);
     }
 
+    public function test_cpp_sources_are_compiled_by_default(): void
+    {
+        $f = self::fixtures();
+        $spec = self::spec('cxx', ['module' => 'cxx'], 'bm-ext');
+        self::assertSame(["{$f}/cxx/src/a.c", "{$f}/cxx/src/b.cpp"], $spec->sources);
+        self::assertSame(["{$f}/cxx/src"], $spec->includeDirs);
+
+        $cmake = (new Packages([$spec]))->cmakeLists();
+        self::assertStringContainsString("\"{$f}/cxx/src/b.cpp\"", $cmake);
+    }
+
+    public function test_cpp_sources_can_be_listed(): void
+    {
+        $f = self::fixtures();
+        self::assertSame(["{$f}/cxx/src/b.cpp"], self::spec('cxx', ['sources' => ['src/*.cpp']])->sources);
+    }
+
     public function test_accepts_board_blocks(): void
     {
         $spec = self::spec('hal', ['board-blocks' => ['led:ws2812']]);

@@ -14,6 +14,8 @@ final readonly class PackageSpec
     public const KEYS = ['board-blocks', 'defines', 'entry', 'fonts', 'ide-stubs', 'idf-dependencies', 'idf-requires', 'include-dirs', 'module', 'options', 'partitions', 'platform', 'priority', 'register', 'registries', 'sdkconfig', 'sources'];
     public const PARTITION_SUBTYPES = ['nvs', 'nvs_keys', 'fat', 'spiffs', 'littlefs', 'coredump', 'efuse', 'undefined', 'phy'];
     public const RESERVED_PARTITIONS = ['factory', 'nvs', 'phy_init', 'storage'];
+    /** The sources of a package without 'sources': its C and C++ files in src/ (ESP-IDF compiles both). */
+    public const DEFAULT_SOURCES = ['src/*.c', 'src/*.cpp'];
 
     /**
      * @param list<string> $sources
@@ -141,7 +143,13 @@ final readonly class PackageSpec
             }
             $sources = array_values(array_unique($sources));
         } else {
-            $sources = is_dir("{$dir}/src") ? self::glob($dir, 'src/*.c', $fail) : [];
+            $sources = [];
+            if (is_dir("{$dir}/src")) {
+                foreach (self::DEFAULT_SOURCES as $pattern) {
+                    $sources = [...$sources, ...self::glob($dir, $pattern, $fail)];
+                }
+                sort($sources, SORT_STRING);
+            }
         }
 
         if (array_key_exists('include-dirs', $meta)) {
