@@ -24,7 +24,7 @@ final class MemoryHostTest extends TestCase
             [$code, $output] = self::exec($build);
             self::assertSame(0, $code, "build failed:\n{$output}");
             [$code, $output] = self::exec([$bin]);
-            self::assertSame("OK\n", $output);
+            self::assertSame("OK\n", str_replace("\r\n", "\n", $output));
             self::assertSame(0, $code);
         } finally {
             @unlink($bin);
@@ -63,7 +63,7 @@ final class MemoryHostTest extends TestCase
             self::assertSame(0, $code, "build failed ({$tree}):\n{$output}");
             foreach ([1, 2, 3] as $seed) {
                 [$code, $output] = self::exec([$bin, (string) $seed]);
-                self::assertSame("OK\n", $output, "seed {$seed}");
+                self::assertSame("OK\n", str_replace("\r\n", "\n", $output), "seed {$seed}");
                 self::assertSame(0, $code);
             }
         } finally {

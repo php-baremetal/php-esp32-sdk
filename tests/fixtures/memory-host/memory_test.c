@@ -83,7 +83,9 @@ static void expect_zero_header(const char *what, const unsigned char *chunk)
 
 int main(void)
 {
-    s_psram = aligned_alloc(ZEND_MM_CHUNK_SIZE, FAKE_PSRAM);
+    /* malloc and align by hand: MinGW has no aligned_alloc */
+    unsigned char *raw = malloc(FAKE_PSRAM + ZEND_MM_CHUNK_SIZE);
+    s_psram = (unsigned char *) (((uintptr_t) raw + ZEND_MM_CHUNK_SIZE - 1) & ~(uintptr_t) (ZEND_MM_CHUNK_SIZE - 1));
     scribble(s_psram, FAKE_PSRAM);
     phpbm_memory_init();
     const zend_mm_handlers *h = zend_mm_platform_handlers;

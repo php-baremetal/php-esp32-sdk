@@ -281,7 +281,7 @@ final class BuildInputsTest extends TestCase
         $setters = [];
         $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($plan->sdk->dir, \FilesystemIterator::SKIP_DOTS));
         foreach ($files as $file) {
-            $path = substr($file->getPathname(), strlen($plan->sdk->dir) + 1);
+            $path = str_replace(DIRECTORY_SEPARATOR, '/', substr($file->getPathname(), strlen($plan->sdk->dir) + 1));
             if (preg_match('#^(host|chips|runtimes|storages|networks|boards)/#', $path) && str_contains($path, 'sdkconfig')
                 && preg_match('/^(# )?CONFIG_MBEDTLS_\w+_MEM_ALLOC\b/m', (string) file_get_contents($file->getPathname()))) {
                 $setters[] = $path;

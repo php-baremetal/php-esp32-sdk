@@ -115,7 +115,8 @@ final class HostComponentsTest extends TestCase
         mkdir($dir);
         file_put_contents($dir . '/app_startup.c', $appStartup);
         $module = str_replace('\\', '/', (string) realpath(__DIR__ . '/../host/cmake/idf-startup.cmake'));
-        file_put_contents($dir . '/check.cmake', "include(\"{$module}\")\nphpbm_check_idf_app_startup(\"{$dir}/app_startup.c\")\n");
+        $source = str_replace('\\', '/', $dir) . '/app_startup.c';
+        file_put_contents($dir . '/check.cmake', "include(\"{$module}\")\nphpbm_check_idf_app_startup(\"{$source}\")\n");
         $process = @proc_open(['cmake', '-P', $dir . '/check.cmake'], [1 => ['pipe', 'w'], 2 => ['redirect', 1]], $pipes);
         if (!is_resource($process)) {
             self::markTestSkipped('no cmake');
