@@ -1,0 +1,8 @@
+{
+    "module": "ctype",
+    "sources": ["ext/ctype/ctype.c"],
+    "include-dirs": ["ext/ctype"],
+    "defines": { "HAVE_CTYPE": 1 },
+    "cost": "about 3 KB",
+    "startup-kb": 2
+}

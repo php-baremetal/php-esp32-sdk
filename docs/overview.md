@@ -27,7 +27,7 @@ SDK 2.0 is not released. Until it is, phpbm reads the previews built from the SD
 | Piece | Role |
 | --- | --- |
 | phpbm | The command-line tool on your computer. It downloads the SDK, checks your project against it and calls its driver. See the [phpbm docs](https://github.com/php-baremetal/phpbm/blob/master/docs/overview.md). |
-| SDK (`esp32`) | Boards, chips, PHP 8.3 to 8.5 build recipes, runtimes, storages, networks, options, the ESP-IDF host project and the driver. |
+| SDK (`esp32`) | Boards, chips, PHP 8.3 to 8.6 build recipes, runtimes, storages, networks, options, the ESP-IDF host project and the driver. |
 | Your project | A Composer project: `composer.json` with `extra.baremetal` and the PHP sources in `project-src/`. |
 | Packages | The features: extensions (`ext-*`), drivers, and `php-baremetal/php-<name>` packages that switch on a PHP extension. Listed in the [registry](https://repository.php-baremetal.com). |
 | conductor | The Composer plugin that installs the packages into `.phpbm/packages/`, adds the HAL for the SDK's platform and writes the manifest phpbm reads. |
@@ -40,7 +40,7 @@ firmware image built with ESP-IDF v6.1.1.
 | | |
 | --- | --- |
 | Chips | ESP32-S3 (`esp32s3`), ESP32-P4 (`esp32p4`) |
-| PHP | 8.3, 8.4 and 8.5; the minor comes from `config.platform.php` in `composer.json` ([PHP versions and extensions](./reference/php.md)) |
+| PHP | 8.3, 8.4, 8.5 and 8.6; the minor comes from `config.platform.php` in `composer.json` ([PHP versions and extensions](./reference/php.md)) |
 | Boards | 13, from Espressif and Waveshare plus generic boards ([Supported boards](./boards/supported-boards.md)) |
 | Runtimes | `init-loop`, `event-driven`, `web-server` ([Runtimes](./runtime/runtimes.md)) |
 | Storages | `embedded` (sources in flash, read-only), `microsd` ([Storage](./runtime/storage.md)) |

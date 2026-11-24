@@ -56,7 +56,7 @@ final class MemoryHostTest extends TestCase
         $build = [$cc, '-std=gnu11', '-O1', '-w', '-D_GNU_SOURCE', '-DZEND_MM_CHUNK_SIZE=((size_t)(512*1024))',
             '-I', "{$fixture}/stubs", '-I', $dir, '-I', "{$dir}/main", '-I', "{$root}/host/components/phpbm/include",
             '-I', "{$tree}/Zend", '-I', "{$tree}/main", '-I', "{$tree}/TSRM", '-I', $tree,
-            '-o', $bin, "{$fixture}/mm_zend_test.c", "{$fixture}/zend_stubs.c", "{$tree}/Zend/zend_alloc.c",
+            '-o', $bin, "{$fixture}/mm_zend_test.c", "{$fixture}/zend_stubs.c", "{$fixture}/zend_report_stubs.c", "{$tree}/Zend/zend_alloc.c",
             "{$root}/host/components/phpbm/memory.c"];
         try {
             [$code, $output] = self::exec($build);

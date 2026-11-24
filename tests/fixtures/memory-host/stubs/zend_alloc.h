@@ -22,3 +22,5 @@ typedef struct _zend_mm_handlers {
 } zend_mm_handlers;
 
 extern const zend_mm_handlers *zend_mm_platform_handlers;
+#define ZEND_MM_PLATFORM_HARD_LIMIT 1
+extern size_t zend_mm_platform_hard_limit;

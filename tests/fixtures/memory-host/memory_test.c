@@ -18,6 +18,7 @@ size_t phpbm_memory_limit(void);
 
 /* Defined by the engine (the zend-mm-platform-storage patch of php/<minor>/patches); memory.c sets it. */
 const zend_mm_handlers *zend_mm_platform_handlers;
+size_t zend_mm_platform_hard_limit;
 
 #define FAKE_PSRAM (8u * 1024 * 1024)
 static unsigned char *s_psram;
@@ -89,6 +90,12 @@ int main(void)
     if (h == NULL || phpbm_memory_limit() < 4 * ZEND_MM_CHUNK_SIZE) {
         printf("FAIL no pool (limit %zu)\n", phpbm_memory_limit());
         return 1;
+    }
+    /* memory_limit leaves 2 chunks of the pool (8 MB of PSRAM is not a small board) as headroom; the engine's hard
+     * limit is the whole pool. */
+    if (zend_mm_platform_hard_limit != phpbm_memory_limit() + 2 * ZEND_MM_CHUNK_SIZE) {
+        printf("FAIL hard limit %zu, memory_limit %zu: not 2 chunks of headroom\n", zend_mm_platform_hard_limit, phpbm_memory_limit());
+        fails++;
     }
 
     unsigned char *a = h->chunk_alloc(NULL, ZEND_MM_CHUNK_SIZE, ZEND_MM_CHUNK_SIZE);

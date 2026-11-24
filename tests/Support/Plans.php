@@ -51,7 +51,7 @@ final class Plans
             'storage' => $with['storage'] ?? 'embedded',
             ...(isset($with['envFile']) ? ['env' => $with['envFile']] : []),
             ...(isset($with['assetDirs']) ? ['assets' => $with['assetDirs']] : []),
-        ], '8.4.26');
+        ], '8.4.28');
         $dir = self::tempDir();
         $runtime = $sdk->runtime($project->runtime);
         $storage = $sdk->storage($project->storage);
@@ -75,7 +75,7 @@ final class Plans
             $runtime,
             $storage,
             $sdk->descriptor->release('8.4'),
-            $with['php'] ?? '/cache/trees/php-8.4.26-abc',
+            $with['php'] ?? '/cache/trees/php-8.4.28-abc',
             $with['sources'] ?? [],
             $with['env'] ?? [],
             $dir . '/project/.phpbm/build',

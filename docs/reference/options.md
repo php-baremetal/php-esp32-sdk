@@ -107,7 +107,7 @@ The runtimes are described in [Runtimes](../runtime/runtimes.md).
 ## PHP extension options
 
 Only the extensions below declare options, and only for projects that require them. Each is the same on PHP 8.3,
-8.4 and 8.5. Their cost and the rest of the extensions are in [PHP versions and extensions](./php.md).
+8.4, 8.5 and 8.6. Their cost and the rest of the extensions are in [PHP versions and extensions](./php.md).
 
 | Option | Owner | Type | Values or range | Default | Effect |
 | --- | --- | --- | --- | --- | --- |

@@ -43,6 +43,11 @@
 #define PHPBM_POOL_MIN_CHUNKS 2
 /* The pool a 2 MB board is calibrated for (1 MB); fewer chunks are logged. */
 #define PHPBM_POOL_SMALL_CHUNKS 4
+/* Chunks of the pool kept above memory_limit. Past the limit the engine (PHP 8.3.37/8.4.28/8.5.13/8.6) still serves
+ * the allocation and raises "Allowed memory size exhausted" a little later: the headroom is what that allocation is
+ * served from. Taken from memory_limit, not from the firmware: one chunk on small-PSRAM boards. */
+#define PHPBM_POOL_HEADROOM_CHUNKS 2
+#define PHPBM_POOL_HEADROOM_CHUNKS_SMALL 1
 
 /* Chunks must be aligned to their size. heap_caps_aligned_alloc() puts a block header
  * before each one, so separate chunks would waste a chunk-sized gap each: PHP gets
@@ -51,6 +56,7 @@
  * not call emalloc from other tasks). */
 static char *s_pool;
 static size_t s_pool_chunks;
+static size_t s_headroom_chunks;
 static size_t s_reserve;
 static uint32_t s_used[PHPBM_POOL_MAX_CHUNKS / 32];
 static size_t s_opcache;
@@ -166,12 +172,22 @@ void phpbm_memory_init(void)
         }
     }
     s_pool_chunks = s_pool != NULL ? chunks : 0;
+    /* memory_limit keeps at least PHPBM_POOL_MIN_CHUNKS: a smaller pool gets less headroom (none at the minimum). */
+    s_headroom_chunks = small ? PHPBM_POOL_HEADROOM_CHUNKS_SMALL : PHPBM_POOL_HEADROOM_CHUNKS;
+    if (s_pool_chunks < PHPBM_POOL_MIN_CHUNKS + s_headroom_chunks) {
+        s_headroom_chunks = s_pool_chunks > PHPBM_POOL_MIN_CHUNKS ? s_pool_chunks - PHPBM_POOL_MIN_CHUNKS : 0;
+    }
     if (small && s_pool_chunks > 0 && s_pool_chunks < PHPBM_POOL_SMALL_CHUNKS) {
         ESP_LOGW("phpbm", "PHP memory pool %zu KB, below the %zu KB expected with %zu KB of PSRAM",
                  s_pool_chunks * (ZEND_MM_CHUNK_SIZE / 1024), (size_t) PHPBM_POOL_SMALL_CHUNKS * (ZEND_MM_CHUNK_SIZE / 1024),
                  heap_caps_get_total_size(PHPBM_HEAP_CAPS) / 1024);
     }
     zend_mm_platform_handlers = &phpbm_mm_handlers;
+#ifdef ZEND_MM_PLATFORM_HARD_LIMIT
+    /* PHP's hard memory limit is the pool: an allocation the pool cannot hold stops with "Hard memory limit of N
+     * bytes exhausted (tried to allocate X bytes) in <file> on line <n>" (then abort()), not a bare "Out of memory". */
+    zend_mm_platform_hard_limit = s_pool_chunks * ZEND_MM_CHUNK_SIZE;
+#endif
 }
 
 size_t phpbm_memory_opcache(void)
@@ -184,8 +200,8 @@ size_t phpbm_memory_reserve(void)
     return s_reserve;
 }
 
-/* 0 when no pool could be reserved. */
+/* The pool less its headroom; 0 when no pool could be reserved. */
 size_t phpbm_memory_limit(void)
 {
-    return s_pool_chunks * ZEND_MM_CHUNK_SIZE;
+    return (s_pool_chunks - s_headroom_chunks) * ZEND_MM_CHUNK_SIZE;
 }

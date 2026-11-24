@@ -28,25 +28,30 @@ final class SdkDescriptorsTest extends TestCase
     public function test_php_releases_with_their_patches(): void
     {
         $sdk = self::sdk();
-        self::assertSame(['8.3', '8.4', '8.5'], array_keys($sdk->descriptor->php));
-        self::assertSame('8.3.35', $sdk->descriptor->release('8.3')->version);
-        self::assertSame('8.4.26', $sdk->descriptor->release('8.4')->version);
-        self::assertSame('8.5.11', $sdk->descriptor->release('8.5')->version);
-        self::assertCount(12, $sdk->patches('8.3'));
-        self::assertCount(13, $sdk->patches('8.4'));
-        self::assertCount(14, $sdk->patches('8.5'));
-        foreach (['8.3', '8.4', '8.5'] as $minor) {
+        self::assertSame(['8.3', '8.4', '8.5', '8.6'], array_keys($sdk->descriptor->php));
+        self::assertSame('8.3.37', $sdk->descriptor->release('8.3')->version);
+        self::assertSame('8.4.28', $sdk->descriptor->release('8.4')->version);
+        self::assertSame('8.5.13', $sdk->descriptor->release('8.5')->version);
+        self::assertSame('8.6.0', $sdk->descriptor->release('8.6')->version);
+        self::assertCount(13, $sdk->patches('8.3'));
+        self::assertCount(14, $sdk->patches('8.4'));
+        self::assertCount(15, $sdk->patches('8.5'));
+        self::assertCount(15, $sdk->patches('8.6'));
+        foreach (['8.3', '8.4', '8.5', '8.6'] as $minor) {
             self::assertSame('0002-ext-date-optional-minimal-tz.patch', basename($sdk->patches($minor)[0]), $minor);
             self::assertNotContains('0001-closure-runtime-cache-arena.patch', array_map('basename', $sdk->patches($minor)));
             self::assertFileExists($sdk->compatDir($minor) . '/internal_functions.c');
         }
         // 8.3 keeps sigsetjmp behind HAVE_SIGSETJMP upstream, so it has no 0008-zend-portability patch.
         self::assertNotContains('0008-zend-portability-sigsetjmp-guard.patch', array_map('basename', $sdk->patches('8.3')));
-        self::assertSame('0014-uri-drop-lexbor-module-dep.patch', basename($sdk->patches('8.5')[12]));
-        foreach (['8.3' => '0013', '8.4' => '0014', '8.5' => '0015'] as $minor => $number) {   // the last one
-            self::assertSame("{$number}-pdo-sqlite-busy-timeout.patch", basename(array_slice($sdk->patches($minor), -1)[0]), $minor);
+        foreach (['8.5', '8.6'] as $minor) {
+            self::assertSame('0014-uri-drop-lexbor-module-dep.patch', basename($sdk->patches($minor)[12]), $minor);
+            self::assertFileExists($sdk->compatDir($minor) . '/uri_whatwg_stub.c');
         }
-        self::assertFileExists($sdk->compatDir('8.5') . '/uri_whatwg_stub.c');
+        foreach (['8.3' => '0013', '8.4' => '0014', '8.5' => '0015', '8.6' => '0015'] as $minor => $number) {   // the last two
+            self::assertSame("{$number}-pdo-sqlite-busy-timeout.patch", basename(array_slice($sdk->patches($minor), -2)[0]), $minor);
+            self::assertSame('0016-zend-mm-huge-chunk-align.patch', basename(array_slice($sdk->patches($minor), -1)[0]), $minor);
+        }
     }
 
     public function test_every_minor_has_the_same_extensions(): void
@@ -54,13 +59,13 @@ final class SdkDescriptorsTest extends TestCase
         $sdk = self::sdk();
         $names = array_keys($sdk->phpExtensions['8.4']);
         sort($names);
-        foreach (['8.3', '8.5'] as $minor) {
+        foreach (['8.3', '8.5', '8.6'] as $minor) {
             $other = array_keys($sdk->phpExtensions[$minor]);
             sort($other);
             self::assertSame($names, $other, $minor);
         }
-        // 8.5 registers OPcache as a module (its ini lookup needs it); 8.3/8.4 accel_startup() registers a static one.
-        foreach (['8.3', '8.4', '8.5'] as $minor) {
+        // 8.5 and 8.6 register OPcache as a module (its ini lookup needs it); 8.3/8.4 accel_startup() registers a static one.
+        foreach (['8.3', '8.4', '8.5', '8.6'] as $minor) {
             self::assertSame('opcache', $sdk->phpExtension($minor, 'opcache')->module);
             foreach ($sdk->phpExtensions[$minor] as $extension) {
                 self::assertSame($extension->name, $extension->module, "{$minor} {$extension->name}");
@@ -69,6 +74,7 @@ final class SdkDescriptorsTest extends TestCase
         self::assertNull($sdk->phpExtension('8.3', 'opcache')->entry);
         self::assertNull($sdk->phpExtension('8.4', 'opcache')->entry);
         self::assertSame('opcache_module_entry', $sdk->phpExtension('8.5', 'opcache')->entry);
+        self::assertSame('opcache_module_entry', $sdk->phpExtension('8.6', 'opcache')->entry);
         // 8.3 still has mbfilter_utf8_mobile.c, which uses the CJK tables.
         $exclude = static fn (string $minor): array => $sdk->phpExtension($minor, 'mbstring')->resolve(['mbstring-cjk' => false])['layers'][1]['exclude'];
         self::assertContains('ext/mbstring/libmbfl/filters/mbfilter_utf8_mobile.c', $exclude('8.3'));

@@ -1,0 +1,11 @@
+{
+    "module": "zlib",
+    "entry": "php_zlib_module_entry",
+    "sources": ["ext/zlib/*.c"],
+    "include-dirs": ["ext/zlib"],
+    "defines": { "HAVE_ZLIB": 1 },
+    "idf-requires": ["espressif__zlib"],
+    "idf-dependencies": { "espressif/zlib": "==1.3.2~1" },
+    "cost": "about 56 KB with the zlib library, about 25 KB of RAM; deflate needs about 260 KB of memory_limit while it runs",
+    "startup-kb": 26
+}

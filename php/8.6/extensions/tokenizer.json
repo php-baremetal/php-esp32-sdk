@@ -1,0 +1,7 @@
+{
+    "module": "tokenizer",
+    "sources": ["ext/tokenizer/*.c"],
+    "include-dirs": ["ext/tokenizer"],
+    "cost": "about 15 KB",
+    "startup-kb": 29
+}

@@ -17,14 +17,15 @@ and the OPcache cache all live there.
 
 ## memory_limit
 
-At boot the firmware reserves one block of PSRAM for PHP's memory manager, in chunks of 256 KB. The block size is
-`memory_limit`; it is always a multiple of 256 KB, at least 512 KB and at most 64 MB (256 chunks).
+At boot the firmware reserves one block of PSRAM for PHP's memory manager, the pool, in chunks of 256 KB: at least
+512 KB and at most 64 MB (256 chunks). `memory_limit` is the pool less a headroom of 2 chunks (1 chunk on a small
+PSRAM board, none when the pool has only 2 chunks), so it is always a multiple of 256 KB.
 
 <!-- @code-block language="text" label="how the block is sized" -->
 ```text
 keep   = firmware reserve + display framebuffers + startup + opcache-memory
 chunks = (free PSRAM - keep) / 256 KB, at most 256, at least 2
-memory_limit = chunks x 256 KB
+memory_limit = (chunks - headroom) x 256 KB     headroom = 2 chunks (small profile: 1), at most chunks - 2
 ```
 <!-- @endcode-block -->
 
@@ -44,7 +45,7 @@ memory_limit = chunks x 256 KB
   `(display framebuffers <n> KB)`. The turned panel's surface framebuffer is left out when ext-display's
   `display-surface` option is `false` (a project that draws only with a renderer such as Slate): 3600 KB on that
   board, 1800 KB more for the rest of the firmware and PHP.
-- `startup-kb` is in `sdk.json` per minor (760, 816 and 872 KB for 8.3, 8.4 and 8.5) and in each extension's
+- `startup-kb` is in `sdk.json` per minor (760, 816, 872 and 984 KB for 8.3, 8.4, 8.5 and 8.6) and in each extension's
   descriptor: see [PHP versions and extensions](./php.md).
 - With less than the minimum, the boot log says `PSRAM too small for PHP` and lists the numbers.
 
@@ -52,15 +53,15 @@ The boot prints the result: the first line contains `memory_limit <n> KB`, and t
 the start. It adds `firmware reserve`, `opcache` or `PHP stack` only when they differ from the defaults, and always
 `firmware reserve` with its display framebuffers when the board has some.
 
-Measured memory limits (PHP 8.4 unless noted):
+Measured pools (PHP 8.4 unless noted); `memory_limit` is the pool less the headroom:
 
-| Board | Configuration | `memory_limit` | Free PSRAM after start |
-| --- | --- | --- | --- |
-| `waveshare-esp32-s3-eth` (8 MB PSRAM) | blink | 5632 KB | 1493 KB |
-| `waveshare-esp32-s3-eth` | all thirteen extensions, `opcache-memory` 1024 | 4352 KB | 1562, 1477 and 1407 KB on 8.3, 8.4 and 8.5 |
-| `waveshare-esp32-p4-eth` (32 MB PSRAM) | blink | 30208 KB | 1493 KB |
-| `waveshare-esp32-s3-zero` (2 MB PSRAM, small profile) | blink | 1024 KB | 85 KB |
-| `waveshare-esp32-s3-zero` | eleven extensions (all but mbstring and opcache), PHP 8.5 | 768 KB | 9 KB |
+| Board | Configuration | Pool | `memory_limit` | Free PSRAM after start |
+| --- | --- | --- | --- | --- |
+| `waveshare-esp32-s3-eth` (8 MB PSRAM) | blink | 5632 KB | 5120 KB | 1493 KB |
+| `waveshare-esp32-s3-eth` | all thirteen extensions, `opcache-memory` 1024 | 4352 KB | 3840 KB | 1562, 1477 and 1407 KB on 8.3, 8.4 and 8.5 |
+| `waveshare-esp32-p4-eth` (32 MB PSRAM) | blink | 30208 KB | 29696 KB | 1493 KB |
+| `waveshare-esp32-s3-zero` (2 MB PSRAM, small profile) | blink | 1024 KB | 768 KB | 85 KB |
+| `waveshare-esp32-s3-zero` | eleven extensions (all but mbstring and opcache), PHP 8.5 | 768 KB | 512 KB | 9 KB |
 
 ### Outside memory_limit
 
@@ -72,8 +73,19 @@ Some allocations come from the PSRAM left to the firmware, not from `memory_limi
 - the `memory` session store: at most 64 sessions and 64 KB;
 - the zlib tables.
 
-Large fragmented allocations can fail below `memory_limit`. A script that exhausts the limit ends with the usual
-`Allowed memory size of N bytes exhausted` fatal error.
+### When the memory runs out
+
+- **A script that reaches `memory_limit`** ends with the usual `Allowed memory size of N bytes exhausted` fatal error,
+  and the runtime's `on-error` applies. Since PHP 8.3.37, 8.4.28, 8.5.13 and 8.6 the engine raises that error a little
+  after the limit is crossed: the allocation that crosses it is still served, from the headroom, and the error comes
+  at the next instruction of the script.
+- **A single allocation larger than what is left plus the headroom** (for example doubling a 4 MB string near the
+  limit) cannot be served. PHP's hard memory limit is the pool: the firmware prints
+  `Hard memory limit of N bytes exhausted (tried to allocate X bytes) in <file> on line <n>` and restarts (an
+  `abort()`, as after any panic). Fragmentation can also leave no run of free chunks for a block larger than 256 KB:
+  the firmware then prints `Out of memory` and restarts.
+- A block larger than about 252 KB (a string, an array's table) takes whole 256 KB chunks, and `memory_limit` counts
+  them whole: a 256 KB string counts as 512 KB in `memory_get_usage()`.
 
 ### Small PSRAM boards
 
@@ -83,13 +95,13 @@ profile: no firmware reserve, a 128 KB stack, OPcache off. If the pool is under 
 Measured on an ESP32-S3 with 4 MB of flash and 2 MB of quad PSRAM (board `waveshare-esp32-s3-zero`, PHP 8.5):
 
 - **Eleven extensions** (all but mbstring and opcache, see [What fits in 4 MB of flash](#what-fits-in-4-mb-of-flash)):
-  `memory_limit` is 768 KB and the boot warns that the pool is under 1024 KB. A script starts with about 375 KB
+  the pool is 768 KB (`memory_limit` 512 KB) and the boot warns that the pool is under 1024 KB. A script starts with about 375 KB
   already used, and 9 KB of PSRAM stay for the rest of the firmware. A light check of each of the eleven passes,
   but a long script such as `12-extension-checks` runs out of memory: it needs a board with more PSRAM.
 - **zlib:** `gzuncompress()` works, and so does compressing with a small window, for example
   `deflate_init($encoding, ['window' => 9, 'memory' => 1])`. `gzcompress()` with the default
-  parameters fails with `Allowed memory size of 786432 bytes exhausted (tried to allocate 65536 bytes)`, even as
-  the first call of the script.
+  parameters fails with `Allowed memory size of N bytes exhausted (tried to allocate 65536 bytes)`, even as the first
+  call of the script.
 - **Wi-Fi:** in `08-network-web/wifi-ap-s3-rgb-manage` about 20 KB of PSRAM stay free after the
   start. Once a station joins the board's access point, the Wi-Fi buffers bring that down to about 1.2 KB.
   esp32-web-hal 1.0.2 and later then put HTTP requests in internal RAM; earlier versions answered every request

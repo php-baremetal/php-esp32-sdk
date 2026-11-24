@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Reference'
-lede:    'PHP 8.3, 8.4 and 8.5 run on the board, each pinned to one patch release. Eight modules are always built in; thirteen optional extensions are added by requiring a php-baremetal/php-name package.'
+lede:    'PHP 8.3, 8.4, 8.5 and 8.6 run on the board, each pinned to one patch release. Eight modules are always built in; thirteen optional extensions are added by requiring a php-baremetal/php-name package.'
 see_also:
   - { href: './options.md', meta: 'Reference' }
   - { href: './memory-and-flash.md', meta: 'Reference' }
@@ -19,9 +19,10 @@ of a project is the minor in `config.platform.php` of its `composer.json` (`phpb
 
 | Minor | Release in this SDK | Engine startup (`startup-kb`) | Patches |
 | --- | --- | --- | --- |
-| 8.3 | 8.3.35 | 760 KB | 13 |
-| 8.4 | 8.4.26 | 816 KB | 14 |
-| 8.5 | 8.5.11 | 872 KB | 15 |
+| 8.3 | 8.3.37 | 760 KB | 14 |
+| 8.4 | 8.4.28 | 816 KB | 15 |
+| 8.5 | 8.5.13 | 872 KB | 16 |
+| 8.6 | 8.6.0 | 984 KB | 16 |
 
 The SDK carries one patch release per minor; an older one disappears with the next SDK release. The sources are
 downloaded from php.net and checked against a sha256. `startup-kb` is the persistent PSRAM the engine takes at
@@ -29,17 +30,18 @@ startup: the firmware keeps it out of `memory_limit` (see [Memory, flash and par
 
 ## Always built in
 
-`core`, `hash`, `json`, `pcre`, `random`, `reflection`, `spl` and `standard`; PHP 8.5 adds `uri`. They cannot be
+`core`, `hash`, `json`, `pcre`, `random`, `reflection`, `spl` and `standard`; PHP 8.5 and 8.6 add `uri`. They cannot be
 removed and have no package. Everything else is optional, and a project that does not require it pays nothing.
 
 Without `php-date` the firmware builds with a small stand-in for the date code: `php_time()` and a minimal
-formatting, in the UTC zone.
+formatting, in the UTC zone. On PHP 8.6 the `Time\Duration` class comes with `php-date` too, so without it
+`Io\Poll\Context::wait()` takes only `null` as its timeout.
 
 ## Optional extensions
 
 A project adds an extension with `composer require php-baremetal/php-<name>`. The package name is the extension
-name: `php-baremetal/php-pdo_sqlite` adds `pdo_sqlite`. All thirteen exist on PHP 8.3, 8.4 and 8.5, with the same
-cost.
+name: `php-baremetal/php-pdo_sqlite` adds `pdo_sqlite`. All thirteen exist on PHP 8.3, 8.4, 8.5 and 8.6, with the
+same cost.
 
 `Flash` is the size the extension adds to the firmware, `Startup` the persistent PSRAM it takes at boot
 (`startup-kb`). The numbers are approximate, measured with `optimization` set to `size`.
@@ -90,18 +92,19 @@ Every PHP minor gets the patches below, applied to the downloaded sources before
 | `opcache-static-embed` | Links OPcache into the firmware and accepts the `embed` SAPI. |
 | `opcache-malloc-shm-backend` | An OPcache shared-memory backend on a plain allocation in PSRAM, with the file locks turned off. |
 | `phpinfo-baremetal-section` | A "PHP Baremetal" table in `phpinfo()`: project, board, firmware version and ESP-IDF version. |
-| `zend-mm-platform-storage` | Lets the firmware hand the Zend memory manager its chunks from the PSRAM pool; keeps the page size when `sysconf` reports none. |
+| `zend-mm-platform-storage` | Lets the firmware hand the Zend memory manager its chunks from the PSRAM pool, with the hard memory limit capped at the pool size; keeps the page size when `sysconf` reports none. |
 | `zend-small-startup-buffers` | Starts the garbage collector's root buffer at 4K entries (collection threshold 4001) and skips the optimizer's function table without OPcache. |
 | `opcache-board-fixes` | `opcache.memory_consumption` in KB; falls back to `stat()` when the FAT driver reports a modification time of 0. |
 | `zlib-gzopen-without-dup` | `gzopen()` and `compress.zlib://` work without `dup()`, which the ESP-IDF file system lacks. |
 | `pdo-sqlite-busy-timeout` | The default `pdo_sqlite` busy timeout is 5 s instead of 60 s. |
+| `zend-mm-huge-chunk-align` | Blocks larger than a chunk take whole 256 KB chunks, as they do in the pool, so `memory_limit` counts what they hold and a growing string is extended in place. |
 
 Two more depend on the minor:
 
 | Patch | Minors | What it does |
 | --- | --- | --- |
-| `zend-portability-sigsetjmp-guard` | 8.4, 8.5 | Uses plain `setjmp` again, because the C library has no `sigsetjmp`. |
-| `uri-drop-lexbor-module-dep` | 8.5 | `ext/uri` no longer requires the `lexbor` module, which the firmware does not build. The RFC 3986 parser and `parse_url()` stay. |
+| `zend-portability-sigsetjmp-guard` | 8.4, 8.5, 8.6 | Uses plain `setjmp` again, because the C library has no `sigsetjmp`. |
+| `uri-drop-lexbor-module-dep` | 8.5, 8.6 | `ext/uri` no longer requires the `lexbor` module, which the firmware does not build. The RFC 3986 parser and `parse_url()` stay. |
 
 ## What is different on the board
 
@@ -114,9 +117,13 @@ The engine is the same; the board around it is not a Linux machine.
 - **No signals and no `setitimer`.** `max_execution_time` still works, through a timer on the real clock: `sleep()`
   counts, and a loop inside C code is not interrupted.
 - **No JIT.**
+- **No fibers.** The engine has no context switch for these 32-bit cores, and there is no `mmap` for a fiber's
+  stack: `Fiber::start()` throws an `Exception` ("Fiber stack allocate failed"). Libraries built on fibers (Revolt,
+  AMPHP v3) do not run; generators work.
 - **FAT file system.** Locks with `fcntl` do nothing on it. SQLite therefore opens databases exclusively, which
   keeps a reset in the middle of a transaction from corrupting the file.
-- **`Uri\WhatWg\Url` (PHP 8.5) throws an `Error`** when constructed: the WHATWG parser is not built.
+- **`Uri\WhatWg\Url` (PHP 8.5 and 8.6) throws an `Error`** when constructed: the WHATWG parser is not built. On
+  8.6 so do `Uri\WhatWg\UrlBuilder::build()` and `Uri\WhatWg\url_percent_encode()`.
 - **`PHP_OS` is `Linux`**, for the scripts that test it; `PHP_UNAME` and `PHP_BUILD_SYSTEM` are `ESP-IDF`.
 
 Extensions that are not available at all: `intl`, `iconv`, `fileinfo`, `gd`, `curl`, the full `openssl` and TLS.

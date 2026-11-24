@@ -8,6 +8,13 @@ the `sdk` branch publishes a preview `2.0.0-alpha.N` on the `sdk-preview` pre-re
 default. Previews are not ready for use: anything can still change.
 
 ### Changed
+- **PHP 8.3.37, 8.4.28 and 8.5.13** (were 8.3.35, 8.4.26 and 8.5.11). The patches apply as before;
+  `zend-mm-platform-storage` is rebased and also gives the firmware's heap the default hard memory limit that
+  these releases add (`zend_mm_startup_ex()` leaves it unset).
+- **Running out of PHP memory is a fatal error again, not a reboot.** `memory_limit` is the pool less 2 chunks (1
+  on small-PSRAM boards) that serve the allocation crossing it, huge blocks count as the whole chunks they take
+  (patch `zend-mm-huge-chunk-align`), and an allocation larger than the pool stops at PHP's hard limit with its file
+  and line.
 - **`firmware-reserve` goes up to 8192 KB** (was 4096), still at most a quarter of the free PSRAM: a large-screen app
   on a 32 MB board can leave more PSRAM to Slate's caches and images (the Waveshare ESP32-P4-WIFI6-Touch-LCD-5 gets
   about 7.7 MB, a quarter of its free PSRAM).
@@ -55,6 +62,10 @@ default. Previews are not ready for use: anything can still change.
   version it uses in `phpbm.lock`.
 
 ### Added
+- PHP 8.6 (8.6.0): the 8.5 patches ported, the same thirteen optional extensions (`date` adds `Time\Duration`),
+  and the new `Io\Poll` API on ESP-IDF's `poll()`. Without `php-date`, `Io\Poll\Context::wait()` takes only a
+  `null` timeout; as on 8.5, the WHATWG URL parser is not built (`Uri\WhatWg\Url`, `UrlBuilder::build()` and
+  `url_percent_encode()` throw). `phpbm init` writes the newest release, now 8.6.0.
 - Board `waveshare-esp32-s3-touch-lcd-5b` (Waveshare ESP32-S3-Touch-LCD-5B): 1024 x 600 RGB panel at a pixel
   clock of 26 MHz (29.8 Hz; a margin under 26.67 MHz, the highest measured that loses no bounce refill on this
   board) with two framebuffers and 6 bounce rows, QIO flash, Wi-Fi buffers in PSRAM, GT911 touch, CH422G expander;
@@ -87,7 +98,7 @@ default. Previews are not ready for use: anything can still change.
   (`PHPBM_DISPLAY_FB_KB`), so a project needs no option for a large panel.
 - Project assets (`extra.baremetal.assets`, needs php-baremetal/spec 1.3): the flash image holds the sources and the `embedded` assets (`BuildPlan::imageDir()`, sized with them); with `microsd` assets the firmware mounts the microSD card also when the code is in flash (`PHPBM_ASSETS_MICROSD`), and `phpbm flash` and `phpbm sync` copy the assets to the card. The sync server changes only the folders the host manages (`/sdcard/app` with the code on the card, and each `microsd` asset folder) and never the rest of the card. Its protocol is now version 2: a board flashed by an earlier preview must be flashed again before syncing. A phpbm that still vendors spec 1.2 (phpbm 0.2.x) keeps building projects without assets: the driver then reads no assets and puts the sources in the image.
 - Package options: native packages declare options; the build defines PHPBM_OPTION_<NAME> for each.
-- `board-overrides` can add a block the board does not have, written whole with its `type` (needs php-baremetal/spec 1.3): for example a `spi` microSD slot on `generic-esp32s3-octal`. Before writing anything the build checks the SDK's blocks (`microsd`, `network`) as they are after the overrides, used or not: a type the chip supports, every pin the type needs (`spi` microSD: `cs`, `sclk`, `mosi`, `miso`; `w5500`: `cs`, `int`, `rst`, `sclk`, `mosi`, `miso`; `emac`: `rst`) and each pin a GPIO number of the chip (0-48 on the ESP32-S3, 0-54 on the ESP32-P4; `-1` for none on `rst` and the `sdio` `pwr_en`). A missing pin is an error that names it, not a C compile error. A block key whose variable the build sets itself (`network.component`, or `extensions` of an added `php` block) is an error too.
+- `board-overrides` can add a block the board does not have, written whole with its `type` (needs php-baremetal/spec 1.3.1): for example a `spi` microSD slot on `generic-esp32s3-octal`. Before writing anything the build checks the SDK's blocks (`microsd`, `network`) as they are after the overrides, used or not: a type the chip supports, every pin the type needs (`spi` microSD: `cs`, `sclk`, `mosi`, `miso`; `w5500`: `cs`, `int`, `rst`, `sclk`, `mosi`, `miso`; `emac`: `rst`) and each pin a GPIO number of the chip (0-48 on the ESP32-S3, 0-54 on the ESP32-P4; `-1` for none on `rst` and the `sdio` `pwr_en`). A missing pin is an error that names it, not a C compile error. A block key whose variable the build sets itself (`network.component`, or `extensions` of an added `php` block) is an error too.
 - Option type `set` (a list of allowed values): the build defines PHPBM_OPTION_<NAME>_<VALUE> as 1 or 0 for each allowed value and PHPBM_OPTION_<NAME> as the comma-separated chosen values (needs php-baremetal/spec 1.2).
 - init-loop runtime: calls bm_events_service() of ext-events (when the firmware has it) after each loop(), so object releases run, the slots of undelivered events go back and event warnings are printed. Docs: events, web and I2C pages describe the event slots of ext-events 1.0.3 instead of a 32-message queue.
 - Fonts: the build compiles the fonts phpbm resolves (BuildPlan::$fonts) into the display_fonts[] table read by ext-display; packages may declare extra.baremetal.fonts.

@@ -13,7 +13,7 @@ next: { label: 'PHP frameworks', href: './frameworks.md' }
 # PHP extensions
 
 The firmware runs the real PHP engine. Eight modules are always built in (`core`, `hash`, `json`, `pcre`,
-`random`, `reflection`, `spl`, `standard`; PHP 8.5 adds `uri`), with no package to require. Every other extension is
+`random`, `reflection`, `spl`, `standard`; PHP 8.5 and 8.6 add `uri`), with no package to require. Every other extension is
 optional: a project that does not require it pays nothing in flash or PSRAM.
 
 ## Enable an extension
@@ -29,7 +29,7 @@ composer require php-baremetal/php-pdo php-baremetal/php-pdo_sqlite
 
 - The package name is `php-baremetal/php-<extension>`: `php-baremetal/php-pdo_sqlite` adds `pdo_sqlite`.
 - The thirteen optional extensions are `bcmath`, `ctype`, `date`, `filter`, `mbstring`, `opcache`, `openssl`,
-  `pdo`, `pdo_sqlite`, `session`, `sqlite3`, `tokenizer` and `zlib`. They exist on PHP 8.3, 8.4 and 8.5. Sizes
+  `pdo`, `pdo_sqlite`, `session`, `sqlite3`, `tokenizer` and `zlib`. They exist on PHP 8.3, 8.4, 8.5 and 8.6. Sizes
   and the versions are in [PHP versions and extensions](../reference/php.md).
 - `pdo_sqlite` needs `pdo`. Without it the build stops with
   `php extension 'pdo_sqlite' needs 'pdo': composer require php-baremetal/php-pdo`.
@@ -288,7 +288,7 @@ directory is packed with its layout.
 | `php extension 'pdo_sqlite' needs 'pdo': composer require php-baremetal/php-pdo` | A required extension package is missing. |
 | `unknown option 'mbstring-regex' in extra.baremetal.options` | The option belongs to an extension that is not required yet. |
 | `Call to undefined function mb_strlen()` | The extension package is not required, or the build did not run again. |
-| `Uri\WhatWg\Url` throws an `Error` (PHP 8.5) | The WHATWG parser is not built; `parse_url()` and the RFC 3986 parser work. |
+| `Uri\WhatWg\Url` throws an `Error` (PHP 8.5 and 8.6) | The WHATWG parser is not built; `parse_url()` and the RFC 3986 parser work. |
 | `mb_split()` undefined with `mbstring` required | `mbstring-regex` is off. |
 | A named time zone is rejected | `date-timezones` is `utc`. |
 | Out of memory while `memory_limit` is free | SQLite, sessions or another extension use the PSRAM outside `memory_limit`; raise `firmware-reserve`. |

@@ -1,0 +1,26 @@
+Platform storage hands out whole, chunk-aligned chunks: take huge blocks in whole chunks too (as upstream does on
+Windows), so real_size and memory_limit count what a huge block holds, and realloc grows one in place.
+diff --git a/Zend/zend_alloc.c b/Zend/zend_alloc.c
+--- a/Zend/zend_alloc.c
++++ b/Zend/zend_alloc.c
+@@ -1650,7 +1650,8 @@ static zend_never_inline void *zend_mm_r
+ 		 */
+ 		new_size = ZEND_MM_ALIGNED_SIZE_EX(size, MAX(REAL_PAGE_SIZE, ZEND_MM_CHUNK_SIZE));
+ #else
+-		new_size = ZEND_MM_ALIGNED_SIZE_EX(size, REAL_PAGE_SIZE);
++		new_size = ZEND_MM_ALIGNED_SIZE_EX(size,
++			zend_mm_platform_handlers != NULL ? MAX(REAL_PAGE_SIZE, ZEND_MM_CHUNK_SIZE) : REAL_PAGE_SIZE);
+ #endif
+ 		if (new_size == old_size) {
+ #if ZEND_DEBUG
+@@ -1962,7 +1963,9 @@ static void *zend_mm_alloc_huge(zend_mm_
+ 	 */
+ 	size_t alignment = MAX(REAL_PAGE_SIZE, ZEND_MM_CHUNK_SIZE);
+ #else
+-	size_t alignment = REAL_PAGE_SIZE;
++	/* Platform storage hands out whole chunks: take a huge block in whole chunks, as on Windows, so that
++	 * real_size (memory_limit) counts what it holds and realloc can grow it in place. */
++	size_t alignment = zend_mm_platform_handlers != NULL ? MAX(REAL_PAGE_SIZE, ZEND_MM_CHUNK_SIZE) : REAL_PAGE_SIZE;
+ #endif
+ 	size_t new_size = ZEND_MM_ALIGNED_SIZE_EX(size, alignment);
+ 	void *ptr;

@@ -9,7 +9,7 @@
 <p align="center">
   <img alt="Status: preview, not ready for use" src="https://img.shields.io/badge/status-preview%20%E2%80%94%20not%20ready%20for%20use-DC2626?style=flat-square">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/php-baremetal/php-esp32-sdk?style=flat-square&color=475569"></a>
-  <img alt="PHP 8.3 | 8.4 | 8.5" src="https://img.shields.io/badge/PHP-8.3%20%7C%208.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white">
+  <img alt="PHP 8.3 | 8.4 | 8.5 | 8.6" src="https://img.shields.io/badge/PHP-8.3%20%7C%208.4%20%7C%208.5%20%7C%208.6-777BB4?style=flat-square&logo=php&logoColor=white">
   <img alt="ESP-IDF v6.1.1" src="https://img.shields.io/badge/ESP--IDF-v6.1.1-E7352C?style=flat-square&logo=espressif&logoColor=white">
   <img alt="Targets: ESP32-P4 | S3" src="https://img.shields.io/badge/targets-ESP32--P4%20%7C%20S3-475569?style=flat-square&logo=espressif&logoColor=white">
   <a href="https://github.com/php-baremetal/php-esp32-sdk/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/php-baremetal/php-esp32-sdk?style=flat-square&color=475569"></a>
@@ -56,7 +56,7 @@ project format and every command.
 
 | | |
 | --- | --- |
-| PHP | 8.3, 8.4, 8.5 (built from the php.net release plus build-time patches) |
+| PHP | 8.3, 8.4, 8.5, 8.6 (built from the php.net release plus build-time patches) |
 | Runtimes | `init-loop`, `event-driven`, `web-server` |
 | Storage | `embedded` (in flash), `microsd` |
 | Options | `network`, `on-error`, `restart-delay`, `firmware-reserve`, `optimization`, `power-save`, `request-timeout` |

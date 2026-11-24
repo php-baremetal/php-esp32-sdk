@@ -14,7 +14,7 @@ next: { label: 'Options', href: './../reference/options.md' }
 
 Real framework code runs on the board: no port, no stripped-down fork. The examples in `09-frameworks/` show how.
 All four target an ESP32-P4 board with a microSD card (32 MB of PSRAM), keep the framework in a nested Composer
-project inside `project-src`, and run PHP 8.5.11.
+project inside `project-src`, and run PHP 8.5 (8.5.13 with this SDK).
 
 | Example | Framework | Runtime | Board | What it does |
 | --- | --- | --- | --- | --- |

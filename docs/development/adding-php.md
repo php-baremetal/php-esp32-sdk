@@ -100,8 +100,8 @@ unconditionally.
 
 <!-- @callout variant="note" title="Test every minor, on a board" -->
 `SdkDescriptorsTest` and `PhpExtensionsTest` prove that the descriptors load and resolve. They do not prove
-that the extension compiles, links and runs. Build a project that requires the package for 8.3, 8.4 and 8.5
-and run it on a board.
+that the extension compiles, links and runs. Build a project that requires the package for 8.3, 8.4, 8.5
+and 8.6 and run it on a board.
 <!-- @endcallout -->
 
 ### The bm-php-ext package
@@ -141,14 +141,14 @@ in the package README and in [PHP versions and extensions](../reference/php.md).
 
 ## Add a PHP minor or a patch release
 
-A **patch release** (say 8.4.26 to 8.4.27) is an edit of the minor's entry in `sdk.json`:
+A **patch release** (say 8.4.28 to 8.4.29) is an edit of the minor's entry in `sdk.json`:
 
 <!-- @code-block language="JSON" label="sdk.json" -->
 ```json
 "8.4": {
-    "version": "8.4.26",
-    "url": "https://www.php.net/distributions/php-8.4.26.tar.gz",
-    "sha256": "c248abaebc4bb777b80968f0760da0da8e989836e896c9ff637b6775d7d37662",
+    "version": "8.4.28",
+    "url": "https://www.php.net/distributions/php-8.4.28.tar.gz",
+    "sha256": "deffc88c60fcfb99f683a9f6689e9c91cf41b7cba50bd5f01a232a98c27f2cd4",
     "startup-kb": 816
 }
 ```

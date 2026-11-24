@@ -1,0 +1,9 @@
+{
+    "module": "sqlite3",
+    "sources": ["ext/sqlite3/sqlite3.c", "sqlite:sqlite3_phpbm.c"],
+    "include-dirs": ["ext/sqlite3", "sqlite:."],
+    "defines": { "SQLITE_OMIT_LOAD_EXTENSION": 1, "HAVE_SQLITE3_ERRSTR": 1, "HAVE_SQLITE3_EXPANDED_SQL": 1 },
+    "requires": { "sources": ["sqlite"] },
+    "cost": "about 480 KB with the SQLite engine (shared with pdo_sqlite: both with pdo about 550 KB); SQLite allocates outside memory_limit: up to 256 KB of page cache per open connection",
+    "startup-kb": 26
+}

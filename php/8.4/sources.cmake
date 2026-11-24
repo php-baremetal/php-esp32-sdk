@@ -1,4 +1,4 @@
-# PHP 8.4.26 source list and private include dirs.
+# PHP 8.4.28 source list and private include dirs.
 # Included by host/components/php/CMakeLists.txt, which sets PHP_SRC.
 
 set(PHP_SRCS

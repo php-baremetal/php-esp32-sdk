@@ -43,7 +43,8 @@ const char *phpbm_network_ip(void);
 /* Reserves PHP's memory pool (PSRAM) and hands its chunks
  * to the Zend memory manager; call before php_embed_init. */
 void phpbm_memory_init(void);
-/* Default memory_limit in bytes: the pool size (free heap minus a reserve, whole chunks). */
+/* Default memory_limit in bytes: the pool (free heap minus a reserve, whole chunks) less a headroom of 2 chunks (1 on
+ * small-PSRAM boards) that serves the allocation crossing the limit. */
 size_t phpbm_memory_limit(void);
 /* PSRAM in bytes kept for the firmware: the firmware-reserve option, capped at a quarter of the free PSRAM (not applied
  * below 4 MB of PSRAM), plus the framebuffers of the board's display drivers (PHPBM_DISPLAY_FB_KB). */

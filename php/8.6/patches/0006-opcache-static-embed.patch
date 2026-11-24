@@ -1,0 +1,41 @@
+Statically link Zend OPcache into the embed build and start it by hand.
+
+There is no opcache.so to dlopen and ZEND_EXTENSIONS_SUPPORT is 0 (no libdl), so the zend_extension
+path never runs OPcache's startup. In 8.5 opcache_extension_entry is file-local, so ZendAccelerator.c
+exports phpbm_opcache_startup() and main.c calls it before zend_startup_extensions(). (8.5 enables
+OPcache for any non-CLI SAPI, so the 8.3/8.4 'embed' tweak in accel_find_sapi() is not needed.)
+diff --git a/ext/opcache/ZendAccelerator.c b/ext/opcache/ZendAccelerator.c
+--- a/ext/opcache/ZendAccelerator.c
++++ b/ext/opcache/ZendAccelerator.c
+@@ -5140,3 +5140,13 @@ static zend_extension opcache_extension_entry = {
+ 	NULL,									/* op_array dtor */
+ 	STANDARD_ZEND_EXTENSION_PROPERTIES
+ };
++
++/* php-baremetal: OPcache is linked statically and ZEND_EXTENSIONS_SUPPORT is 0, so main.c starts it
++ * through this hook (opcache_extension_entry is file-local in PHP 8.5). */
++ZEND_EXT_API void phpbm_opcache_startup(void)
++{
++	if (opcache_extension_entry.startup) {
++		opcache_extension_entry.startup(&opcache_extension_entry);
++	}
++}
++
+diff --git a/main/main.c b/main/main.c
+--- a/main/main.c
++++ b/main/main.c
+@@ -2353,6 +2353,14 @@ zend_result php_module_startup(sapi_module_struct *sf, zend_module_entry *additi
+ 	zend_startup_modules();
+ 
+ 	/* start Zend extensions */
++#ifdef PHP_EXT_OPCACHE_ENABLED
++	/* php-baremetal: start the statically linked OPcache (see ZendAccelerator.c). accel_startup() registers
++	 * its module and ini and sets zend_post_startup_cb, so it must run before zend_post_startup(). */
++	{
++		extern void phpbm_opcache_startup(void);
++		phpbm_opcache_startup();
++	}
++#endif
+ 	zend_startup_extensions();
+ 
+ 	zend_collect_module_handlers();

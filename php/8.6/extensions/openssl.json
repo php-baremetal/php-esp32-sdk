@@ -1,0 +1,6 @@
+{
+    "module": "openssl",
+    "idf-requires": ["mbedtls"],
+    "cost": "about 85 KB with the mbedTLS code it links (measured without a network), about 5 KB of RAM; a partial API: AES-CBC/CTR/GCM, digests, random bytes, no keys, signatures, X.509 or TLS and only the OPENSSL_RAW_DATA/ZERO_PADDING/DONT_ZERO_PAD_KEY constants",
+    "startup-kb": 5
+}

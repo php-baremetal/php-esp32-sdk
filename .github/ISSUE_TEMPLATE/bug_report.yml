@@ -40,7 +40,7 @@ body:
     attributes:
       label: SDK and PHP version
       description: The SDK version from `phpbm.lock` and `config.platform.php` from composer.json.
-      placeholder: "esp32 2.0.0, PHP 8.5.11"
+      placeholder: "esp32 2.0.0, PHP 8.5.13"
     validations:
       required: true
   - type: dropdown

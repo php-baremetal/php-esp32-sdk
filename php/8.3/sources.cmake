@@ -1,4 +1,4 @@
-# PHP 8.3.35 source list and private include dirs.
+# PHP 8.3.37 source list and private include dirs.
 # Included by host/components/php/CMakeLists.txt, which sets PHP_SRC.
 
 set(PHP_SRCS

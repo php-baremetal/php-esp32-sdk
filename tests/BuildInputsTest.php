@@ -28,7 +28,7 @@ final class BuildInputsTest extends TestCase
         $build = BuildInputs::cmakePath($plan->buildDir);
         $project = BuildInputs::cmakePath($plan->projectDir);
         $sdk = BuildInputs::cmakePath($plan->sdk->dir);
-        $maps = ["{$project}" => 'project', $sdk => 'php-esp32-sdk', '/cache/trees/php-8.4.26-abc' => 'php-src', '/cache/trees/sqlite-1' => 'source/sqlite'];
+        $maps = ["{$project}" => 'project', $sdk => 'php-esp32-sdk', '/cache/trees/php-8.4.28-abc' => 'php-src', '/cache/trees/sqlite-1' => 'source/sqlite'];
         uksort($maps, static fn (string $a, string $b): int => strlen($a) <=> strlen($b));
         $maps = implode(';', array_map(static fn (string $d, string $n): string => "{$d}={$n}", array_keys($maps), $maps));
 
@@ -58,9 +58,9 @@ final class BuildInputsTest extends TestCase
             set(PHPBM_NETWORK_SDKCONFIG "")
             set(PHPBM_NETWORK_BUFFERS_SDKCONFIG "")
             set(PHPBM_NETWORK_STATIC_BUFFERS_SDKCONFIG "")
-            set(PHPBM_PHP_VERSION "8.4.26")
+            set(PHPBM_PHP_VERSION "8.4.28")
             set(PHPBM_PHP_MINOR "8.4")
-            set(PHPBM_PHP_SRC "/cache/trees/php-8.4.26-abc")
+            set(PHPBM_PHP_SRC "/cache/trees/php-8.4.28-abc")
             set(PHPBM_APP_SRC "{$project}/project-src")
             set(PHPBM_APP_ENTRY "index.php")
             set(PHPBM_ASSETS_MICROSD "0")
