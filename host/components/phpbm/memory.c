@@ -1,6 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "esp_heap_caps.h"
 #include "esp_log.h"
@@ -14,8 +15,15 @@
 #error "phpbm needs PSRAM"
 #endif
 #define PHPBM_HEAP_CAPS (MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
-/* PSRAM left to the rest of the firmware once PHP has started (at most a quarter of the free PSRAM). */
+/* PSRAM left to the rest of the firmware once PHP has started (at most a quarter of the free PSRAM), besides the
+ * display framebuffers. */
 #define PHPBM_FIRMWARE_RESERVE ((size_t) PHPBM_OPTION_FIRMWARE_RESERVE * 1024)
+/* The framebuffers of the board's display drivers (BuildInputs::displayFramebufferKb()): reserved on top of the
+ * firmware-reserve option and outside its cap, also on small-PSRAM boards (the driver needs them to start). */
+#ifndef PHPBM_DISPLAY_FB_KB
+#define PHPBM_DISPLAY_FB_KB 0
+#endif
+#define PHPBM_DISPLAY_FB ((size_t) PHPBM_DISPLAY_FB_KB * 1024)
 /* PSRAM PHP malloc()s in php_embed_init (persistent data): the engine's own, per PHP minor (sdk.json
  * php.<minor>.startup-kb: the drop in free PSRAM across php_embed_init with blink on the S3-ETH, plus 14 KB,
  * rounded up to 8 KB; 8.3 760532 B, 8.4 820508 B, 8.5 871492 B), plus the optional extensions' (their
@@ -77,7 +85,13 @@ static void *phpbm_chunk_alloc(zend_mm_storage *storage, size_t size, size_t ali
             for (size_t i = 0; i < count; i++) {
                 phpbm_slot_set(first + i, true);
             }
-            return s_pool + first * ZEND_MM_CHUNK_SIZE;
+            char *chunk = s_pool + first * ZEND_MM_CHUNK_SIZE;
+            /* The Zend MM takes a new chunk to be zero-filled, as mmap() returns it: it sets only the first word of
+             * the page bitmap and the first page's entry, and takes the pages past free_tail as free without reading
+             * the bitmap. PSRAM holds random bytes after power-on, so a stale bitmap handed out pages that were in
+             * use (heap corruption while the first scripts compiled). Zero the chunk header (its first page). */
+            memset(chunk, 0, (size_t) ZEND_MM_FIRST_PAGE * ZEND_MM_PAGE_SIZE);
+            return chunk;
         }
         first += n;
     }
@@ -120,12 +134,12 @@ void phpbm_memory_init(void)
     size_t startup;
     if (small) {
         startup = PHPBM_PHP_STARTUP;
-        s_reserve = 0;
+        s_reserve = PHPBM_DISPLAY_FB;
         ESP_LOGI("phpbm", "firmware-reserve (%d KB) not applied below %d MB of PSRAM",
                  PHPBM_OPTION_FIRMWARE_RESERVE, PHPBM_SMALL_PSRAM / (1024 * 1024));
     } else {
         startup = PHPBM_PHP_STARTUP_ALLOWANCE;
-        s_reserve = PHPBM_FIRMWARE_RESERVE < available / 4 ? PHPBM_FIRMWARE_RESERVE : available / 4;
+        s_reserve = (PHPBM_FIRMWARE_RESERVE < available / 4 ? PHPBM_FIRMWARE_RESERVE : available / 4) + PHPBM_DISPLAY_FB;
     }
 #if PHPBM_PHP_EXT_OPCACHE
     if (small) {
@@ -140,9 +154,9 @@ void phpbm_memory_init(void)
         chunks = PHPBM_POOL_MAX_CHUNKS;
     }
     if (chunks < PHPBM_POOL_MIN_CHUNKS) {
-        ESP_LOGE("phpbm", "PSRAM too small for PHP: %zu KB total, %zu KB free, firmware-reserve %zu KB, PHP startup %zu KB, opcache %zu KB leave %zu KB (min %zu KB)",
-                 heap_caps_get_total_size(PHPBM_HEAP_CAPS) / 1024, available / 1024, s_reserve / 1024, startup / 1024, s_opcache / 1024,
-                 chunks * (ZEND_MM_CHUNK_SIZE / 1024),
+        ESP_LOGE("phpbm", "PSRAM too small for PHP: %zu KB total, %zu KB free, firmware-reserve %zu KB (display framebuffers %d KB), PHP startup %zu KB, opcache %zu KB leave %zu KB (min %zu KB)",
+                 heap_caps_get_total_size(PHPBM_HEAP_CAPS) / 1024, available / 1024, s_reserve / 1024, PHPBM_DISPLAY_FB_KB,
+                 startup / 1024, s_opcache / 1024, chunks * (ZEND_MM_CHUNK_SIZE / 1024),
                  (size_t) PHPBM_POOL_MIN_CHUNKS * (ZEND_MM_CHUNK_SIZE / 1024));
     }
     for (; chunks >= PHPBM_POOL_MIN_CHUNKS; chunks--) {

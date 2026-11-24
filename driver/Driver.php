@@ -299,6 +299,7 @@ final class Driver implements DriverContract
             'host/sdkconfig/optimization-' . BuildInputs::optimization($plan),
             'host/sdkconfig/log-' . BuildInputs::log($plan),
             ...(BuildInputs::powerSave($plan) ? ['host/sdkconfig/power-save'] : []),
+            ...(BuildInputs::wifiBuffers($plan) === 'psram' ? ['host/sdkconfig/wifi-buffers-psram'] : []),
             "runtimes/{$plan->runtime->id}/sdkconfig",
             "storages/{$plan->storage->id}/sdkconfig",
         ];
@@ -313,6 +314,11 @@ final class Driver implements DriverContract
                 $content = (string) file_get_contents($file);
                 hash_update($hash, $fragment . "\0" . strlen($content) . "\0" . $content);
             }
+        }
+        $staticBuffers = BuildInputs::wifiStaticBuffers($plan);
+        if ($staticBuffers !== null) {
+            $content = BuildInputs::wifiStaticBuffersFragment($staticBuffers);
+            hash_update($hash, 'build/' . BuildInputs::WIFI_STATIC_BUFFERS_FRAGMENT . "\0" . strlen($content) . "\0" . $content);
         }
         foreach ($packages->sdkconfigFragmentsByPackage() as $name => $file) {
             $content = (string) file_get_contents($file);

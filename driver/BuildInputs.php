@@ -29,6 +29,27 @@ final class BuildInputs
             'emac' => ['required' => ['rst'], 'none' => ['rst']],
         ],
     ];
+    /**
+     * Display block types whose driver allocates its framebuffers in PSRAM from the board's block (rgb:
+     * esp32-display-rgb, dsi: esp32-display-dsi): width x height x 2 bytes per frame, `frames` frames (1 by default).
+     * memory.c keeps them out of PHP's pool.
+     */
+    public const FRAMEBUFFER_TYPES = ['rgb', 'dsi'];
+    /**
+     * Where the chip's own Wi-Fi (network type 'wifi') and lwIP take their buffers: the board's network.buffers.
+     * 'internal' (the default) keeps the ESP-IDF allocation; 'psram' adds host/sdkconfig/wifi-buffers-psram
+     * (CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP), for boards whose display leaves too little internal RAM for Wi-Fi.
+     */
+    public const WIFI_BUFFERS = ['internal', 'psram'];
+    /**
+     * The range of the board's network.static-buffers: the count of static Wi-Fi RX buffers, static TX buffers and
+     * the AMPDU RX BA window, all set to the same N. ESP-IDF v6.1 esp_wifi/Kconfig: STATIC_RX_BUFFER_NUM 2-25
+     * (2-128 on Wi-Fi 6 chips), RX_BA_WIN 2-32 (2-64), STATIC_TX_BUFFER_NUM 1-64; 2-25 is valid on every chip.
+     * Equal counts keep the Kconfig advice of static RX buffers >= the BA window.
+     */
+    public const WIFI_STATIC_BUFFERS = [2, 25];
+    /** The sdkconfig fragment BuildInputs::write() generates from network.static-buffers, in the build directory. */
+    public const WIFI_STATIC_BUFFERS_FRAGMENT = 'wifi-static-buffers.sdkconfig';
 
     public static function cmakePath(string $path): string
     {
@@ -60,6 +81,7 @@ final class BuildInputs
         $envSource = self::envSource($plan->env);
         $network = self::network($plan);
         $driver = self::networkDriver($plan, $network);
+        $staticBuffers = self::wifiStaticBuffers($plan);
 
         $vars = [
             'SDK_DIR' => self::cmakePath($plan->sdk->dir),
@@ -84,6 +106,8 @@ final class BuildInputs
             'NETWORK' => $network,
             'NETWORK_COMPONENT' => self::networkComponent($plan, $driver),
             'NETWORK_SDKCONFIG' => self::networkSdkconfig($plan, $driver),
+            'NETWORK_BUFFERS_SDKCONFIG' => self::wifiBuffers($plan) === 'psram' ? self::cmakePath("{$plan->sdk->dir}/host/sdkconfig/wifi-buffers-psram") : '',
+            'NETWORK_STATIC_BUFFERS_SDKCONFIG' => $staticBuffers === null ? '' : self::cmakePath("{$build}/" . self::WIFI_STATIC_BUFFERS_FRAGMENT),
             'PHP_VERSION' => $plan->php->version,
             'PHP_MINOR' => $plan->php->minor,
             'PHP_SRC' => self::cmakePath($plan->phpSourceDir),
@@ -148,6 +172,12 @@ final class BuildInputs
 
         self::ensureDir($build);
         self::put("{$build}/board.sdkconfig", "CONFIG_ESPTOOLPY_FLASHSIZE_{$board->flash}=y\nCONFIG_ESPTOOLPY_FLASHSIZE=\"{$board->flash}\"\n");
+        $staticFragment = "{$build}/" . self::WIFI_STATIC_BUFFERS_FRAGMENT;
+        if ($staticBuffers !== null) {
+            self::put($staticFragment, self::wifiStaticBuffersFragment($staticBuffers));
+        } elseif (is_file($staticFragment) && !@unlink($staticFragment)) {
+            throw new SpecException("cannot delete {$staticFragment}");
+        }
         self::put("{$build}/env.c", $envSource);
         self::put("{$build}/phpbm_board.c", $boardSource);
         self::ensureDir("{$build}/include");
@@ -246,6 +276,49 @@ final class BuildInputs
             throw new SpecException("board {$board->id}: chip '{$board->chip}' does not support flash-mode '{$mode}'");
         }
         return $mode;
+    }
+
+    /**
+     * The PSRAM (KB) of the framebuffers the project's display drivers take from the board's blocks: for each block
+     * of a FRAMEBUFFER_TYPES type driven by an installed package (extra.baremetal.board-blocks "<kind>:<type>",
+     * the block named <kind> or <kind>-<n>), width x height x 2 bytes x frames, plus one more for a dsi block with
+     * rotation 90, 180 or 270 (the drawing surface's own framebuffer) unless the display-surface option of
+     * ext-display is false. 0 without such a block.
+     */
+    public static function displayFramebufferKb(BuildPlan $plan): int
+    {
+        $driven = [];
+        foreach ($plan->manifest->packages as $package) {
+            foreach ((array) ($package->meta['board-blocks'] ?? []) as $entry) {
+                $driven[(string) $entry] = true;
+            }
+        }
+        $board = $plan->board;
+        $surface = ($plan->options['display-surface'] ?? true) !== false;   // ext-display's option (default true)
+        $bytes = 0;
+        foreach ($board->peripherals as $name => $block) {
+            $type = (string) ($block['type'] ?? '');
+            $kind = (string) preg_replace('/-\d+$/D', '', (string) $name);
+            if (!in_array($type, self::FRAMEBUFFER_TYPES, true) || !isset($driven["{$kind}:{$type}"])) {
+                continue;
+            }
+            $frames = $block['frames'] ?? 1;
+            if (!is_int($frames) || $frames < 1 || $frames > 2) {
+                throw new SpecException("board {$board->id}: {$name}.frames must be 1 or 2");
+            }
+            $width = $block['width'] ?? null;
+            $height = $block['height'] ?? null;
+            if (!is_int($width) || !is_int($height) || $width < 1 || $height < 1) {
+                throw new SpecException("board {$board->id}: {$name}.width and {$name}.height must be positive integers");
+            }
+            $bytes += $width * $height * 2 * $frames;
+            if ($surface && $type === 'dsi' && in_array($block['rotation'] ?? 0, [90, 180, 270], true)) {
+                // a turned dsi panel: the drawing surface of ext-display keeps its own framebuffer, in the turned
+                // coordinates, which the driver copies turned (allocated at the start, Slate or not)
+                $bytes += $width * $height * 2;
+            }
+        }
+        return intdiv($bytes + 1023, 1024);
     }
 
     /** The chip revision family (chips/<chip>/sdkconfig.rev-<revision>): v1 by default where the chip has them, '' where it has none. */
@@ -395,6 +468,66 @@ final class BuildInputs
             return $type;
         }
         return $network;
+    }
+
+    /**
+     * The board's network.buffers (WIFI_BUFFERS): 'internal' when absent. Checked whether the network is on or not,
+     * before anything is written: only the chip's own Wi-Fi (type 'wifi') takes the key, and 'psram' needs PSRAM.
+     */
+    public static function wifiBuffers(BuildPlan $plan): string
+    {
+        $board = $plan->board;
+        $block = $board->peripherals['network'] ?? null;
+        if (!is_array($block) || !array_key_exists('buffers', $block)) {
+            return 'internal';
+        }
+        $value = $block['buffers'];
+        if (!is_string($value) || !in_array($value, self::WIFI_BUFFERS, true)) {
+            throw new SpecException("board {$board->id}: network.buffers must be '" . implode("' or '", self::WIFI_BUFFERS) . "'");
+        }
+        $type = (string) $block['type'];
+        if ($type !== 'wifi') {
+            throw new SpecException("board {$board->id}: network.buffers applies only to network type 'wifi' (the chip's own radio), not to '{$type}'");
+        }
+        if ($value === 'psram' && ($board->psram ?? '') === '') {
+            throw new SpecException("board {$board->id}: network.buffers 'psram' needs PSRAM, and the board has none");
+        }
+        return $value;
+    }
+
+    /**
+     * The board's network.static-buffers (WIFI_STATIC_BUFFERS), null when absent. Checked whether the network is on
+     * or not, before anything is written: a whole number in range, only on the chip's own Wi-Fi (type 'wifi'), and
+     * only with network.buffers 'psram', the one mode in which ESP-IDF makes the Wi-Fi TX buffers static (without
+     * it, CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM does not exist and would be dropped silently).
+     */
+    public static function wifiStaticBuffers(BuildPlan $plan): ?int
+    {
+        $board = $plan->board;
+        $block = $board->peripherals['network'] ?? null;
+        if (!is_array($block) || !array_key_exists('static-buffers', $block)) {
+            return null;
+        }
+        $value = $block['static-buffers'];
+        [$min, $max] = self::WIFI_STATIC_BUFFERS;
+        if (!is_int($value) || $value < $min || $value > $max) {
+            throw new SpecException("board {$board->id}: network.static-buffers must be a whole number from {$min} to {$max}");
+        }
+        $type = (string) $block['type'];
+        if ($type !== 'wifi') {
+            throw new SpecException("board {$board->id}: network.static-buffers applies only to network type 'wifi' (the chip's own radio), not to '{$type}'");
+        }
+        if (self::wifiBuffers($plan) !== 'psram') {
+            throw new SpecException("board {$board->id}: network.static-buffers needs network.buffers 'psram' (ESP-IDF has static Wi-Fi TX buffers only in that mode)");
+        }
+        return $value;
+    }
+
+    /** The generated fragment for network.static-buffers N, also hashed by the driver's sdkconfig fingerprint. */
+    public static function wifiStaticBuffersFragment(int $n): string
+    {
+        return "# Generated from the board key network.static-buffers ({$n}).\n"
+            . "CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM={$n}\nCONFIG_ESP_WIFI_RX_BA_WIN={$n}\nCONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM={$n}\n";
     }
 
     /** The network sdkconfig fragment (networks/<type>/sdkconfig), '' when there is none. */
@@ -547,6 +680,11 @@ final class BuildInputs
         $startupKb = $plan->php->startupKb ?? throw new SpecException("sdk.json php.{$plan->php->minor}: 'startup-kb' is required by the esp32 driver");
         // Persistent PSRAM of the engine and of the optional extensions at startup (memory.c budgets it).
         $header .= sprintf("#define PHPBM_PHP_STARTUP_KB %d\n#define PHPBM_PHP_EXT_STARTUP_KB %d\n", $startupKb, $extensionsKb);
+        $framebufferKb = self::displayFramebufferKb($plan);
+        if ($framebufferKb > 0) {
+            // The framebuffers of the board's display, reserved by memory.c on top of firmware-reserve.
+            $header .= sprintf("#define PHPBM_DISPLAY_FB_KB %d\n", $framebufferKb);
+        }
         if ($plan->storage->id === 'microsd') {
             $header .= "#define PHPBM_STORAGE_MICROSD 1\n";
         }

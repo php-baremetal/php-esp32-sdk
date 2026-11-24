@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'The 13 boards of the esp32 SDK: chip, PSRAM, flash, console and the peripherals each one has.'
+lede:    'The 17 boards of the esp32 SDK: chip, PSRAM, flash, console and the peripherals each one has.'
 see_also:
   - { href: './board-files.md', meta: 'Reference' }
   - { href: './board-overrides.md', meta: 'Reference' }
@@ -30,13 +30,15 @@ port. How a board file is built is in [Board files](./board-files.md).
 | `generic-esp32p4` | ESP32-P4 (generic) | ESP32-P4 | hex | 32 MB | uart |
 | `waveshare-esp32-s3-eth` | Waveshare ESP32-S3-ETH | ESP32-S3 | octal | 16 MB | usb-jtag |
 | `waveshare-esp32-s3-touch-lcd-1.85b` | Waveshare ESP32-S3-Touch-LCD-1.85B | ESP32-S3 | octal | 16 MB | usb-jtag |
+| `waveshare-esp32-s3-touch-lcd-5b` | Waveshare ESP32-S3-Touch-LCD-5B | ESP32-S3 | octal | 16 MB | usb-jtag |
 | `waveshare-esp32-s3-zero` | Waveshare ESP32-S3-Zero | ESP32-S3 | quad | 4 MB | usb-jtag |
 | `waveshare-esp32-s3-zero-n8r8` | Waveshare ESP32-S3-Zero (N8R8) | ESP32-S3 | octal | 8 MB | usb-jtag |
 | `waveshare-esp32-p4-eth` | Waveshare ESP32-P4-ETH | ESP32-P4 | hex | 32 MB | uart |
 | `waveshare-esp32-p4-pico` | Waveshare ESP32-P4-Pico | ESP32-P4 | hex | 32 MB | uart |
 | `waveshare-esp32-p4-wifi6` | Waveshare ESP32-P4-WIFI6 | ESP32-P4 | hex | 32 MB | uart |
+| `waveshare-esp32-p4-wifi6-touch-lcd-5` | Waveshare ESP32-P4-WIFI6-Touch-LCD-5 | ESP32-P4 | hex | 32 MB | uart |
 
-The P4 boards also set `revision` to `v1` (see [Board files](./board-files.md)).
+The P4 boards also set `revision`: `v1`, except Waveshare ESP32-P4-WIFI6-Touch-LCD-5, which has a v3 chip and sets `v3` (see [Board files](./board-files.md)).
 
 The two Freenove ESP32-S3 WROOM Board Lite files differ only in the module: ESP32-S3-WROOM-1-N16R8 (8 MB of
 octal PSRAM) or ESP32-S3-WROOM-1-N16R16V (16 MB of octal PSRAM, 1.8 V; the firmware reads the PSRAM size and the
@@ -59,14 +61,21 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
 | `generic-esp32p4` | none | none |
 | `waveshare-esp32-s3-eth` | `spi`: cs 4, sclk 7, mosi 6, miso 5 | `w5500`: cs 14, int 10, rst 9, sclk 13, mosi 11, miso 12 |
 | `waveshare-esp32-s3-touch-lcd-1.85b` | `spi`: cs 13, sclk 15, mosi 14, miso 16 | `wifi` |
+| `waveshare-esp32-s3-touch-lcd-5b` | none | `wifi` |
 | `waveshare-esp32-s3-zero` | none | `wifi` |
 | `waveshare-esp32-s3-zero-n8r8` | none | `wifi` |
 | `waveshare-esp32-p4-eth` | `sdio`: pwr_en 45 | `emac`: rst 51 |
 | `waveshare-esp32-p4-pico` | `sdio` | none |
 | `waveshare-esp32-p4-wifi6` | `sdio` | `wifi-c6` |
+| `waveshare-esp32-p4-wifi6-touch-lcd-5` | `sdio` | `wifi-c6` |
 
 - `waveshare-esp32-s3-touch-lcd-1.85b` also has a `touch` block (CST816S: INT on GPIO 4, reset on GPIO 1, 360 x 360) next to
   its `display` and `i2c` blocks; see [Touch input](../modules/touch.md).
+- `waveshare-esp32-s3-touch-lcd-5b` also has `i2c`, `expander` (CH422G), `display` (1024 x 600 RGB, two framebuffers) and
+  `touch` (GT911) blocks, and reads its flash in QIO mode. Its Wi-Fi takes its buffers from PSRAM (`buffers: "psram"`): the panel leaves too little internal RAM. GPIO 0 is both a data line of the panel (G3) and the BOOT button: do not use BOOT while the
+  panel runs. The microSD slot's chip select is on the expander, so the board has no `microsd` block.
+- `waveshare-esp32-p4-wifi6-touch-lcd-5` also has `i2c`, `display` (720 x 1280 MIPI-DSI turned to 1280 x 720, two
+  framebuffers) and `touch` (GT911, polled: its INT line is not wired) blocks, and reads its flash in QIO mode.
 - `sdio` boards use SDMMC slot 0. The pins not named in the table take the defaults clk 43, cmd 44, d0 39,
   d1 40, d2 41, d3 42; `pwr_en` is absent unless the board sets it.
 - The microSD slot is what the `microsd` storage needs, and a network block is what the `web-server` runtime

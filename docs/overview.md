@@ -33,7 +33,7 @@ SDK 2.0 is not released. Until it is, phpbm reads the previews built from the SD
 | conductor | The Composer plugin that installs the packages into `.phpbm/packages/`, adds the HAL for the SDK's platform and writes the manifest phpbm reads. |
 
 The project names the SDK (`esp32@^2.0`), a board, a runtime and a storage. The SDK turns that into a
-firmware image built with ESP-IDF v6.1.
+firmware image built with ESP-IDF v6.1.1.
 
 ## What it provides
 

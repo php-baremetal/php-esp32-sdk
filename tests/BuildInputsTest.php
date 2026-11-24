@@ -56,6 +56,8 @@ final class BuildInputsTest extends TestCase
             set(PHPBM_NETWORK "")
             set(PHPBM_NETWORK_COMPONENT "")
             set(PHPBM_NETWORK_SDKCONFIG "")
+            set(PHPBM_NETWORK_BUFFERS_SDKCONFIG "")
+            set(PHPBM_NETWORK_STATIC_BUFFERS_SDKCONFIG "")
             set(PHPBM_PHP_VERSION "8.4.26")
             set(PHPBM_PHP_MINOR "8.4")
             set(PHPBM_PHP_SRC "/cache/trees/php-8.4.26-abc")
@@ -174,6 +176,214 @@ final class BuildInputsTest extends TestCase
         $header = (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
         self::assertStringContainsString("#define PHPBM_OPTION_NETWORK \"on\"\n#define PHPBM_OPTION_NETWORK_OFF 0\n#define PHPBM_OPTION_NETWORK_ON 1\n", $header);
         self::assertStringContainsString("#define PHPBM_OPTION_FIRMWARE_RESERVE 2048\n", $header);
+    }
+
+    public function test_display_framebuffers_are_reserved_for_a_driven_block(): void
+    {
+        $b = SdkDescriptorsTest::sdk()->board('waveshare-esp32-s3-touch-lcd-5b');
+        $rgb = new Package('php-baremetal/esp32-display-rgb', 'bm-lib', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['board-blocks' => ['display:rgb']]);
+        $header = static function (Board $board, array $packages): string {
+            $plan = Plans::plan(['board' => $board, 'packages' => $packages]);
+            BuildInputs::write($plan);
+            return (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
+        };
+        $with = static function (array $display) use ($b): Board {
+            $peripherals = $b->peripherals;
+            $peripherals['display'] = [...$peripherals['display'], ...$display];
+            return new Board($b->id, $b->name, $b->chip, $b->psram, $b->flash, $b->console, $peripherals, $b->flashMode, $b->revision);
+        };
+        // 1024 x 600 x 2 bytes x 2 frames
+        self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 2400\n", $header($b, [$rgb]));
+        self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 1200\n", $header($with(['frames' => 1]), [$rgb]));
+        // no driver installed for the block: nothing reserved
+        self::assertStringNotContainsString('PHPBM_DISPLAY_FB_KB', $header($b, []));
+        self::assertStringNotContainsString('PHPBM_DISPLAY_FB_KB', $header(SdkDescriptorsTest::sdk()->board('waveshare-esp32-s3-eth'), [$rgb]));
+        foreach ([3, 0, '2'] as $frames) {
+            try {
+                $header($with(['frames' => $frames]), [$rgb]);
+                self::fail('expected a SpecException');
+            } catch (SpecException $e) {
+                self::assertSame('board waveshare-esp32-s3-touch-lcd-5b: display.frames must be 1 or 2', $e->getMessage());
+            }
+        }
+    }
+
+    public function test_the_display_surface_option_drops_the_surface_framebuffer(): void
+    {
+        $b = SdkDescriptorsTest::sdk()->board('waveshare-esp32-p4-wifi6-touch-lcd-5');
+        $dsi = new Package('php-baremetal/esp32-display-dsi', 'bm-lib', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['board-blocks' => ['display:dsi']]);
+        $declared = ['display-surface' => ['type' => 'bool', 'default' => true, 'description' => 'The drawing surface.']];
+        $display = new Package('php-baremetal/ext-display', 'bm-lib', '1.2.0', __DIR__ . '/fixtures/packages/hello', ['options' => $declared]);   // its options, without its sources
+        $header = static function (array $options) use ($b, $dsi, $display): string {
+            $plan = Plans::plan(['board' => $b, 'packages' => [$dsi, $display], 'options' => $options]);
+            BuildInputs::write($plan);
+            return (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h');
+        };
+        // on (the default): 720 x 1280 x 2 bytes x 2 frames plus the surface's framebuffer (rotation 90)
+        self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 5400\n", $header([]));
+        self::assertStringContainsString("#define PHPBM_OPTION_DISPLAY_SURFACE 1\n", $header([]));
+        self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 5400\n", $header(['display-surface' => true]));
+        // off: only the driver's two frames, and the define ext-display reads
+        $off = $header(['display-surface' => false]);
+        self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 3600\n", $off);
+        self::assertStringContainsString("#define PHPBM_OPTION_DISPLAY_SURFACE 0\n", $off);
+        // rotation 0 (the surface draws in the driver's framebuffer): nothing to drop
+        $peripherals = $b->peripherals;
+        $peripherals['display'] = [...$peripherals['display'], 'rotation' => 0];
+        $flat = new Board($b->id, $b->name, $b->chip, $b->psram, $b->flash, $b->console, $peripherals, $b->flashMode, $b->revision);
+        foreach ([true, false] as $on) {
+            $plan = Plans::plan(['board' => $flat, 'packages' => [$dsi, $display], 'options' => ['display-surface' => $on]]);
+            BuildInputs::write($plan);
+            self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 3600\n", (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h'));
+        }
+        // the option as ext-display declares it: a bool, true by default, anything else refused
+        $option = $display->options()['display-surface'];
+        self::assertSame('bool', $option->type);
+        self::assertTrue($option->default);
+        self::assertFalse($option->accept(false, 'display-surface'));
+        try {
+            $option->accept('no', 'extra.baremetal.options.display-surface');
+            self::fail('expected a SpecException');
+        } catch (SpecException $e) {
+            self::assertSame('extra.baremetal.options.display-surface: must be true or false, got "no"', $e->getMessage());
+        }
+    }
+
+    public function test_dsi_framebuffers_are_reserved_on_the_p4_touch_lcd_5(): void
+    {
+        $b = SdkDescriptorsTest::sdk()->board('waveshare-esp32-p4-wifi6-touch-lcd-5');
+        $dsi = new Package('php-baremetal/esp32-display-dsi', 'bm-lib', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['board-blocks' => ['display:dsi']]);
+        $plan = Plans::plan(['board' => $b, 'packages' => [$dsi]]);
+        BuildInputs::write($plan);
+        // 720 x 1280 x 2 bytes x 2 frames, plus the drawing surface's own framebuffer (rotation 90)
+        self::assertStringContainsString("#define PHPBM_DISPLAY_FB_KB 5400\n", (string) file_get_contents($plan->buildDir . '/include/phpbm_options.h'));
+        self::assertSame('qio', BuildInputs::flashMode($plan));
+        self::assertSame('v3', BuildInputs::revision($plan));
+        // the panel's init sequence (about 900 characters) reaches bm_board.h as one string, dpi-hz as an int
+        $board = (string) file_get_contents($plan->buildDir . '/phpbm_board.c');
+        self::assertStringContainsString('{ "display", "init", false, 0, "' . $b->peripherals['display']['init'] . '" },', $board);
+        self::assertStringContainsString('{ "display", "dpi-hz", true, 58000000, NULL },', $board);
+    }
+
+    public function test_wifi_buffers_in_psram_add_the_sdkconfig_fragment(): void
+    {
+        $plan = Plans::plan(['board' => 'waveshare-esp32-s3-touch-lcd-5b']);
+        $inputs = (string) file_get_contents(BuildInputs::write($plan));
+        $sdk = BuildInputs::cmakePath($plan->sdk->dir);
+        self::assertStringContainsString("set(PHPBM_NETWORK_BUFFERS_SDKCONFIG \"{$sdk}/host/sdkconfig/wifi-buffers-psram\")\n", $inputs);
+        self::assertStringContainsString("set(PHPBM_NETWORK_BUFFERS \"psram\")\n", $inputs);
+        self::assertSame('psram', BuildInputs::wifiBuffers($plan));
+        $fragment = (string) file_get_contents($plan->sdk->dir . '/host/sdkconfig/wifi-buffers-psram');
+        self::assertMatchesRegularExpression('/^CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y$/m', $fragment);
+        // mbedTLS in PSRAM too: the only SDK fragment that sets the MBEDTLS_MEM_ALLOC_MODE choice, so no other one
+        // (applied before or after it) changes it back to ESP-IDF's default, internal RAM only
+        self::assertMatchesRegularExpression('/^CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y$/m', $fragment);
+        $setters = [];
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($plan->sdk->dir, \FilesystemIterator::SKIP_DOTS));
+        foreach ($files as $file) {
+            $path = substr($file->getPathname(), strlen($plan->sdk->dir) + 1);
+            if (preg_match('#^(host|chips|runtimes|storages|networks|boards)/#', $path) && str_contains($path, 'sdkconfig')
+                && preg_match('/^(# )?CONFIG_MBEDTLS_\w+_MEM_ALLOC\b/m', (string) file_get_contents($file->getPathname()))) {
+                $setters[] = $path;
+            }
+        }
+        self::assertSame(['host/sdkconfig/wifi-buffers-psram'], $setters);
+        // the default, and an explicit 'internal', keep today's allocation: no fragment
+        $devkit = SdkDescriptorsTest::sdk()->board('espressif-esp32-s3-devkitc-1-n8r8');
+        foreach ([$devkit, $devkit->withOverrides(['network' => ['buffers' => 'internal']])] as $board) {
+            $plan = Plans::plan(['board' => $board]);
+            self::assertSame('internal', BuildInputs::wifiBuffers($plan));
+            self::assertStringContainsString("set(PHPBM_NETWORK_BUFFERS_SDKCONFIG \"\")\n", (string) file_get_contents(BuildInputs::write($plan)));
+        }
+        // a board-override can turn it on for a board with PSRAM
+        $plan = Plans::plan(['board' => $devkit->withOverrides(['network' => ['buffers' => 'psram']])]);
+        self::assertStringContainsString('/host/sdkconfig/wifi-buffers-psram")', (string) file_get_contents(BuildInputs::write($plan)));
+    }
+
+    public function test_wifi_buffers_are_checked_before_anything_is_written(): void
+    {
+        $sdk = SdkDescriptorsTest::sdk();
+        $devkit = $sdk->board('espressif-esp32-s3-devkitc-1-n8r8');
+        $noPsram = new Board($devkit->id, $devkit->name, $devkit->chip, null, $devkit->flash, $devkit->console, $devkit->peripherals);
+        $emac = $sdk->board('generic-esp32p4')->withOverrides(['network' => ['type' => 'emac', 'rst' => 51, 'buffers' => 'psram']]);
+        $cases = [
+            ["board espressif-esp32-s3-devkitc-1-n8r8: network.buffers must be 'internal' or 'psram'", $devkit->withOverrides(['network' => ['buffers' => 'iram']])],
+            ["board espressif-esp32-s3-devkitc-1-n8r8: network.buffers must be 'internal' or 'psram'", $devkit->withOverrides(['network' => ['buffers' => true]])],
+            ["board espressif-esp32-s3-devkitc-1-n8r8: network.buffers 'psram' needs PSRAM, and the board has none", $noPsram->withOverrides(['network' => ['buffers' => 'psram']])],
+            ["board waveshare-esp32-s3-eth: network.buffers applies only to network type 'wifi' (the chip's own radio), not to 'w5500'", $sdk->board('waveshare-esp32-s3-eth')->withOverrides(['network' => ['buffers' => 'psram']])],
+            ["board waveshare-esp32-p4-wifi6: network.buffers applies only to network type 'wifi' (the chip's own radio), not to 'wifi-c6'", $sdk->board('waveshare-esp32-p4-wifi6')->withOverrides(['network' => ['buffers' => 'psram']])],
+            ["board generic-esp32p4: network.buffers applies only to network type 'wifi' (the chip's own radio), not to 'emac'", $emac],
+            ["board waveshare-esp32-s3-eth: network.buffers applies only to network type 'wifi' (the chip's own radio), not to 'w5500'", $sdk->board('waveshare-esp32-s3-eth')->withOverrides(['network' => ['buffers' => 'internal']])],
+        ];
+        foreach ($cases as [$message, $board]) {
+            $plan = Plans::plan(['board' => $board]);
+            try {
+                BuildInputs::write($plan);
+                self::fail("accepted: {$message}");
+            } catch (SpecException $e) {
+                self::assertSame($message, $e->getMessage());
+            }
+            self::assertFalse(is_dir($plan->buildDir));
+        }
+    }
+
+    public function test_wifi_static_buffers_write_a_generated_sdkconfig_fragment(): void
+    {
+        $fragment = static fn (int $n): string => "# Generated from the board key network.static-buffers ({$n}).\n"
+            . "CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM={$n}\nCONFIG_ESP_WIFI_RX_BA_WIN={$n}\nCONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM={$n}\n";
+        $b = SdkDescriptorsTest::sdk()->board('waveshare-esp32-s3-touch-lcd-5b');
+        foreach ([4 => $b, 2 => $b->withOverrides(['network' => ['static-buffers' => 2]]), 25 => $b->withOverrides(['network' => ['static-buffers' => 25]])] as $n => $board) {
+            $plan = Plans::plan(['board' => $board]);
+            $inputs = (string) file_get_contents(BuildInputs::write($plan));
+            $build = BuildInputs::cmakePath($plan->buildDir);
+            self::assertSame($n, BuildInputs::wifiStaticBuffers($plan));
+            self::assertStringContainsString("set(PHPBM_NETWORK_STATIC_BUFFERS_SDKCONFIG \"{$build}/wifi-static-buffers.sdkconfig\")\n", $inputs);
+            self::assertStringContainsString("set(PHPBM_NETWORK_STATIC_BUFFERS \"{$n}\")\n", $inputs);
+            self::assertSame($fragment($n), file_get_contents($plan->buildDir . '/wifi-static-buffers.sdkconfig'));
+        }
+        // without the key ESP-IDF keeps its own counts: no fragment, and a stale one is removed
+        $plan = Plans::plan(['board' => $b]);
+        BuildInputs::write($plan);
+        $props = $b->peripherals;
+        unset($props['network']['static-buffers']);
+        $without = new \PhpBaremetal\Spec\Sdk\Descriptor\Board($b->id, $b->name, $b->chip, $b->psram, $b->flash, $b->console, $props, $b->flashMode);
+        $plan = new \PhpBaremetal\Spec\Sdk\BuildPlan($plan->projectDir, $plan->manifest, $plan->sdk, $without, $plan->chip, $plan->runtime, $plan->storage, $plan->php, $plan->phpSourceDir, [], [], $plan->buildDir, false, $plan->options);
+        self::assertNull(BuildInputs::wifiStaticBuffers($plan));
+        self::assertStringContainsString("set(PHPBM_NETWORK_STATIC_BUFFERS_SDKCONFIG \"\")\n", (string) file_get_contents(BuildInputs::write($plan)));
+        self::assertFileDoesNotExist($plan->buildDir . '/wifi-static-buffers.sdkconfig');
+    }
+
+    public function test_wifi_static_buffers_are_checked_before_anything_is_written(): void
+    {
+        $sdk = SdkDescriptorsTest::sdk();
+        $b = $sdk->board('waveshare-esp32-s3-touch-lcd-5b');
+        $devkit = $sdk->board('espressif-esp32-s3-devkitc-1-n8r8');
+        $range = 'board waveshare-esp32-s3-touch-lcd-5b: network.static-buffers must be a whole number from 2 to 25';
+        $type = static fn (string $board, string $t): string => "board {$board}: network.static-buffers applies only to network type 'wifi' (the chip's own radio), not to '{$t}'";
+        $emac = $sdk->board('generic-esp32p4')->withOverrides(['network' => ['type' => 'emac', 'rst' => 51, 'static-buffers' => 4]]);
+        $cases = [
+            [$range, $b->withOverrides(['network' => ['static-buffers' => 1]])],
+            [$range, $b->withOverrides(['network' => ['static-buffers' => 26]])],
+            [$range, $b->withOverrides(['network' => ['static-buffers' => 0]])],
+            [$range, $b->withOverrides(['network' => ['static-buffers' => '4']])],
+            [$range, $b->withOverrides(['network' => ['static-buffers' => 4.5]])],
+            [$range, $b->withOverrides(['network' => ['static-buffers' => true]])],
+            ["board espressif-esp32-s3-devkitc-1-n8r8: network.static-buffers needs network.buffers 'psram' (ESP-IDF has static Wi-Fi TX buffers only in that mode)", $devkit->withOverrides(['network' => ['static-buffers' => 4]])],
+            ["board espressif-esp32-s3-devkitc-1-n8r8: network.static-buffers needs network.buffers 'psram' (ESP-IDF has static Wi-Fi TX buffers only in that mode)", $devkit->withOverrides(['network' => ['buffers' => 'internal', 'static-buffers' => 4]])],
+            [$type('waveshare-esp32-s3-eth', 'w5500'), $sdk->board('waveshare-esp32-s3-eth')->withOverrides(['network' => ['static-buffers' => 4]])],
+            [$type('waveshare-esp32-p4-wifi6', 'wifi-c6'), $sdk->board('waveshare-esp32-p4-wifi6')->withOverrides(['network' => ['static-buffers' => 4]])],
+            [$type('generic-esp32p4', 'emac'), $emac],
+        ];
+        foreach ($cases as [$message, $board]) {
+            $plan = Plans::plan(['board' => $board]);
+            try {
+                BuildInputs::write($plan);
+                self::fail("accepted: {$message}");
+            } catch (SpecException $e) {
+                self::assertSame($message, $e->getMessage());
+            }
+            self::assertFalse(is_dir($plan->buildDir));
+        }
     }
 
     public function test_the_network_is_off_by_default(): void
@@ -791,6 +1001,15 @@ final class BuildInputsTest extends TestCase
         $octal = new Board($s3->id, $s3->name, $s3->chip, $s3->psram, $s3->flash, $s3->console, $s3->peripherals, 'octal');
         $inputs = (string) file_get_contents(BuildInputs::write(Plans::plan(['board' => $octal])));
         self::assertStringContainsString("set(PHPBM_FLASH_MODE \"octal\")\n", $inputs);
+        $qio = new Board($s3->id, $s3->name, $s3->chip, $s3->psram, $s3->flash, $s3->console, $s3->peripherals, 'qio');
+        $inputs = (string) file_get_contents(BuildInputs::write(Plans::plan(['board' => $qio])));
+        self::assertStringContainsString("set(PHPBM_FLASH_MODE \"qio\")\n", $inputs);
+        self::assertSame("CONFIG_ESPTOOLPY_FLASHMODE_QIO=y\n", file_get_contents(dirname(__DIR__) . '/chips/esp32s3/sdkconfig.flash-qio'));
+        // the ESP32-P4 takes qio too (chips/esp32p4/sdkconfig.flash-qio), not octal
+        $p4qio = new Board($p4->id, $p4->name, $p4->chip, $p4->psram, $p4->flash, $p4->console, $p4->peripherals, 'qio');
+        $inputs = (string) file_get_contents(BuildInputs::write(Plans::plan(['board' => $p4qio])));
+        self::assertStringContainsString("set(PHPBM_FLASH_MODE \"qio\")\n", $inputs);
+        self::assertSame("CONFIG_ESPTOOLPY_FLASHMODE_QIO=y\n", file_get_contents(dirname(__DIR__) . '/chips/esp32p4/sdkconfig.flash-qio'));
     }
 
     public function test_project_version_comes_from_composer_then_git_then_fallback(): void

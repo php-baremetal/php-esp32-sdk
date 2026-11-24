@@ -1,0 +1,4 @@
+# The bootloader logs warnings and errors only: at the info level the ESP32-P4 bootloader of ESP-IDF 6.1 for v3
+# silicon with a 32 MB flash (32-bit addresses) is 0x6140 bytes, over the 0x6000 that fit before the partition table
+# at 0x8000. The application still logs the flash mode at start ("spi_flash: flash io: qio").
+CONFIG_BOOTLOADER_LOG_LEVEL_WARN=y

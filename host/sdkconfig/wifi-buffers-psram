@@ -1,0 +1,14 @@
+# Board key network.buffers "psram" (network type "wifi"): Wi-Fi and lwIP allocate in PSRAM first and fall back to
+# internal RAM (ESP-IDF esp_psram Kconfig: "Try to allocate memories of WiFi and LWIP in SPIRAM firstly"). For boards
+# whose display drivers leave too little internal RAM to start Wi-Fi. It needs CONFIG_SPIRAM_USE_MALLOC, which every
+# chips/<chip>/sdkconfig.<psram> fragment sets; the build refuses the key on a board without PSRAM.
+# The Wi-Fi buffer counts are left to ESP-IDF, whose Kconfig gives this mode its own defaults (16 static RX buffers,
+# static TX buffers, a 16-frame AMPDU RX window, no limit on out-of-order TCP segments). The board key
+# network.static-buffers lowers the static RX/TX counts and the window with a generated fragment applied after this.
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+
+# mbedTLS (the WPA3-SAE handshake, TLS) allocates in PSRAM too, instead of ESP-IDF's default internal RAM only
+# (MBEDTLS_INTERNAL_MEM_ALLOC; no earlier fragment sets the choice, so this one picks it). Measured on Waveshare
+# ESP32-S3-Touch-LCD-5B: the WPA3-SAE handshake was where internal RAM ran lowest; its authentication took 0.42 s in
+# 6 handshakes (0.40-0.48 s with internal RAM; a first prototype measured 0.6-0.9 s in 2).
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y

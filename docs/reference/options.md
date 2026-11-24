@@ -53,7 +53,7 @@ These apply to every runtime.
 | `network` | enum | `off`, `on` | `off` | Brings up the board's wired network (DHCP) before PHP starts. On a Wi-Fi board the script connects with ext-wifi. A runtime that needs a network turns it on by itself. |
 | `on-error` | enum | `stop`, `continue` | `stop` | An uncaught exception in `loop()` or in an event handler: `stop` ends the program, like the php CLI; `continue` prints it as a warning and goes on. Fatal errors always stop. In `web-server` an error ends only that request. |
 | `restart-delay` | int | 0 to 3600 | `5` | Seconds the board waits before it restarts once the program has ended. |
-| `firmware-reserve` | int | 256 to 4096 | `1024` | PSRAM in KB left to the rest of the firmware (network, HTTP server, native extensions); PHP gets the rest as `memory_limit`. See [Memory, flash and partitions](./memory-and-flash.md). |
+| `firmware-reserve` | int | 256 to 8192 | `1024` | PSRAM in KB left to the rest of the firmware (network, HTTP server, native extensions); PHP gets the rest as `memory_limit`. The framebuffers of the board's display are reserved besides it. See [Memory, flash and partitions](./memory-and-flash.md). |
 | `optimization` | enum | `size`, `performance`, `debug` | `size` | Compiler optimization of the whole firmware: `size` is `-Os`, `performance` is `-O2`, `debug` is `-Og`. |
 | `log` | enum | `none`, `error`, `warn`, `info`, `debug` | `info` | Lowest level of the firmware's own log lines (ESP-IDF, the network drivers, native packages) that are compiled in and printed. See [The log option](#the-log-option). |
 | `power-save` | enum | `off`, `on` | `off` | Automatic light sleep while every task waits. See [Power saving](./power-save.md). |

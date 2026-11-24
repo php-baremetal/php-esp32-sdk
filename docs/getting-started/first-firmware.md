@@ -68,7 +68,7 @@ phpbm monitor
 
 - `phpbm init` writes `composer.json`, `project-src/index.php` and `.gitignore`.
 - `composer require` runs the conductor, which installs the packages and writes `.phpbm/manifest.json`.
-- `phpbm toolchain:install` installs ESP-IDF v6.1 once per machine (about 6 GB).
+- `phpbm toolchain:install` installs ESP-IDF v6.1.1 once per machine (about 6 GB).
 - `phpbm flash` builds, checks the chip on the port and flashes. The first build compiles PHP and takes a while.
 - `phpbm monitor` opens the serial console; leave it with Ctrl + ].
 
@@ -161,7 +161,7 @@ the ESP-IDF version and the memory limit:
 
 <!-- @code-block language="Text" label="serial console, form of the output" -->
 ```text
-<project> <version>: PHP 8.5.11 on Waveshare ESP32-S3-Zero (N8R8) (esp32s3), ESP-IDF v6.1, memory_limit … KB, core 1
+<project> <version>: PHP 8.5.11 on Waveshare ESP32-S3-Zero (N8R8) (esp32s3), ESP-IDF v6.1.1, memory_limit … KB, core 1
 phpbm: PSRAM free after start … KB (largest … KB)
 blinking SOS on GPIO 2
 ```

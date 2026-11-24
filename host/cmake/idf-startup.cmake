@@ -1,0 +1,32 @@
+# ESP32-P4: phpbm's startup.c (host/components/phpbm) waits for core 0's scheduler with a paced poll, then calls
+# ESP-IDF's esp_startup_start_app_other_cores() (compiled as phpbm_idf_start_app_other_cores, post-project.cmake).
+# That is only equivalent while ESP-IDF's function does nothing core 0 needs before its own wait: a version that, for
+# example, published core 1's readiness before the loop would deadlock at boot instead of failing to build. This check
+# fails the configure when the code before the wait is no longer the core check and the flag's declaration it is now.
+function(phpbm_check_idf_app_startup file)
+    set(_why "phpbm's ESP32-P4 start-up (host/components/phpbm/startup.c) waits for core 0's scheduler before it calls ESP-IDF's esp_startup_start_app_other_cores(), which must start with that same wait")
+    if(NOT EXISTS "${file}")
+        message(FATAL_ERROR "ESP-IDF's ${file} not found: ${_why}.")
+    endif()
+    file(READ "${file}" _src)
+    string(FIND "${_src}" "void esp_startup_start_app_other_cores(void)" _at)
+    if(_at EQUAL -1)
+        message(FATAL_ERROR "esp_startup_start_app_other_cores() is not defined in ESP-IDF's ${file}: ${_why}.")
+    endif()
+    string(SUBSTRING "${_src}" ${_at} -1 _fn)
+    string(LENGTH "void esp_startup_start_app_other_cores(void)" _skip)
+    string(SUBSTRING "${_fn}" ${_skip} -1 _fn)
+    string(FIND "${_fn}" "while (port_xSchedulerRunning[0] == 0)" _wait)
+    string(FIND "${_fn}" "\n}" _end)
+    if(_wait EQUAL -1 OR (NOT _end EQUAL -1 AND _end LESS _wait))
+        message(FATAL_ERROR "esp_startup_start_app_other_cores() in ESP-IDF's ${file} no longer waits with `while (port_xSchedulerRunning[0] == 0)`: ${_why}.")
+    endif()
+    string(SUBSTRING "${_fn}" 0 ${_wait} _before)
+    string(REGEX REPLACE "/\\*([^*]|\\*+[^*/])*\\*+/" "" _before "${_before}")
+    string(REGEX REPLACE "//[^\n]*" "" _before "${_before}")
+    string(REGEX REPLACE "[ \t\r\n]" "" _before "${_before}")
+    set(_known "{if(xPortGetCoreID()>=2){abort();}externvolatileunsignedport_xSchedulerRunning[CONFIG_FREERTOS_NUMBER_OF_CORES];")
+    if(NOT _before STREQUAL _known)
+        message(FATAL_ERROR "esp_startup_start_app_other_cores() in ESP-IDF's ${file} runs new code before its wait for core 0's scheduler: ${_why}. Check that core 0 does not need that code before its scheduler starts, then update host/cmake/idf-startup.cmake (or drop the override if ESP-IDF's wait pauses now).")
+    endif()
+endfunction()

@@ -1,0 +1,19 @@
+{
+    "name": "Waveshare ESP32-S3-Touch-LCD-5B",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "16MB",
+    "flash-mode": "qio",
+    "console": "usb-jtag",
+    "network": { "type": "wifi", "buffers": "psram", "static-buffers": 4 },
+    "i2c": { "type": "i2c", "sda": 8, "scl": 9 },
+    "expander": { "type": "ch422g", "inputs": "exio0,exio5" },
+    "display": { "type": "rgb", "width": 1024, "height": 600,
+        "pclk": 7, "de": 5, "hsync": 46, "vsync": 3,
+        "data": "14,38,18,17,10,39,0,45,48,47,21,1,2,42,41,40",
+        "pclk-hz": 26000000, "pclk-neg": 1,
+        "hsync-pulse": 30, "hsync-back": 145, "hsync-front": 170,
+        "vsync-pulse": 2, "vsync-back": 23, "vsync-front": 12,
+        "bounce-rows": 6, "frames": 2, "bl": "exio2", "rst": "exio3" },
+    "touch": { "type": "gt911", "int": 4, "rst": "exio1", "width": 1024, "height": 600 }
+}

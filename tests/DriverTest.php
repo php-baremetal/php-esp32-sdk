@@ -31,7 +31,7 @@ final class DriverTest extends TestCase
     protected function setUp(): void
     {
         $this->toolchainDir = Plans::tempDir();
-        $this->idf = $this->toolchainDir . '/esp-idf-v6.1';
+        $this->idf = $this->toolchainDir . '/esp-idf-v6.1.1';
         $this->venv = FakeIdf::install($this->idf, $this->toolchainDir . '/tools');
         $this->python = $this->venv . '/bin/python';
     }
@@ -232,6 +232,57 @@ final class DriverTest extends TestCase
         self::assertFileExists($plan->buildDir . '/idf/CMakeCache.txt');
     }
 
+    public function test_changing_the_wifi_buffers_drops_sdkconfig(): void
+    {
+        $board = SdkDescriptorsTest::sdk()->board('espressif-esp32-s3-devkitc-1-n8r8');
+        $plan = Plans::plan(['board' => $board]);
+        $this->buildWith($plan);
+        $this->seed($plan);
+        $this->buildWith($plan);
+        self::assertFileExists($plan->buildDir . '/sdkconfig');
+        $this->buildWith($this->movedTo($plan, Plans::plan(['board' => $board->withOverrides(['network' => ['buffers' => 'psram']])])));
+        self::assertFileDoesNotExist($plan->buildDir . '/sdkconfig');
+        self::assertFileExists($plan->buildDir . '/idf/CMakeCache.txt');
+    }
+
+    public function test_editing_the_wifi_buffers_fragment_drops_sdkconfig(): void
+    {
+        $copy = Plans::tempDir();
+        $source = dirname(__DIR__);
+        foreach (['sdk.json', 'composer.json', 'boards', 'chips', 'runtimes', 'storages', 'networks', 'host', 'php', 'driver'] as $entry) {
+            $this->copyTree("{$source}/{$entry}", "{$copy}/{$entry}");
+        }
+        $plan = Plans::plan(['sdk' => (new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy), 'board' => 'waveshare-esp32-s3-touch-lcd-5b']);
+        $this->buildWith($plan);
+        $this->seed($plan);
+        $this->buildWith($plan);
+        self::assertFileExists($plan->buildDir . '/sdkconfig');
+
+        file_put_contents("{$copy}/host/sdkconfig/wifi-buffers-psram", "CONFIG_EDITED=y\n", FILE_APPEND);
+        $this->buildWith($plan);
+        self::assertFileDoesNotExist($plan->buildDir . '/sdkconfig');
+        self::assertFileExists($plan->buildDir . '/idf/CMakeCache.txt');
+    }
+
+    public function test_changing_the_wifi_static_buffers_drops_sdkconfig(): void
+    {
+        $board = SdkDescriptorsTest::sdk()->board('waveshare-esp32-s3-touch-lcd-5b');
+        $plan = Plans::plan(['board' => $board]);
+        $this->buildWith($plan);
+        $this->seed($plan);
+        $this->buildWith($plan);
+        self::assertFileExists($plan->buildDir . '/sdkconfig');
+        $before = json_decode((string) file_get_contents($plan->buildDir . '/fingerprint.json'), true);
+
+        $this->buildWith($this->movedTo($plan, Plans::plan(['board' => $board->withOverrides(['network' => ['static-buffers' => 8]])])));
+        self::assertFileDoesNotExist($plan->buildDir . '/sdkconfig');
+        self::assertFileExists($plan->buildDir . '/idf/CMakeCache.txt');
+        // the generated fragment is part of the fragments hash, not only of the board blocks
+        $after = json_decode((string) file_get_contents($plan->buildDir . '/fingerprint.json'), true);
+        self::assertNotSame($before['fragments'], $after['fragments']);
+        self::assertStringContainsString('=8', (string) file_get_contents($plan->buildDir . '/wifi-static-buffers.sdkconfig'));
+    }
+
     public function test_editing_a_package_sdkconfig_fragment_drops_sdkconfig(): void
     {
         $dir = Plans::tempDir() . '/cfg';
@@ -283,7 +334,7 @@ final class DriverTest extends TestCase
         $plan = Plans::plan();
         $this->buildWith($plan);
         $this->seed($plan);
-        FakeIdf::install($this->idf, $this->toolchainDir . '/tools', '6.1.1');
+        FakeIdf::install($this->idf, $this->toolchainDir . '/tools', '6.1.2');
         $this->buildWith($plan);
         self::assertDirectoryDoesNotExist($plan->buildDir . '/idf');
         self::assertFileDoesNotExist($plan->buildDir . '/sdkconfig');

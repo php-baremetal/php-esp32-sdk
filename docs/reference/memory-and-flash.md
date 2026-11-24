@@ -22,7 +22,7 @@ At boot the firmware reserves one block of PSRAM for PHP's memory manager, in ch
 
 <!-- @code-block language="text" label="how the block is sized" -->
 ```text
-keep   = firmware reserve + startup + opcache-memory
+keep   = firmware reserve + display framebuffers + startup + opcache-memory
 chunks = (free PSRAM - keep) / 256 KB, at most 256, at least 2
 memory_limit = chunks x 256 KB
 ```
@@ -30,17 +30,27 @@ memory_limit = chunks x 256 KB
 
 | Profile | When | Startup | Firmware reserve | PHP stack | OPcache |
 | --- | --- | --- | --- | --- | --- |
-| Large | total PSRAM of 4 MB or more | `startup-kb` of the PHP minor, plus the `startup-kb` of each optional extension, plus 208 KB for packages | the `firmware-reserve` option, at most a quarter of the free PSRAM | 256 KB | `opcache-memory` KB taken from the block |
-| Small | total PSRAM under 4 MB | `startup-kb` of the minor plus extensions, without the 208 KB | 0 (logged at boot) | 128 KB | disabled at boot |
+| Large | total PSRAM of 4 MB or more | `startup-kb` of the PHP minor, plus the `startup-kb` of each optional extension, plus 208 KB for packages | the `firmware-reserve` option, at most a quarter of the free PSRAM, plus the display framebuffers | 256 KB | `opcache-memory` KB taken from the block |
+| Small | total PSRAM under 4 MB | `startup-kb` of the minor plus extensions, without the 208 KB | the display framebuffers only (`firmware-reserve` is logged as not applied) | 128 KB | disabled at boot |
 
-- `firmware-reserve` (256 to 4096 KB, default 1024) is the PSRAM kept for the rest of the firmware: the network, the
-  HTTP server, the native extensions. Raise it when a package runs out of PSRAM; lower it to give PHP more.
+- `firmware-reserve` (256 to 8192 KB, default 1024; at most a quarter of the free PSRAM) is the PSRAM kept for the
+  rest of the firmware: the network, the HTTP server, the native extensions, Slate's caches and images. Raise it when
+  a package runs out of PSRAM; lower it to give PHP more.
+- The display framebuffers: a display block of the board whose driver is installed and keeps its framebuffers in
+  PSRAM (types `rgb` and `dsi`: `width` x `height` x 2 bytes x `frames`, plus one more for a `dsi` panel with
+  `rotation` 90, 180 or 270, whose drawing surface keeps its own framebuffer; 2400 KB for the two frames of the
+  Waveshare ESP32-S3-Touch-LCD-5B, 5400 KB for the two frames and the turned surface of the Waveshare
+  ESP32-P4-WIFI6-Touch-LCD-5) is reserved on top of `firmware-reserve` and outside its cap. The boot line adds
+  `(display framebuffers <n> KB)`. The turned panel's surface framebuffer is left out when ext-display's
+  `display-surface` option is `false` (a project that draws only with a renderer such as Slate): 3600 KB on that
+  board, 1800 KB more for the rest of the firmware and PHP.
 - `startup-kb` is in `sdk.json` per minor (760, 816 and 872 KB for 8.3, 8.4 and 8.5) and in each extension's
   descriptor: see [PHP versions and extensions](./php.md).
 - With less than the minimum, the boot log says `PSRAM too small for PHP` and lists the numbers.
 
 The boot prints the result: the first line contains `memory_limit <n> KB`, and the next one the free PSRAM after
-the start. It adds `firmware reserve`, `opcache` or `PHP stack` only when they differ from the defaults.
+the start. It adds `firmware reserve`, `opcache` or `PHP stack` only when they differ from the defaults, and always
+`firmware reserve` with its display framebuffers when the board has some.
 
 Measured memory limits (PHP 8.4 unless noted):
 
@@ -144,11 +154,11 @@ storage there is no `storage` partition: the sources live on the card and `phpbm
 | `generic-esp32s3-quad`, `waveshare-esp32-s3-zero` | 4 MB | quad |
 | `espressif-esp32-s3-devkitc-1-n8r2` | 8 MB | quad |
 | `espressif-esp32-s3-devkitc-1-n8r8`, `generic-esp32s3-octal`, `waveshare-esp32-s3-zero-n8r8` | 8 MB | octal |
-| `espressif-esp32-s3-devkitc-1-n16r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `freenove-esp32-s3-wroom-lite-n16r16`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b` | 16 MB | octal |
-| `generic-esp32p4`, `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `waveshare-esp32-p4-wifi6` | 32 MB | hex |
+| `espressif-esp32-s3-devkitc-1-n16r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `freenove-esp32-s3-wroom-lite-n16r16`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b` | 16 MB | octal |
+| `generic-esp32p4`, `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `waveshare-esp32-p4-wifi6`, `waveshare-esp32-p4-wifi6-touch-lcd-5` | 32 MB | hex |
 
 <!-- @callout variant="note" title="Only 16 MB are used on a 32 MB board" -->
-With the default quad flash mode, the cache maps only the first 16 MB of the flash, so the partitions stay below
+With the quad flash bus (`quad` or `qio`), the cache maps only the first 16 MB of the flash, so the partitions stay below
 that limit: the upper 16 MB of a 32 MB ESP32-P4 board stay unused. A board can set `flash-mode` to `octal` on an
 ESP32-S3 (see [Board files](../boards/board-files.md)); no board of the SDK does.
 <!-- @endcallout -->

@@ -5,6 +5,6 @@ CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
 # often; it takes 16 KB of internal RAM.
 CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB=y
 
-# The main task (boot, storage mount and unmount, restart, deep sleep; PHP has its own task) in 16 KB of internal
-# RAM instead of the 32 KB of host/sdkconfig.defaults: it uses about 1 KB, and the 16 KB go to Wi-Fi and drivers.
-CONFIG_ESP_MAIN_TASK_STACK_SIZE=16384
+# The main task (boot, storage mount and unmount, restart, deep sleep; PHP has its own task) in 8 KB of internal
+# RAM instead of the 32 KB of host/sdkconfig.defaults: it uses about 1 KB, and the 24 KB go to Wi-Fi and drivers.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

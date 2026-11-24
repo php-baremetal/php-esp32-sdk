@@ -1,0 +1,18 @@
+{
+    "name": "Waveshare ESP32-P4-WIFI6-Touch-LCD-5",
+    "chip": "esp32p4",
+    "psram": "hex",
+    "flash": "32MB",
+    "flash-mode": "qio",
+    "revision": "v3",
+    "microsd": { "type": "sdio" },
+    "network": { "type": "wifi-c6" },
+    "i2c": { "type": "i2c", "sda": 7, "scl": 8 },
+    "display": { "type": "dsi", "width": 720, "height": 1280, "rotation": 90, "frames": 2,
+        "lanes": 2, "lane-mbps": 700, "dpi-hz": 58000000,
+        "hsync-pulse": 20, "hsync-back": 20, "hsync-front": 40,
+        "vsync-pulse": 4, "vsync-back": 10, "vsync-front": 24,
+        "phy-ldo": 3, "phy-mv": 2500, "rst": 27, "rst-high": 1, "bl": 26, "bl-pwm": 1,
+        "init": "11 /120; 36 00; 3A 55; BA 61; B9 FF 83 94; B1 48 0A 6A 09 33 54 71 71 2E 45; BA 61 03 68 6B B2 C0; B2 00 80 64 0C 06 2F; B4 1C 78 1C 78 1C 78 01 0C 86 75 00 3F 1C 78 1C 78 1C 78 01 0C 86; D3 00 00 00 00 00 00 08 08 32 10 05 00 05 32 13 C1 00 01 32 10 08 00 00 37 03 07 07 37 05 05 37 0C 40; D5 18 18 18 18 22 23 20 21 04 05 06 07 00 01 02 03 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 19 19 19 19; D6 18 18 19 19 21 20 23 22 03 02 01 00 07 06 05 04 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 18 19 19 18 18; E0 07 08 09 0D 10 14 16 13 24 36 48 4A 58 6F 76 80 97 A5 A8 B5 C6 62 63 68 6F 72 78 7F 7F 00 02 08 0D 0C 0E 0F 10 24 36 48 4A 58 6F 78 82 99 A4 A0 B1 C0 5E 5E 64 6B 6C 73 7F 7F; CC 0B; C0 1F 73; B6 6B 6B; D4 02; BD 01; B1 00; BD 00; BF 40 81 50 00 1A FC 01; 3A 50; 11 /200; B2 00 80 64 0C 06 2F 00 00 00 00 C0 18; 29 /80" },
+    "touch": { "type": "gt911", "rst": 23, "width": 720, "height": 1280, "swap-xy": 1, "mirror-y": 1, "poll-ms": 10 }
+}

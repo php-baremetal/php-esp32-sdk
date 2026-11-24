@@ -9,7 +9,7 @@ use PhpBaremetal\Spec\Testing\FakeProcess;
 
 final class FakeIdf
 {
-    public static function install(string $idfPath, string $toolsPath, string $version = '6.1.0', bool $windows = false): string
+    public static function install(string $idfPath, string $toolsPath, string $version = '6.1.1', bool $windows = false): string
     {
         [$major, $minor, $patch] = explode('.', $version);
         @mkdir("{$idfPath}/tools", 0777, true);

@@ -1,5 +1,5 @@
 include("$ENV{PHPBM_INPUTS}")
-set(_srcs "boot.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}" "${PHPBM_BOARD_C}")
+set(_srcs "boot.c" "startup.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}" "${PHPBM_BOARD_C}")
 set(_priv esp_pm esp_hw_support esp_driver_gpio esp_app_format esp_netif esp_event esp_timer fatfs)
 include("${PHPBM_SDK_DIR}/host/cmake/microsd.cmake")
 if(PHPBM_MICROSD)
@@ -31,6 +31,11 @@ foreach(_fn glob globfree)
     idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=${_fn}" APPEND)
     idf_build_set_property(LINK_OPTIONS "-Wl,-u,__wrap_${_fn}" APPEND)
 endforeach()
+# The ESP32-P4 app CPU waits for the scheduler with a pause between reads (startup.c, post-project.cmake). Nothing
+# else references startup.c, so -u links it: its strong esp_startup_start_app_other_cores replaces startup.c's weak one.
+if(CONFIG_IDF_TARGET_ESP32P4 AND NOT CONFIG_FREERTOS_UNICORE)
+    idf_build_set_property(LINK_OPTIONS "-Wl,-u,phpbm_start_app_other_cores" APPEND)
+endif()
 # statvfs() for PHP's disk_free_space()/disk_total_space() (fs_pathnorm.c): ESP-IDF's is a stub.
 idf_build_set_property(LINK_OPTIONS "-Wl,--wrap=statvfs" APPEND)
 idf_build_set_property(LINK_OPTIONS "-Wl,-u,__wrap_statvfs" APPEND)

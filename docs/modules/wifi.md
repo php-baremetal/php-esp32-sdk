@@ -31,7 +31,7 @@ and does not need ext-events.
 
 | Network type | Boards | ext-wifi |
 | --- | --- | --- |
-| `wifi` | `espressif-esp32-s3-devkitc-1-n16r8`, `-n8r2`, `-n8r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `-n16r16`, `generic-esp32s3-quad`, `generic-esp32s3-octal`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-zero`, `waveshare-esp32-s3-zero-n8r8` | Required to get any network |
+| `wifi` | `espressif-esp32-s3-devkitc-1-n16r8`, `-n8r2`, `-n8r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `-n16r16`, `generic-esp32s3-quad`, `generic-esp32s3-octal`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b`, `waveshare-esp32-s3-zero`, `waveshare-esp32-s3-zero-n8r8` | Required to get any network |
 | `wifi-c6` | `waveshare-esp32-p4-wifi6`: an ESP32-C6 companion chip over SDIO | Required; the firmware starts the link to the companion whenever ext-wifi is installed |
 | `w5500` | `waveshare-esp32-s3-eth`: wired, and the ESP32-S3 has a radio | Optional: Wi-Fi then runs next to Ethernet |
 | none or wired without a radio | `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `generic-esp32p4` | Not supported: the build fails with `board '...' has no Wi-Fi: remove php-baremetal/ext-wifi` |
@@ -212,6 +212,68 @@ events are delivered.
   separate from the `power-save` option (light sleep); Wi-Fi with `power-save` on has not been verified on
   hardware. See [Power saving](../reference/power-save.md).
 
+## Memory
+
+Starting Wi-Fi takes about 42-45 KB of the chip's internal RAM (measured on the ESP32-S3); if that is not free,
+the first Wi-Fi call fails and the console prints `wifi init failed: ESP_ERR_NO_MEM`. A large display can use most
+of the internal RAM: on Waveshare ESP32-S3-Touch-LCD-5B the RGB panel's bounce buffers and Slate's bands leave about
+35 KB. On such a board the board file sets `"buffers": "psram"` in its `wifi` network block
+([Board files](../boards/board-files.md#network)). Wi-Fi and lwIP then allocate in PSRAM first and fall back to
+internal RAM (ESP-IDF option `CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP`). At start the ESP-IDF Wi-Fi log prints
+`WiFi/LWIP prefer SPIRAM`.
+
+The cost:
+
+- **Speed.** ESP-IDF publishes no throughput figure for this option. Its external RAM guide says that PSRAM shares
+  the cache with the flash: data the cache holds is read almost as fast as internal RAM, larger blocks fall back to
+  the speed of the PSRAM bus. On the ESP32-S3, DMA to PSRAM has limited bandwidth, above all when the CPU uses PSRAM
+  at the same time. An RGB panel reads its framebuffer from PSRAM all the time, so expect somewhat lower throughput
+  and higher latency than with internal buffers.
+- **Buffer counts.** With the option on, ESP-IDF changes some of its own defaults: 16 static RX buffers instead of 10,
+  16 static TX buffers instead of dynamic ones, a 16-frame AMPDU RX window instead of 6 (the Kconfig help asks for at
+  least 16 in this mode), and no limit on out-of-order TCP segments. The SDK keeps these defaults unless the board
+  sets `static-buffers` (below).
+- **PSRAM.** The buffers come out of the PSRAM left outside PHP's block, which the `firmware-reserve` option
+  sizes (see [Memory and flash](../reference/memory-and-flash.md)).
+- **mbedTLS in PSRAM.** The same fragment sets `CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC`: mbedTLS allocates in PSRAM
+  instead of ESP-IDF's default, internal RAM only. That covers the WPA3-SAE handshake, which mbedTLS computes when
+  the board joins a WPA3 network, and any TLS session. The handshake is where internal RAM ran lowest on Waveshare
+  ESP32-S3-Touch-LCD-5B: with mbedTLS in internal RAM, about 1.3 KB of DMA-capable RAM was left at that moment.
+  The cost is time, as PSRAM is slower than internal RAM: a first test measured 0.6-0.9 s for the handshake (from
+  the start of authentication to the association) instead of about 0.4 s, in 2 handshakes; with the board's final
+  configuration it took 0.42 s in 6 handshakes, the same as with internal RAM (0.40-0.48 s). Keys and session data
+  are then in PSRAM, which the ESP32-S3 encrypts only with flash encryption on.
+
+On a board with enough internal RAM, keep the default (`internal`): Wi-Fi stays in the faster memory. On another
+board with PSRAM, a project can turn it on with [board overrides](../boards/board-overrides.md):
+`"board-overrides": { "network": { "buffers": "psram" } }`.
+
+### Fewer static buffers
+
+The static RX and TX buffers (about 1.6 KB each) are DMA buffers: they stay in internal RAM even with `buffers:
+"psram"`, and `esp_wifi_init()` allocates them all at once. On Waveshare ESP32-S3-Touch-LCD-5B, next to Slate on
+the double-buffered 1024 x 600 panel, the 16 + 16 that ESP-IDF picks in PSRAM mode do not fit: `wifi init failed:
+ESP_ERR_NO_MEM`. Its board file therefore also sets `"static-buffers": 4`, which sets the static RX buffers, the
+static TX buffers and the AMPDU RX window to 4 ([Board files](../boards/board-files.md#network)).
+
+Measured on that board (ESP-IDF v6.1, 2026-11-17):
+
+| Static RX / BA window / static TX | Result |
+| --- | --- |
+| 16 / 16 / 16 (ESP-IDF default in PSRAM mode) | `ESP_ERR_NO_MEM` |
+| 8 / 8 / 16 | `ESP_ERR_NO_MEM` |
+| 6 / 6 / 6 | `ESP_ERR_NO_MEM` |
+| 4 / 4 / 4 | Starts, connects in about 8 s, stays online; internal RAM minimum about 8.4 KB |
+
+The cost of fewer buffers is less receive headroom: the radio can hold fewer frames while the stack is busy, and
+the access point may send fewer frames per aggregate. Expect lower throughput for large transfers such as an OTA
+download. ESP-IDF recommends a BA window of at least 16 when Wi-Fi allocates in PSRAM (Kconfig reference,
+[`CONFIG_ESP_WIFI_RX_BA_WIN`](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-reference/kconfig-reference.html#config-esp-wifi-rx-ba-win)),
+and its [Wi-Fi performance guide](https://docs.espressif.com/projects/esp-idf/en/latest/esp32s3/api-guides/wifi-driver/wifi-performance-and-power-save.html)
+ties throughput to these counts. The throughput with 4 was not measured. Use the key only on a board that cannot
+start Wi-Fi otherwise, and keep N as high as the internal RAM allows. A project can change it with board overrides:
+`"board-overrides": { "network": { "static-buffers": 6 } }`.
+
 ## With the web-server runtime
 
 The [web-server](../runtime/web-server.md) runtime needs a network, and on a Wi-Fi board it does not connect for
@@ -245,6 +307,7 @@ a `wifi_connect(..., wait: false)` there returns before the address exists, so u
 | Symptom | Cause |
 | --- | --- |
 | `connect failed` (`wifi_connect()` returns `false`) | Wrong credentials, network not in range or a slow DHCP server, all after `$timeout_ms`. The console prints `sta disconnected, reason=..`. |
+| `wifi init failed: ESP_ERR_NO_MEM` on the console, every Wi-Fi call fails | Not enough internal RAM to start Wi-Fi, usually next to a large display: see [Memory](#memory). |
 | `wifi_scan()` returns `false` | The scan could not start or did not finish within 15 s. |
 | The access point has no password | The password was `null`, empty or under 8 characters. |
 | `serve_http(): no network interface (turn the network option on, or connect with ext-wifi first)` | `serve_http()` ran before `wifi_connect()` or `wifi_ap_start()`. |

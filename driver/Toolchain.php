@@ -13,7 +13,7 @@ use PhpBaremetal\Spec\SpecException;
 
 final class Toolchain implements ToolchainContract
 {
-    public const IDF_VERSION = 'v6.1';
+    public const IDF_VERSION = 'v6.1.1';
     public const IDF_REPOSITORY = 'https://github.com/espressif/esp-idf.git';
     public const TARGETS = 'esp32s3,esp32p4';
     public const MIN_PYTHON = '3.10';
@@ -147,9 +147,48 @@ final class Toolchain implements ToolchainContract
         ];
     }
 
+    /** v6.1.x from IDF_VERSION's patch on (v6.1.1 fixes the ESP32-P4 v3 start-up faults with memory protection). */
     private function compatible(?string $version): bool
     {
-        return $version !== null && str_starts_with($version . '.', self::IDF_VERSION . '.');
+        if ($version === null || !preg_match('/^v(\d+)\.(\d+)(?:\.(\d+))?$/', $version, $m)
+            || !preg_match('/^v(\d+)\.(\d+)\.(\d+)$/', self::IDF_VERSION, $want)) {
+            return false;
+        }
+        return $m[1] === $want[1] && $m[2] === $want[2] && (int) ($m[3] ?? 0) >= (int) $want[3];
+    }
+
+    /**
+     * An ESP-IDF that an earlier SDK installed next to this one's folder: [path, version], or null. Only one of the
+     * same major version strictly older than IDF_VERSION (a newer SDK's folder, or another major's, is not "too old");
+     * of several, the newest.
+     */
+    private function olderInstall(): ?array
+    {
+        $want = substr(self::IDF_VERSION, 1);
+        $found = null;
+        foreach (glob($this->context->toolchainDir . '/esp-idf-v*', GLOB_ONLYDIR) ?: [] as $dir) {
+            $header = @file_get_contents($dir . '/components/esp_common/include/esp_idf_version.h');
+            if ($dir === $this->idfPath() || $header === false) {
+                continue;
+            }
+            $parts = [];
+            foreach (['MAJOR', 'MINOR', 'PATCH'] as $part) {
+                $parts[] = preg_match('/#define\s+ESP_IDF_VERSION_' . $part . '\s+(\d+)/', $header, $m) ? $m[1] : '0';
+            }
+            $version = implode('.', $parts);
+            if ($parts[0] !== explode('.', $want)[0] || version_compare($version, $want, '>=')
+                || ($found !== null && version_compare($version, substr($found[1], 1), '<='))) {
+                continue;
+            }
+            $found = [$dir, 'v' . $version];
+        }
+        return $found;
+    }
+
+    /** "v6.1.1 or a later v6.1.x". */
+    private static function wanted(): string
+    {
+        return self::IDF_VERSION . ' or a later ' . preg_replace('/\.\d+$/', '.x', self::IDF_VERSION);
     }
 
     public function python(): string
@@ -161,11 +200,14 @@ final class Toolchain implements ToolchainContract
     {
         $idf = $this->idfPath();
         if (!is_file("{$idf}/tools/idf.py") || !is_file("{$idf}/tools/idf_tools.py")) {
+            if (!$this->external() && ($old = $this->olderInstall()) !== null) {
+                return new ToolchainStatus(false, $old[1], sprintf('ESP-IDF %s in %s is too old, the esp32 sdk needs %s: run `phpbm toolchain:install` (it installs into %s; the old folder can then be deleted)', $old[1], $old[0], self::wanted(), $idf));
+            }
             return new ToolchainStatus(false, null, "ESP-IDF not found in {$idf}");
         }
         $version = $this->version();
         if (!$this->compatible($version)) {
-            return new ToolchainStatus(false, $version, sprintf('ESP-IDF %s in %s, the esp32 sdk needs %s', $version ?? 'of unknown version', $idf, self::IDF_VERSION));
+            return new ToolchainStatus(false, $version, sprintf('ESP-IDF %s in %s, the esp32 sdk needs %s: run `phpbm toolchain:install`', $version ?? 'of unknown version', $idf, self::wanted()));
         }
         if (($problem = $this->pathProblem()) !== null) {
             return new ToolchainStatus(false, $version, $problem);

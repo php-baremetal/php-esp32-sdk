@@ -230,9 +230,14 @@ static const char *phpbm_boot(const char *root)
     printf("phpbm: PSRAM free after start %zu KB (largest %zu KB)",
            heap_caps_get_free_size(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) / 1024,
            heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT) / 1024);
+#if PHPBM_DISPLAY_FB_KB
+    /* The reserve includes the display framebuffers (memory.c): always shown, with their share. */
+    printf(", firmware reserve %zu KB (display framebuffers %d KB)", phpbm_memory_reserve() / 1024, PHPBM_DISPLAY_FB_KB);
+#else
     if (phpbm_memory_reserve() != (size_t) PHPBM_OPTION_FIRMWARE_RESERVE * 1024) {
         printf(", firmware reserve %zu KB", phpbm_memory_reserve() / 1024);
     }
+#endif
 #if PHPBM_PHP_EXT_OPCACHE
     if (phpbm_memory_opcache() != 0) {
         printf(", opcache %d KB", PHPBM_OPTION_OPCACHE_MEMORY);

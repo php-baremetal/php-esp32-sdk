@@ -10,7 +10,7 @@
   <img alt="Status: preview, not ready for use" src="https://img.shields.io/badge/status-preview%20%E2%80%94%20not%20ready%20for%20use-DC2626?style=flat-square">
   <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/php-baremetal/php-esp32-sdk?style=flat-square&color=475569"></a>
   <img alt="PHP 8.3 | 8.4 | 8.5" src="https://img.shields.io/badge/PHP-8.3%20%7C%208.4%20%7C%208.5-777BB4?style=flat-square&logo=php&logoColor=white">
-  <img alt="ESP-IDF v6.1" src="https://img.shields.io/badge/ESP--IDF-v6.1-E7352C?style=flat-square&logo=espressif&logoColor=white">
+  <img alt="ESP-IDF v6.1.1" src="https://img.shields.io/badge/ESP--IDF-v6.1.1-E7352C?style=flat-square&logo=espressif&logoColor=white">
   <img alt="Targets: ESP32-P4 | S3" src="https://img.shields.io/badge/targets-ESP32--P4%20%7C%20S3-475569?style=flat-square&logo=espressif&logoColor=white">
   <a href="https://github.com/php-baremetal/php-esp32-sdk/stargazers"><img alt="Stars" src="https://img.shields.io/github/stars/php-baremetal/php-esp32-sdk?style=flat-square&color=475569"></a>
 </p>
@@ -43,7 +43,7 @@ composer global require php-baremetal/phpbm php-baremetal/conductor
 phpbm sdk:install esp32
 phpbm init blink && cd blink
 composer require php-baremetal/ext-gpio php-baremetal/ext-sys
-phpbm toolchain:install          # ESP-IDF v6.1, once per machine
+phpbm toolchain:install          # ESP-IDF v6.1.1, once per machine
 phpbm flash && phpbm monitor
 ```
 
@@ -75,9 +75,11 @@ project format and every command.
 | `waveshare-esp32-s3-zero-n8r8` | Waveshare ESP32-S3-Zero (N8R8) | ESP32-S3 | Wi-Fi |
 | `waveshare-esp32-s3-eth` | Waveshare ESP32-S3-ETH | ESP32-S3 | Ethernet (W5500) |
 | `waveshare-esp32-s3-touch-lcd-1.85b` | Waveshare ESP32-S3-Touch-LCD-1.85B | ESP32-S3 | Wi-Fi |
+| `waveshare-esp32-s3-touch-lcd-5b` | Waveshare ESP32-S3-Touch-LCD-5B | ESP32-S3 | Wi-Fi |
 | `waveshare-esp32-p4-eth` | Waveshare ESP32-P4-ETH | ESP32-P4 | Ethernet |
 | `waveshare-esp32-p4-pico` | Waveshare ESP32-P4-Pico | ESP32-P4 | — |
 | `waveshare-esp32-p4-wifi6` | Waveshare ESP32-P4-WIFI6 | ESP32-P4 | Wi-Fi (ESP32-C6) |
+| `waveshare-esp32-p4-wifi6-touch-lcd-5` | Waveshare ESP32-P4-WIFI6-Touch-LCD-5 | ESP32-P4 | Wi-Fi (ESP32-C6) |
 | `generic-esp32s3-quad`, `generic-esp32s3-octal`, `generic-esp32p4` | Any ESP32-S3 (quad or octal PSRAM) or ESP32-P4 | | |
 
 Every board needs external PSRAM. `phpbm discover` shows which boards match the connected chip.

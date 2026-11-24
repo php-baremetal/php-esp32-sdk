@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Reference'
-lede:    'The esp32 SDK builds with ESP-IDF v6.1 for the ESP32-S3 and the ESP32-P4. What phpbm toolchain:install does for it, where things go, and the variables and path rules that matter.'
+lede:    'The esp32 SDK builds with ESP-IDF v6.1.1 for the ESP32-S3 and the ESP32-P4. What phpbm toolchain:install does for it, where things go, and the variables and path rules that matter.'
 see_also:
   - { href: 'https://github.com/php-baremetal/phpbm/blob/master/docs/guide/toolchains.md', meta: 'phpbm', label: 'phpbm toolchains guide' }
   - { href: './troubleshooting.md', meta: 'Reference' }
@@ -11,7 +11,7 @@ next: { label: 'Troubleshooting', href: './troubleshooting.md' }
 
 # Toolchain
 
-The toolchain of the `esp32` SDK is ESP-IDF v6.1 (`v6.1` and any `v6.1.x`), with its compiler, CMake, Ninja and
+The toolchain of the `esp32` SDK is ESP-IDF v6.1.1 (`v6.1.1` and any later `v6.1.x`), with its compiler, CMake, Ninja and
 Python environment, for the targets `esp32s3` and `esp32p4`. The general behaviour of `phpbm toolchain:install` is in
 the [phpbm toolchains guide](https://github.com/php-baremetal/phpbm/blob/master/docs/guide/toolchains.md); this page
 adds what is specific to this SDK.
@@ -20,8 +20,8 @@ adds what is specific to this SDK.
 
 Run inside a project, `phpbm toolchain:install` does three things, each only when it is missing:
 
-1. Clones ESP-IDF v6.1 from `https://github.com/espressif/esp-idf.git`, shallow and with its submodules, into
-   `~/.phpbm/toolchains/esp32/esp-idf-v6.1`. An incomplete or wrong-version checkout in that folder is deleted first.
+1. Clones ESP-IDF v6.1.1 from `https://github.com/espressif/esp-idf.git`, shallow and with its submodules, into
+   `~/.phpbm/toolchains/esp32/esp-idf-v6.1.1`. An incomplete or wrong-version checkout in that folder is deleted first.
 2. Installs the ESP-IDF tools with `idf_tools.py` (`required`, `cmake` and `ninja`) for `esp32s3,esp32p4`, into
    `~/.phpbm/toolchains/esp32/tools`.
 3. Creates the ESP-IDF Python environment, `install-python-env`, in
@@ -52,7 +52,7 @@ tick "Add python.exe to PATH".
 | What | Default | Moved by |
 | --- | --- | --- |
 | phpbm home | `~/.phpbm` (`%USERPROFILE%\.phpbm` on Windows) | `PHPBM_HOME` |
-| ESP-IDF | `<home>/toolchains/esp32/esp-idf-v6.1` | `PHPBM_ESP32_IDF_PATH` |
+| ESP-IDF | `<home>/toolchains/esp32/esp-idf-v6.1.1` | `PHPBM_ESP32_IDF_PATH` |
 | ESP-IDF tools and Python environment | `<home>/toolchains/esp32/tools` | `PHPBM_ESP32_IDF_TOOLS_PATH` or `IDF_TOOLS_PATH`, with `PHPBM_ESP32_IDF_PATH` |
 | Build of a project | `.phpbm/build` | |
 
@@ -61,7 +61,7 @@ tick "Add python.exe to PATH".
 | Variable | Meaning |
 | --- | --- |
 | `PHPBM_PYTHON` | The Python to use, tried before the others. |
-| `PHPBM_ESP32_IDF_PATH` | An ESP-IDF v6.1 that you manage yourself. phpbm uses it in place and never installs into it: install its tools there with its own `tools/idf_tools.py install` and `install-python-env`. `phpbm toolchain:install` refuses with this variable set. |
+| `PHPBM_ESP32_IDF_PATH` | An ESP-IDF v6.1.1 (or a later v6.1.x) that you manage yourself. phpbm uses it in place and never installs into it: install its tools there with its own `tools/idf_tools.py install` and `install-python-env`. `phpbm toolchain:install` refuses with this variable set. |
 | `PHPBM_ESP32_IDF_TOOLS_PATH` | With `PHPBM_ESP32_IDF_PATH`: where that ESP-IDF's tools live. |
 | `IDF_TOOLS_PATH` | Read when the previous one is not set. With neither, the tools are in `~/.espressif` (`%USERPROFILE%\.espressif` on Windows). |
 | `PHPBM_HOME` | Where phpbm keeps SDKs, toolchains and cache; set it to a short path without spaces on Windows. |
@@ -71,11 +71,16 @@ so your shell does not need `export.sh`.
 
 ## Version check
 
-phpbm reads the version from `components/esp_common/include/esp_idf_version.h` of the ESP-IDF in use. Only `v6.1` and
-`v6.1.x` are accepted. Otherwise the toolchain counts as not installed:
+phpbm reads the version from `components/esp_common/include/esp_idf_version.h` of the ESP-IDF in use. Only `v6.1.1` and
+later `v6.1.x` are accepted (v6.1.1 fixes start-up faults of the ESP32-P4 v3 with memory protection and the hardware
+stack guard). Otherwise the toolchain counts as not installed:
 
 - `ESP-IDF not found in <path>`: there is no ESP-IDF there;
-- `ESP-IDF <version> in <path>, the esp32 sdk needs v6.1`: another version is there.
+- `ESP-IDF <version> in <path>, the esp32 sdk needs v6.1.1 or a later v6.1.x: run `phpbm toolchain:install``: another
+  version is there (with your own ESP-IDF, update it yourself);
+- `ESP-IDF v6.1.0 in <home>/toolchains/esp32/esp-idf-v6.1 is too old, ...`: the folder of an earlier SDK (v6.1) is
+  there and the new one is not (only an older v6 folder is named; of several, the newest). `phpbm toolchain:install`
+  installs v6.1.1 into its own folder; delete the old one by hand to free its space (about 6 GB with its tools).
 
 With the managed toolchain, `phpbm toolchain:install` replaces a wrong version; with `PHPBM_ESP32_IDF_PATH` you replace
 it yourself. A change of ESP-IDF path or version also starts the next build from scratch.

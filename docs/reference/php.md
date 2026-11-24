@@ -83,7 +83,6 @@ Every PHP minor gets the patches below, applied to the downloaded sources before
 
 | Patch | What it does |
 | --- | --- |
-| `closure-runtime-cache-arena` | Allocates a closure's run-time cache from the request arena instead of freeing it one by one, which corrupted the heap with scope-bound closures. |
 | `ext-date-optional-minimal-tz` | With `date-timezones` `utc`, swaps the 350 KB timezone database for a UTC-only one (about 2.7 KB). |
 | `mbstring-optional-no-cjk` | With `mbstring-cjk` off, drops the CJK encodings, the CJK languages of `mb_language()` and `mb_convert_kana()`. |
 | `csprng-esp-getrandom` | Declares `getrandom()` for ESP-IDF, where it uses the hardware random generator. |

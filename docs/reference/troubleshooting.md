@@ -50,7 +50,7 @@ A message with `<...>` stands for a value that changes. Run a command with `-vv`
 | `network type '<type>' of board '<id>' is not supported by this sdk` | The board file names a network type that has no folder in the SDK's `networks/`. Fix the board file, or use a supported board. See [Board files](../boards/board-files.md). |
 | `board '<id>' connects over Wi-Fi from PHP: composer require php-baremetal/ext-wifi` | A Wi-Fi board needs ext-wifi: the script connects. |
 | `board '<id>' has no Wi-Fi: remove php-baremetal/ext-wifi` | The board has no radio. Remove the package. |
-| `board <id>: chip '<chip>' does not support flash-mode '<mode>'` | `flash-mode` in the board file is a mode the chip has no fragment for. Only `octal` on the ESP32-S3 exists besides `quad`. |
+| `board <id>: chip '<chip>' does not support flash-mode '<mode>'` | `flash-mode` in the board file is a mode the chip has no fragment for. Besides `quad`, only `qio` (ESP32-S3, ESP32-P4) and `octal` (ESP32-S3) exist. |
 | `board <id>: chip '<chip>' has no revision '<rev>'` | The `revision` in the board file is not `v1` or `v3` for the ESP32-P4. |
 | `board <id>: unsupported flash size '<size>' (use e.g. 4MB)` | `flash` in the board file must be whole megabytes, like `16MB`. |
 | `board <id>: <block>.<pin> must be a GPIO number from 0 to <max>` | A pin of the `microsd` or `network` block (board file or `board-overrides`) is not a GPIO of the chip: 0-48 on the ESP32-S3, 0-54 on the ESP32-P4. |
@@ -98,12 +98,12 @@ The `env` file of the project is never sent to the card.
 | Message | Fix |
 | --- | --- |
 | `ESP-IDF needs Python 3.10 or newer: install it ... or set PHPBM_PYTHON` | See [Toolchain](./toolchain.md). |
-| `ESP-IDF not found in <path>` and `ESP-IDF <version> in <path>, the esp32 sdk needs v6.1` | Run `phpbm toolchain:install`, or point `PHPBM_ESP32_IDF_PATH` at a v6.1 checkout. |
+| `ESP-IDF not found in <path>`, `ESP-IDF <version> in <path>, the esp32 sdk needs v6.1.1 or a later v6.1.x` and `... is too old` | Run `phpbm toolchain:install`, or point `PHPBM_ESP32_IDF_PATH` at a v6.1.1 (or later v6.1.x) checkout. After the move from v6.1, the old `esp-idf-v6.1` folder can be deleted. |
 | `ESP-IDF tools are not installed in <path>: run phpbm toolchain:install` | The checkout is there but its tools are not. With your own ESP-IDF, run its `idf_tools.py install` and `install-python-env`. |
 | `cannot activate ESP-IDF in <path>: <last line>; ...` | `idf_tools.py export` failed. Read the last line; usually the tools are missing or the Python environment is broken. |
 | `PHPBM_ESP32_IDF_PATH points to an ESP-IDF managed outside phpbm: ...` | `toolchain:install` does not install into your own ESP-IDF. Unset the variable, or install its tools yourself. |
 | `git is required to install ESP-IDF: install git and run phpbm toolchain:install again` | Install git. |
-| `cannot clone ESP-IDF v6.1: <last line>; check the network and run ... again` | A network or disk problem. Run the command again. |
+| `cannot clone ESP-IDF v6.1.1: <last line>; check the network and run ... again` | A network or disk problem. Run the command again. |
 | `installing ESP-IDF tools for esp32s3,esp32p4 failed (exit N): ...` | Same: fix the cause and run again. |
 | `cannot remove the incomplete ESP-IDF checkout in <path>: delete it by hand ...` | Delete the folder. |
 | `ESP-IDF cannot work from a path with spaces or non-ASCII characters (<path>): set PHPBM_HOME to a path without them` | Windows only. |

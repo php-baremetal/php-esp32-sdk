@@ -45,7 +45,8 @@ const char *phpbm_network_ip(void);
 void phpbm_memory_init(void);
 /* Default memory_limit in bytes: the pool size (free heap minus a reserve, whole chunks). */
 size_t phpbm_memory_limit(void);
-/* PSRAM in bytes kept for the firmware: the firmware-reserve option, capped at a quarter of the free PSRAM (0 below 4 MB of PSRAM). */
+/* PSRAM in bytes kept for the firmware: the firmware-reserve option, capped at a quarter of the free PSRAM (not applied
+ * below 4 MB of PSRAM), plus the framebuffers of the board's display drivers (PHPBM_DISPLAY_FB_KB). */
 size_t phpbm_memory_reserve(void);
 /* PSRAM in bytes set aside for OPcache; 0 without it, and below 4 MB of PSRAM, where it is disabled. */
 size_t phpbm_memory_opcache(void);

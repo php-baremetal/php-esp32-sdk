@@ -26,7 +26,7 @@ final class ToolchainTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = Plans::tempDir();
-        $this->idf = $this->dir . '/toolchain/esp-idf-v6.1';
+        $this->idf = $this->dir . '/toolchain/esp-idf-v6.1.1';
         $this->tools = $this->dir . '/toolchain/tools';
     }
 
@@ -60,12 +60,53 @@ final class ToolchainTest extends TestCase
         self::assertSame("ESP-IDF not found in {$this->idf}", $status->problem);
     }
 
+    public function test_an_older_v61_patch_is_too_old(): void
+    {
+        FakeIdf::install($this->idf, $this->tools, '6.1.0');
+        $status = $this->toolchain(new FakeProcess())->status();
+        self::assertFalse($status->installed);
+        self::assertSame('v6.1.0', $status->version);
+        self::assertSame("ESP-IDF v6.1.0 in {$this->idf}, the esp32 sdk needs v6.1.1 or a later v6.1.x: run `phpbm toolchain:install`", $status->problem);
+    }
+
+    public function test_a_later_v61_patch_is_accepted(): void
+    {
+        FakeIdf::install($this->idf, $this->tools, '6.1.4');
+        $process = (new FakeProcess())->on('python3 --version', new ProcessResult(0, "Python 3.12.3\n"))
+            ->on('python3', new ProcessResult(0, ''));
+        self::assertSame('v6.1.4', $this->toolchain($process)->status()->version);
+    }
+
+    public function test_the_previous_sdks_install_is_reported_too_old(): void
+    {
+        $old = dirname($this->idf) . '/esp-idf-v6.1';
+        FakeIdf::install($old, $this->tools, '6.1.0');
+        $status = $this->toolchain(new FakeProcess())->status();
+        self::assertFalse($status->installed);
+        self::assertSame("ESP-IDF v6.1.0 in {$old} is too old, the esp32 sdk needs v6.1.1 or a later v6.1.x: run `phpbm toolchain:install` (it installs into {$this->idf}; the old folder can then be deleted)", $status->problem);
+    }
+
+    public function test_only_a_strictly_older_v6_install_is_reported_too_old(): void
+    {
+        $base = dirname($this->idf);
+        FakeIdf::install("{$base}/esp-idf-v6.2.0", $this->tools, '6.2.0');   // a newer SDK's
+        FakeIdf::install("{$base}/esp-idf-v5.5", $this->tools, '5.5.0');     // another major: not ours
+        $status = $this->toolchain(new FakeProcess())->status();
+        self::assertSame("ESP-IDF not found in {$this->idf}", $status->problem);
+
+        FakeIdf::install("{$base}/esp-idf-v6.0.1", $this->tools, '6.0.1');
+        FakeIdf::install("{$base}/esp-idf-v6.1", $this->tools, '6.1.0');
+        $status = $this->toolchain(new FakeProcess())->status();
+        self::assertSame('v6.1.0', $status->version, 'the newest of the older ones');
+        self::assertStringStartsWith("ESP-IDF v6.1.0 in {$base}/esp-idf-v6.1 is too old", (string) $status->problem);
+    }
+
     public function test_wrong_idf_version(): void
     {
         FakeIdf::install($this->idf, $this->tools, '5.5.5');
         $status = $this->toolchain(new FakeProcess())->status();
         self::assertSame('v5.5.5', $status->version);
-        self::assertSame("ESP-IDF v5.5.5 in {$this->idf}, the esp32 sdk needs v6.1", $status->problem);
+        self::assertSame("ESP-IDF v5.5.5 in {$this->idf}, the esp32 sdk needs v6.1.1 or a later v6.1.x: run `phpbm toolchain:install`", $status->problem);
     }
 
     public function test_no_suitable_python(): void
@@ -95,7 +136,7 @@ final class ToolchainTest extends TestCase
 
         $status = $toolchain->status();
         self::assertTrue($status->installed);
-        self::assertSame('v6.1.0', $status->version);
+        self::assertSame('v6.1.1', $status->version);
         self::assertSame([
             'IDF_PATH' => $this->idf,
             'IDF_TOOLS_PATH' => $this->tools,
@@ -120,10 +161,10 @@ final class ToolchainTest extends TestCase
     public function test_windows_rejects_paths_with_spaces(): void
     {
         $dir = $this->dir . '/my tools';
-        FakeIdf::install("{$dir}/esp-idf-v6.1", "{$dir}/tools");
+        FakeIdf::install("{$dir}/esp-idf-v6.1.1", "{$dir}/tools");
         $status = $this->toolchain(new FakeProcess(), [], 'Windows', $dir)->status();
         self::assertFalse($status->installed);
-        self::assertSame("ESP-IDF cannot work from a path with spaces or non-ASCII characters ({$dir}/esp-idf-v6.1): set PHPBM_HOME to a path without them", $status->problem);
+        self::assertSame("ESP-IDF cannot work from a path with spaces or non-ASCII characters ({$dir}/esp-idf-v6.1.1): set PHPBM_HOME to a path without them", $status->problem);
     }
 
     public function test_install_clones_then_installs_tools_and_python_env(): void
@@ -137,11 +178,11 @@ final class ToolchainTest extends TestCase
 
         self::assertSame([
             ['python3', '--version'],
-            ['git', 'clone', '--depth', '1', '--branch', 'v6.1', '--recurse-submodules', '--shallow-submodules', Toolchain::IDF_REPOSITORY, $this->idf],
+            ['git', 'clone', '--depth', '1', '--branch', 'v6.1.1', '--recurse-submodules', '--shallow-submodules', Toolchain::IDF_REPOSITORY, $this->idf],
             ['python3', "{$this->idf}/tools/idf_tools.py", '--non-interactive', 'install', 'required', 'cmake', 'ninja', '--targets=esp32s3,esp32p4'],
             ['python3', "{$this->idf}/tools/idf_tools.py", '--non-interactive', 'install-python-env'],
         ], $process->calls);
-        self::assertContains('step: cloning ESP-IDF v6.1', $out->lines);
+        self::assertContains('step: cloning ESP-IDF v6.1.1', $out->lines);
         self::assertContains('step: installing ESP-IDF tools for esp32s3,esp32p4', $out->lines);
         self::assertContains('step: installing the ESP-IDF Python environment', $out->lines);
     }
@@ -170,7 +211,7 @@ final class ToolchainTest extends TestCase
             ->on('python3 --version', new ProcessResult(0, "Python 3.12.3\n"))
             ->on('git clone', new ProcessResult(128, '', "fatal: unable to access\n"));
         $this->expectException(SpecException::class);
-        $this->expectExceptionMessage('cannot clone ESP-IDF v6.1: fatal: unable to access; check the network and run `phpbm toolchain:install` again');
+        $this->expectExceptionMessage('cannot clone ESP-IDF v6.1.1: fatal: unable to access; check the network and run `phpbm toolchain:install` again');
         $this->toolchain($process)->install(new BufferedOutput());
     }
 
@@ -203,7 +244,7 @@ final class ToolchainTest extends TestCase
 
     public function test_windows_keeps_the_path_key_case(): void
     {
-        $venv = FakeIdf::install($this->idf, $this->tools, '6.1.0', true);
+        $venv = FakeIdf::install($this->idf, $this->tools, '6.1.1', true);
         $process = (new FakeProcess())
             ->on('py -3 --version', new ProcessResult(0, "Python 3.12.0\n"))
             ->on("py -3 {$this->idf}/tools/idf_tools.py --non-interactive export", new ProcessResult(0, "IDF_PYTHON_ENV_PATH={$venv}\nPATH=C:\\x\\bin;%PATH%\n"));
@@ -387,6 +428,6 @@ final class ToolchainTest extends TestCase
 
     public function test_the_managed_idf_directory_is_versioned(): void
     {
-        self::assertStringEndsWith('/esp-idf-v6.1', $this->toolchain(new FakeProcess())->idfPath());
+        self::assertStringEndsWith('/esp-idf-v6.1.1', $this->toolchain(new FakeProcess())->idfPath());
     }
 }

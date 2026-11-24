@@ -10,7 +10,9 @@ foreach(_fragment
         "${PHPBM_POWER_SAVE_SDKCONFIG}"
         "${PHPBM_SDK_DIR}/runtimes/${PHPBM_RUNTIME}/sdkconfig"
         "${PHPBM_SDK_DIR}/storages/${PHPBM_STORAGE}/sdkconfig"
-        "${PHPBM_NETWORK_SDKCONFIG}")
+        "${PHPBM_NETWORK_SDKCONFIG}"
+        "${PHPBM_NETWORK_BUFFERS_SDKCONFIG}"
+        "${PHPBM_NETWORK_STATIC_BUFFERS_SDKCONFIG}")
     if(EXISTS "${_fragment}" AND NOT IS_DIRECTORY "${_fragment}")
         list(APPEND SDKCONFIG_DEFAULTS "${_fragment}")
     endif()

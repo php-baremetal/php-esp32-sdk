@@ -44,8 +44,8 @@ The network is also switched on when the runtime or the storage requires the `ne
 | --- | --- | --- |
 | `w5500` | `waveshare-esp32-s3-eth` | Wired, a W5500 on SPI2 at 20 MHz; the firmware brings it up |
 | `emac` | `waveshare-esp32-p4-eth` | Wired, the ESP32-P4 EMAC with an IP101 PHY, PHY reset on GPIO 51; the firmware brings it up |
-| `wifi` | The `espressif-esp32-s3-devkitc-1-*`, `generic-esp32s3-*`, `waveshare-esp32-s3-touch-lcd-1.85b` and `waveshare-esp32-s3-zero*` boards | The chip's own radio; the script connects with ext-wifi |
-| `wifi-c6` | `waveshare-esp32-p4-wifi6` | An ESP32-C6 companion over SDIO; the script connects with ext-wifi |
+| `wifi` | The `espressif-esp32-s3-devkitc-1-*`, `generic-esp32s3-*`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b` and `waveshare-esp32-s3-zero*` boards | The chip's own radio; the script connects with ext-wifi |
+| `wifi-c6` | `waveshare-esp32-p4-wifi6`, `waveshare-esp32-p4-wifi6-touch-lcd-5` | An ESP32-C6 companion over SDIO; the script connects with ext-wifi |
 
 `waveshare-esp32-p4-pico` and `generic-esp32p4` have no network block. The chip limits the types: the
 ESP32-S3 supports `w5500` and `wifi`, the ESP32-P4 supports `emac` and `wifi-c6`.
@@ -87,5 +87,5 @@ Each network type can add a fragment, `networks/<type>/sdkconfig`, to the firmwa
 | --- | --- | --- |
 | `w5500` | `phpbm_w5500` (espressif/w5500, espressif/wiznet_common) | None |
 | `emac` | `phpbm_emac` (espressif/ip101) | None |
-| `wifi` | None | None |
+| `wifi` | None | None; with the board key `buffers: "psram"`, `host/sdkconfig/wifi-buffers-psram` (Wi-Fi and lwIP buffers in PSRAM first, see [Wi-Fi](../modules/wifi.md#memory)); with `static-buffers: N`, a generated `wifi-static-buffers.sdkconfig` (static RX/TX buffers and RX window set to N) |
 | `wifi-c6` | `phpbm_wifi-c6` (esp_hosted, esp_wifi_remote and their dependencies) | The ESP32-C6 target and the Function-EV-Board SDIO wiring, esp_hosted started from the firmware instead of automatically, no restart on a link failure, and larger remote Wi-Fi buffers |

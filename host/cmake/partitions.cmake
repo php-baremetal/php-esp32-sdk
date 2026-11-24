@@ -35,9 +35,9 @@ foreach(_partition IN LISTS PHPBM_PARTITIONS)
     string(APPEND _packages_csv "${_name}, data, ${_subtype}, , ${_kb}K\n")
 endforeach()
 
-# On quad flash the cache maps only the first 16 MB (32-bit addressing is experimental in IDF): the partitions must sit below it.
+# On a quad flash bus (quad or qio) the cache maps only the first 16 MB (32-bit addressing is experimental in IDF): the partitions must sit below it.
 set(_layout_kb ${PHPBM_FLASH_KB})
-if(PHPBM_FLASH_MODE STREQUAL "quad" AND _layout_kb GREATER 16384)
+if(PHPBM_FLASH_MODE MATCHES "^(quad|qio)$" AND _layout_kb GREATER 16384)
     set(_layout_kb 16384)
 endif()
 math(EXPR _factory_kb "((${_layout_kb} - 128 - ${_storage_kb} - ${_packages_kb}) / 64) * 64")

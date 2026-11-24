@@ -32,18 +32,19 @@ final class SdkDescriptorsTest extends TestCase
         self::assertSame('8.3.35', $sdk->descriptor->release('8.3')->version);
         self::assertSame('8.4.26', $sdk->descriptor->release('8.4')->version);
         self::assertSame('8.5.11', $sdk->descriptor->release('8.5')->version);
-        self::assertCount(13, $sdk->patches('8.3'));
-        self::assertCount(14, $sdk->patches('8.4'));
-        self::assertCount(15, $sdk->patches('8.5'));
+        self::assertCount(12, $sdk->patches('8.3'));
+        self::assertCount(13, $sdk->patches('8.4'));
+        self::assertCount(14, $sdk->patches('8.5'));
         foreach (['8.3', '8.4', '8.5'] as $minor) {
-            self::assertSame('0001-closure-runtime-cache-arena.patch', basename($sdk->patches($minor)[0]), $minor);
+            self::assertSame('0002-ext-date-optional-minimal-tz.patch', basename($sdk->patches($minor)[0]), $minor);
+            self::assertNotContains('0001-closure-runtime-cache-arena.patch', array_map('basename', $sdk->patches($minor)));
             self::assertFileExists($sdk->compatDir($minor) . '/internal_functions.c');
         }
         // 8.3 keeps sigsetjmp behind HAVE_SIGSETJMP upstream, so it has no 0008-zend-portability patch.
         self::assertNotContains('0008-zend-portability-sigsetjmp-guard.patch', array_map('basename', $sdk->patches('8.3')));
-        self::assertSame('0014-uri-drop-lexbor-module-dep.patch', basename($sdk->patches('8.5')[13]));
-        foreach (['8.3' => '0013', '8.4' => '0014', '8.5' => '0015'] as $minor => $number) {
-            self::assertSame("{$number}-pdo-sqlite-busy-timeout.patch", basename($sdk->patches($minor)[(int) $number - 1]), $minor);
+        self::assertSame('0014-uri-drop-lexbor-module-dep.patch', basename($sdk->patches('8.5')[12]));
+        foreach (['8.3' => '0013', '8.4' => '0014', '8.5' => '0015'] as $minor => $number) {   // the last one
+            self::assertSame("{$number}-pdo-sqlite-busy-timeout.patch", basename(array_slice($sdk->patches($minor), -1)[0]), $minor);
         }
         self::assertFileExists($sdk->compatDir('8.5') . '/uri_whatwg_stub.c');
     }
@@ -97,10 +98,20 @@ final class SdkDescriptorsTest extends TestCase
         self::assertTrue($sdk->chip('esp32p4')->supports('network', 'emac'));
     }
 
+    /** The main task's stack: 8 KB on the ESP32-S3 (it uses about 1 KB), over the 32 KB of the host defaults. */
+    public function test_the_esp32s3_main_task_stack(): void
+    {
+        $root = dirname(__DIR__);
+        $value = static fn (string $file): array => preg_match_all('/^CONFIG_ESP_MAIN_TASK_STACK_SIZE=(\d+)$/m', (string) file_get_contents("{$root}/{$file}"), $m) ? $m[1] : [];
+        self::assertSame(['32768'], $value('host/sdkconfig.defaults'));
+        self::assertSame(['8192'], $value('chips/esp32s3/sdkconfig'));
+        self::assertSame([], $value('chips/esp32p4/sdkconfig.hex'));
+    }
+
     public function test_every_board_loads(): void
     {
         $boards = self::sdk()->boards;
-        self::assertCount(15, $boards);
+        self::assertCount(17, $boards);
         self::assertSame(['microsd' => 'spi', 'network' => 'w5500'], $boards['waveshare-esp32-s3-eth']->capabilities());
         self::assertSame(14, $boards['waveshare-esp32-s3-eth']->peripherals['network']['cs']);
         self::assertSame('octal', $boards['waveshare-esp32-s3-eth']->psram);
@@ -108,7 +119,7 @@ final class SdkDescriptorsTest extends TestCase
         self::assertSame(['microsd' => 'sdio', 'network' => 'emac'], $boards['waveshare-esp32-p4-eth']->capabilities());
         self::assertSame(45, $boards['waveshare-esp32-p4-eth']->peripherals['microsd']['pwr_en']);
         self::assertSame([], $boards['generic-esp32p4']->capabilities());
-        foreach (['generic-esp32p4', 'waveshare-esp32-p4-eth', 'waveshare-esp32-p4-pico', 'waveshare-esp32-p4-wifi6'] as $id) {
+        foreach (['generic-esp32p4', 'waveshare-esp32-p4-eth', 'waveshare-esp32-p4-pico', 'waveshare-esp32-p4-wifi6', 'waveshare-esp32-p4-wifi6-touch-lcd-5'] as $id) {
             self::assertSame('hex', $boards[$id]->psram, $id);
         }
         self::assertSame(['network' => 'wifi'], $boards['generic-esp32s3-quad']->capabilities());
@@ -122,6 +133,30 @@ final class SdkDescriptorsTest extends TestCase
         foreach (['waveshare-esp32-s3-zero', 'waveshare-esp32-s3-zero-n8r8'] as $id) {
             self::assertEqualsCanonicalizing(['led' => 'ws2812', 'network' => 'wifi'], $boards[$id]->capabilities(), $id);
         }
+    }
+
+    public function test_the_5b_board_has_a_double_buffered_panel_and_qio_flash(): void
+    {
+        $b = self::sdk()->board('waveshare-esp32-s3-touch-lcd-5b');
+        self::assertSame('qio', $b->flashMode);
+        self::assertSame(2, $b->peripherals['display']['frames']);
+        self::assertSame(6, $b->peripherals['display']['bounce-rows']);
+        self::assertSame(0, 600 % $b->peripherals['display']['bounce-rows']);
+        // Wi-Fi next to the double-buffered panel: its buffers go to PSRAM (internal RAM is short), and only 4
+        // static RX/TX buffers (they stay in internal DMA RAM): 16 and 6 failed esp_wifi_init() on the board
+        self::assertSame(['type' => 'wifi', 'buffers' => 'psram', 'static-buffers' => 4], $b->peripherals['network']);
+    }
+
+    public function test_the_p4_touch_lcd_5_board_has_its_blocks(): void
+    {
+        $b = self::sdk()->board('waveshare-esp32-p4-wifi6-touch-lcd-5');
+        self::assertSame('esp32p4', $b->chip);
+        self::assertSame('dsi', $b->peripherals['display']['type']);
+        self::assertSame(90, $b->peripherals['display']['rotation']);
+        self::assertSame(25, count(explode(';', $b->peripherals['display']['init'])));
+        self::assertSame('gt911', $b->peripherals['touch']['type']);
+        self::assertSame('wifi-c6', $b->peripherals['network']['type']);
+        self::assertSame('sdio', $b->peripherals['microsd']['type']);
     }
 
     public function test_the_sdk_declares_the_firmware_options(): void
@@ -145,7 +180,7 @@ final class SdkDescriptorsTest extends TestCase
         self::assertSame(3600, $options['restart-delay']->max);
         self::assertSame(['off', 'on'], $options['network']->values);
         self::assertSame('off', $options['network']->default);
-        self::assertSame([256, 4096, 1024], [$options['firmware-reserve']->min, $options['firmware-reserve']->max, $options['firmware-reserve']->default]);
+        self::assertSame([256, 8192, 1024], [$options['firmware-reserve']->min, $options['firmware-reserve']->max, $options['firmware-reserve']->default]);
     }
 
     public function test_runtime_specific_options(): void
@@ -241,7 +276,7 @@ final class SdkDescriptorsTest extends TestCase
         $zlib = $sdk->phpExtension('8.4', 'zlib');
         self::assertSame(['espressif__zlib'], $zlib->idfRequires);
         self::assertSame(['espressif/zlib' => '==1.3.2~1'], $zlib->idfDependencies);
-        self::assertSame('0013-zlib-gzopen-without-dup.patch', basename($sdk->patches('8.4')[12]));
+        self::assertSame('0013-zlib-gzopen-without-dup.patch', basename($sdk->patches('8.4')[11]));
         $declared = array_keys($sdk->descriptor->options);
         foreach ([...$sdk->runtimes, ...$sdk->storages] as $module) {
             $declared = [...$declared, ...array_keys($module->options)];
