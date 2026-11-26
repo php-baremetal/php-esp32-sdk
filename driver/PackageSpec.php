@@ -10,7 +10,7 @@ use PhpBaremetal\Spec\SpecException;
 
 final readonly class PackageSpec
 {
-    public const TYPES = ['bm-ext', 'bm-hal', 'bm-lib', 'bm-php-ext'];
+    public const TYPES = ['bm-boards', 'bm-ext', 'bm-hal', 'bm-lib', 'bm-php-ext'];
     public const KEYS = ['board-blocks', 'defines', 'entry', 'fonts', 'ide-stubs', 'idf-dependencies', 'idf-requires', 'include-dirs', 'module', 'options', 'partitions', 'platform', 'priority', 'register', 'registries', 'sdkconfig', 'sources'];
     public const PARTITION_SUBTYPES = ['nvs', 'nvs_keys', 'fat', 'spiffs', 'littlefs', 'coredump', 'efuse', 'undefined', 'phy'];
     public const RESERVED_PARTITIONS = ['factory', 'nvs', 'phy_init', 'storage'];
@@ -65,6 +65,13 @@ final readonly class PackageSpec
         }
         if ($meta !== [] && array_is_list($meta)) {
             throw $fail('extra.baremetal must be an object');
+        }
+        // Board files only: spec reads them (SdkLoader::withBoardPackages); nothing reaches the build.
+        if ($package->type === 'bm-boards') {
+            if ($meta !== []) {
+                throw $fail('type bm-boards takes no extra.baremetal keys, got \'' . array_key_first($meta) . "'");
+            }
+            return new self($name, $dir, null, 100, [], [], [], [], [], null, [], version: $package->version);
         }
         if ($package->type === 'bm-php-ext') {
             foreach (array_keys($meta) as $key) {

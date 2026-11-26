@@ -57,7 +57,8 @@ the scripts' own data.
 
 The board file describes the slot (see [Board files](../boards/board-files.md)); a board without a `microsd`
 block cannot use this storage, unless the project adds one with
-[board overrides](../boards/board-overrides.md#adding-a-block). The chip decides the type:
+[board overrides](../boards/board-overrides.md#adding-a-block). The chip decides the type. The `waveshare-*` boards
+are in the board package `php-baremetal/boards-waveshare`, which the project requires:
 
 | Board | Slot type | Pins |
 | --- | --- | --- |

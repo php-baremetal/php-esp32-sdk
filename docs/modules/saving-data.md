@@ -145,8 +145,8 @@ echo file_get_contents($path);
 <!-- @endcode-block -->
 
 Boards with a card slot: `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`,
-`waveshare-esp32-p4-eth`, `waveshare-esp32-p4-wifi6` and `waveshare-esp32-p4-pico`. Pins and slot types are in
-[Storage](../runtime/storage.md).
+`waveshare-esp32-p4-eth`, `waveshare-esp32-p4-wifi6` and `waveshare-esp32-p4-pico`, all in the board package
+`php-baremetal/boards-waveshare`. Pins and slot types are in [Storage](../runtime/storage.md).
 
 ### Rules on the board
 

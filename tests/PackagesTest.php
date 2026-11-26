@@ -149,7 +149,7 @@ final class PackagesTest extends TestCase
             'null entry' => ['hello', ['module' => 'hello', 'entry' => null], 'bm-ext', "package php-baremetal/esp32-x: 'entry' must be the C symbol of the zend_module_entry (omit it for hello_module_entry)"],
             'bad entry' => ['hello', ['module' => 'hello', 'entry' => 'a-b'], 'bm-ext', "package php-baremetal/esp32-x: 'entry' must be the C symbol of the zend_module_entry (omit it for hello_module_entry)"],
             'entry on a hal' => ['hal', ['entry' => 'x_module_entry'], 'bm-hal', "package php-baremetal/esp32-x: 'entry' is only allowed for type bm-ext, not bm-hal"],
-            'unknown type' => ['hal', [], 'bm-extension', "package php-baremetal/esp32-x: unknown type 'bm-extension' (allowed: bm-ext, bm-hal, bm-lib, bm-php-ext)"],
+            'unknown type' => ['hal', [], 'bm-extension', "package php-baremetal/esp32-x: unknown type 'bm-extension' (allowed: bm-boards, bm-ext, bm-hal, bm-lib, bm-php-ext)"],
             'unknown key' => ['hal', ['src-dir' => 'src'], 'bm-hal', "package php-baremetal/esp32-x: unknown key 'src-dir' in extra.baremetal (allowed: board-blocks, defines, entry, fonts, ide-stubs, idf-dependencies, idf-requires, include-dirs, module, options, partitions, platform, priority, register, registries, sdkconfig, sources)"],
             'priority not int' => ['hal', ['priority' => '1'], 'bm-hal', "package php-baremetal/esp32-x: 'priority' must be an integer"],
             'glob without matches' => ['hal', ['sources' => ['src/*.cpp']], 'bm-hal', "package php-baremetal/esp32-x: 'sources' pattern 'src/*.cpp' matches no file"],
@@ -246,6 +246,26 @@ final class PackagesTest extends TestCase
             new Package('php-baremetal/hello', 'bm-ext', '1.0.0', self::fixtures() . '/hello', ['module' => 'hello']),
         ]]);
         self::assertSame(['php-baremetal/hello'], array_map(static fn (PackageSpec $s): string => $s->name, Packages::fromPlan($plan)->specs));
+    }
+
+    public function test_a_bm_boards_package_brings_nothing_to_the_build(): void
+    {
+        $boards = new Package('php-baremetal/boards-waveshare', 'bm-boards', '1.0.0', self::fixtures() . '/boards-waveshare', []);
+        $spec = PackageSpec::fromPackage($boards, '/project', '8.4', 'esp32');
+        self::assertSame([[], [], null, null, [], [], []], [$spec->sources, $spec->includeDirs, $spec->module, $spec->sdkconfig, $spec->partitions, $spec->registries, $spec->register]);
+
+        $plan = Plans::plan(['packages' => [
+            $boards,
+            new Package('php-baremetal/hello', 'bm-ext', '1.0.0', self::fixtures() . '/hello', ['module' => 'hello']),
+        ]]);
+        self::assertSame(['php-baremetal/hello'], array_map(static fn (PackageSpec $s): string => $s->name, Packages::fromPlan($plan)->specs));
+    }
+
+    public function test_a_bm_boards_package_takes_no_extra_baremetal_keys(): void
+    {
+        $this->expectException(SpecException::class);
+        $this->expectExceptionMessage("package acme/boards: type bm-boards takes no extra.baremetal keys, got 'sources'");
+        PackageSpec::fromPackage(new Package('acme/boards', 'bm-boards', '1.0.0', self::fixtures() . '/boards-acme', ['sources' => ['src/*.c']]), '/project');
     }
 
     public function test_rejects_a_missing_package_directory(): void

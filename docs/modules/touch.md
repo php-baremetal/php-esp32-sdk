@@ -25,9 +25,10 @@ composer require php-baremetal/touch-cst816s    # brings ext-input, ext-i2c and 
 
 ## The board
 
-The `waveshare-esp32-s3-touch-lcd-1.85b` board file has a `touch` block, so the driver needs no pins:
+The `waveshare-esp32-s3-touch-lcd-1.85b` board file (board package `php-baremetal/boards-waveshare`) has a `touch`
+block, so the driver needs no pins:
 
-<!-- @code-block language="json" label="boards/waveshare-esp32-s3-touch-lcd-1.85b.json" -->
+<!-- @code-block language="json" label="boards/esp32/waveshare-esp32-s3-touch-lcd-1.85b.json" -->
 ```json
 "touch": { "type": "cst816s", "int": 4, "rst": 1, "width": 360, "height": 360 }
 ```

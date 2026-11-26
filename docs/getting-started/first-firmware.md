@@ -43,15 +43,17 @@ built on that chip.
   mac     xx:xx:xx:xx:xx:xx
   radio   WiFi, BLE
   sdk     esp32 2.0.0
-  board   waveshare-esp32-s3-eth  Waveshare ESP32-S3-ETH
-  board   waveshare-esp32-s3-zero  Waveshare ESP32-S3-Zero
+  board   espressif-esp32-s3-devkitc-1-n8r8  Espressif ESP32-S3-DevKitC-1 (N8R8)
+  board   generic-esp32s3-octal  ESP32-S3 (octal PSRAM, generic)
   …       one line per ESP32-S3 board of the SDK
 ```
 <!-- @endcode-block -->
 
 The chip does not tell the board apart: pick the id whose name and flash size match the board in your hand.
-The example uses `waveshare-esp32-s3-zero-n8r8`. If your board is not listed, use the matching generic board
-(see [Supported boards](../boards/supported-boards.md)).
+The Waveshare boards are in the package `php-baremetal/boards-waveshare`, not in the SDK: `phpbm init` lists them
+next to the SDK's own and adds the package to the project when you pick one. The example uses
+`waveshare-esp32-s3-zero-n8r8`. If your board is not listed, use the matching generic board (see
+[Supported boards](../boards/supported-boards.md)).
 
 ## Create the project
 
@@ -66,7 +68,8 @@ phpbm monitor
 ```
 <!-- @endcode-block -->
 
-- `phpbm init` writes `composer.json`, `project-src/index.php` and `.gitignore`.
+- `phpbm init` writes `composer.json`, `project-src/index.php` and `.gitignore`. For a Waveshare board it also
+  requires `php-baremetal/boards-waveshare`.
 - `composer require` runs the conductor, which installs the packages and writes `.phpbm/manifest.json`.
 - `phpbm toolchain:install` installs ESP-IDF v6.1.1 once per machine (about 6 GB).
 - `phpbm flash` builds, checks the chip on the port and flashes. The first build compiles PHP and takes a while.
@@ -90,6 +93,7 @@ phpbm monitor
   ],
   "require": {
     "php-baremetal/conductor": "^1.0",
+    "php-baremetal/boards-waveshare": "^1.0",
     "php-baremetal/ext-sys": "^1.0",
     "php-baremetal/ext-gpio": "^1.0"
   },
@@ -113,8 +117,8 @@ phpbm monitor
 ```
 <!-- @endcode-block -->
 
-`extra.baremetal` is the SDK's input: `sdk` (name and constraint), `board` (a file in `boards/`), `runtime` and
-`storage`. The full format is in the
+`extra.baremetal` is the SDK's input: `sdk` (name and constraint), `board` (a board file of the SDK or of an
+installed board package, here `php-baremetal/boards-waveshare`), `runtime` and `storage`. The full format is in the
 [phpbm project guide](https://github.com/php-baremetal/phpbm/blob/master/docs/guide/project.md).
 
 ## project-src/index.php

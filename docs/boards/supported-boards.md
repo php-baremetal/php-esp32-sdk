@@ -1,22 +1,24 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'The 17 boards of the esp32 SDK: chip, PSRAM, flash, console and the peripherals each one has.'
+lede:    'The 8 boards of the esp32 SDK and the Waveshare boards of php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
 see_also:
   - { href: './board-files.md', meta: 'Reference' }
   - { href: './board-overrides.md', meta: 'Reference' }
   - { href: '../runtime/storage.md', meta: 'Storage' }
   - { href: '../runtime/network.md', meta: 'Network' }
+  - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-waveshare', meta: 'Board package', label: 'boards-waveshare' }
 prev: { label: 'IDE support', href: '../getting-started/ide-support.md' }
 next: { label: 'Board files', href: './board-files.md' }
 ---
 
 # Supported boards
 
-A project selects its board with `extra.baremetal.board`, one of the ids below. The id is the file name in the
-SDK's `boards/` directory without `.json`. `phpbm discover` lists the ids that match the chip on a connected
-port. How a board file is built is in [Board files](./board-files.md).
+A project selects its board with `extra.baremetal.board`, one of the ids below. The id is the file name without
+`.json`, in the SDK's `boards/` directory or in the `boards/esp32/` directory of a board package (a Composer
+package of type `bm-boards`). `phpbm discover` lists the ids that match the chip on a connected port. How a board
+file is built, and how a board package is laid out, is in [Board files](./board-files.md).
 
-## Boards
+## Boards of the SDK
 
 | Board id | Product | Chip | PSRAM | Flash | Console |
 | --- | --- | --- | --- | --- | --- |
@@ -28,17 +30,8 @@ port. How a board file is built is in [Board files](./board-files.md).
 | `generic-esp32s3-quad` | ESP32-S3 (quad PSRAM, generic) | ESP32-S3 | quad | 4 MB | uart |
 | `generic-esp32s3-octal` | ESP32-S3 (octal PSRAM, generic) | ESP32-S3 | octal | 8 MB | uart |
 | `generic-esp32p4` | ESP32-P4 (generic) | ESP32-P4 | hex | 32 MB | uart |
-| `waveshare-esp32-s3-eth` | Waveshare ESP32-S3-ETH | ESP32-S3 | octal | 16 MB | usb-jtag |
-| `waveshare-esp32-s3-touch-lcd-1.85b` | Waveshare ESP32-S3-Touch-LCD-1.85B | ESP32-S3 | octal | 16 MB | usb-jtag |
-| `waveshare-esp32-s3-touch-lcd-5b` | Waveshare ESP32-S3-Touch-LCD-5B | ESP32-S3 | octal | 16 MB | usb-jtag |
-| `waveshare-esp32-s3-zero` | Waveshare ESP32-S3-Zero | ESP32-S3 | quad | 4 MB | usb-jtag |
-| `waveshare-esp32-s3-zero-n8r8` | Waveshare ESP32-S3-Zero (N8R8) | ESP32-S3 | octal | 8 MB | usb-jtag |
-| `waveshare-esp32-p4-eth` | Waveshare ESP32-P4-ETH | ESP32-P4 | hex | 32 MB | uart |
-| `waveshare-esp32-p4-pico` | Waveshare ESP32-P4-Pico | ESP32-P4 | hex | 32 MB | uart |
-| `waveshare-esp32-p4-wifi6` | Waveshare ESP32-P4-WIFI6 | ESP32-P4 | hex | 32 MB | uart |
-| `waveshare-esp32-p4-wifi6-touch-lcd-5` | Waveshare ESP32-P4-WIFI6-Touch-LCD-5 | ESP32-P4 | hex | 32 MB | uart |
 
-The P4 boards also set `revision`: `v1`, except Waveshare ESP32-P4-WIFI6-Touch-LCD-5, which has a v3 chip and sets `v3` (see [Board files](./board-files.md)).
+The generic P4 board sets `revision` `v1` (see [Board files](./board-files.md)).
 
 The two Freenove ESP32-S3 WROOM Board Lite files differ only in the module: ESP32-S3-WROOM-1-N16R8 (8 MB of
 octal PSRAM) or ESP32-S3-WROOM-1-N16R16V (16 MB of octal PSRAM, 1.8 V; the firmware reads the PSRAM size and the
@@ -59,25 +52,9 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
 | `generic-esp32s3-quad` | none | `wifi` |
 | `generic-esp32s3-octal` | none | `wifi` |
 | `generic-esp32p4` | none | none |
-| `waveshare-esp32-s3-eth` | `spi`: cs 4, sclk 7, mosi 6, miso 5 | `w5500`: cs 14, int 10, rst 9, sclk 13, mosi 11, miso 12 |
-| `waveshare-esp32-s3-touch-lcd-1.85b` | `spi`: cs 13, sclk 15, mosi 14, miso 16 | `wifi` |
-| `waveshare-esp32-s3-touch-lcd-5b` | none | `wifi` |
-| `waveshare-esp32-s3-zero` | none | `wifi` |
-| `waveshare-esp32-s3-zero-n8r8` | none | `wifi` |
-| `waveshare-esp32-p4-eth` | `sdio`: pwr_en 45 | `emac`: rst 51 |
-| `waveshare-esp32-p4-pico` | `sdio` | none |
-| `waveshare-esp32-p4-wifi6` | `sdio` | `wifi-c6` |
-| `waveshare-esp32-p4-wifi6-touch-lcd-5` | `sdio` | `wifi-c6` |
 
-- `waveshare-esp32-s3-touch-lcd-1.85b` also has a `touch` block (CST816S: INT on GPIO 4, reset on GPIO 1, 360 x 360) next to
-  its `display` and `i2c` blocks; see [Touch input](../modules/touch.md).
-- `waveshare-esp32-s3-touch-lcd-5b` also has `i2c`, `expander` (CH422G), `display` (1024 x 600 RGB, two framebuffers) and
-  `touch` (GT911) blocks, and reads its flash in QIO mode. Its Wi-Fi takes its buffers from PSRAM (`buffers: "psram"`): the panel leaves too little internal RAM. GPIO 0 is both a data line of the panel (G3) and the BOOT button: do not use BOOT while the
-  panel runs. The microSD slot's chip select is on the expander, so the board has no `microsd` block.
-- `waveshare-esp32-p4-wifi6-touch-lcd-5` also has `i2c`, `display` (720 x 1280 MIPI-DSI turned to 1280 x 720, two
-  framebuffers) and `touch` (GT911, polled: its INT line is not wired) blocks, and reads its flash in QIO mode.
-- `sdio` boards use SDMMC slot 0. The pins not named in the table take the defaults clk 43, cmd 44, d0 39,
-  d1 40, d2 41, d3 42; `pwr_en` is absent unless the board sets it.
+- An `sdio` slot (ESP32-P4) uses SDMMC slot 0. The pins it does not name take the defaults clk 43, cmd 44,
+  d0 39, d1 40, d2 41, d3 42; `pwr_en` is absent unless the block sets it.
 - The microSD slot is what the `microsd` storage needs, and a network block is what the `web-server` runtime
   needs. A board without the block cannot use them, unless the project adds the block with
   [board overrides](./board-overrides.md#adding-a-block) ([Storage](../runtime/storage.md), [Runtimes](../runtime/runtimes.md)).
@@ -85,6 +62,34 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
   before PHP starts when the network is on ([Network](../runtime/network.md)).
 - A different wiring of a slot or a network block is set in the project with
   [board overrides](./board-overrides.md).
+
+## Waveshare boards
+
+The Waveshare boards are in the board package `php-baremetal/boards-waveshare`, not in the SDK. Require it in the
+project (`phpbm init` does it when you pick one of them), then use the id as for an SDK board:
+
+<!-- @code-block language="bash" label="in the project folder" -->
+```bash
+composer require php-baremetal/boards-waveshare
+```
+<!-- @endcode-block -->
+
+| Board id | Product | Chip | PSRAM | Flash | Console |
+| --- | --- | --- | --- | --- | --- |
+| `waveshare-esp32-s3-eth` | Waveshare ESP32-S3-ETH | ESP32-S3 | octal | 16 MB | usb-jtag |
+| `waveshare-esp32-s3-touch-lcd-1.85b` | Waveshare ESP32-S3-Touch-LCD-1.85B | ESP32-S3 | octal | 16 MB | usb-jtag |
+| `waveshare-esp32-s3-touch-lcd-5b` | Waveshare ESP32-S3-Touch-LCD-5B | ESP32-S3 | octal | 16 MB | usb-jtag |
+| `waveshare-esp32-s3-zero` | Waveshare ESP32-S3-Zero | ESP32-S3 | quad | 4 MB | usb-jtag |
+| `waveshare-esp32-s3-zero-n8r8` | Waveshare ESP32-S3-Zero (N8R8) | ESP32-S3 | octal | 8 MB | usb-jtag |
+| `waveshare-esp32-p4-eth` | Waveshare ESP32-P4-ETH | ESP32-P4 | hex | 32 MB | uart |
+| `waveshare-esp32-p4-pico` | Waveshare ESP32-P4-Pico | ESP32-P4 | hex | 32 MB | uart |
+| `waveshare-esp32-p4-wifi6` | Waveshare ESP32-P4-WIFI6 | ESP32-P4 | hex | 32 MB | uart |
+| `waveshare-esp32-p4-wifi6-touch-lcd-5` | Waveshare ESP32-P4-WIFI6-Touch-LCD-5 | ESP32-P4 | hex | 32 MB | uart |
+
+Their peripherals (microSD slots, networks, displays, touch controllers, LEDs), their pins and the driver
+packages each block needs are in the package's documentation:
+[boards-waveshare](https://repository.php-baremetal.com/packages/php-baremetal/boards-waveshare). The SDK lists the package in
+`sdk.json` (`board-packages`), which is how `phpbm init` finds it.
 
 ## Generic boards
 
@@ -102,7 +107,7 @@ The two S3 generic boards declare `wifi`; the generic P4 declares nothing, so it
 ## Requirements
 
 <!-- @callout variant="warning" title="External PSRAM is required" -->
-Every board of the SDK has external PSRAM, and the firmware keeps the PHP heap and the PHP task stack there.
+Every board of the SDK and of boards-waveshare has external PSRAM, and the firmware keeps the PHP heap and the PHP task stack there.
 The PSRAM type of the board must match the chip: quad or octal on the ESP32-S3, hex on the ESP32-P4. The
 flash size must be the real size of the module: the firmware's partition table is laid out from it.
 <!-- @endcallout -->

@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'extra.baremetal.board-overrides changes keys of a board''s peripheral blocks from the project, for example other pins, or adds a block the board does not have, without editing the SDK.'
+lede:    'extra.baremetal.board-overrides changes keys of a board''s peripheral blocks from the project, for example other pins, or adds a block the board does not have, without editing the board file.'
 see_also:
   - { href: './board-files.md', meta: 'Reference' }
   - { href: './supported-boards.md', meta: 'Boards' }
@@ -15,6 +15,9 @@ next: { label: 'Runtimes', href: '../runtime/runtimes.md' }
 change in that block, or to a whole new block. Use it when your hardware wires a slot or a network controller to
 other pins than the board file says, or when you wire a peripheral the board file does not have, such as a microSD
 slot on a generic board.
+
+Overrides work the same on an SDK board and on a board of a [board package](./board-files.md#board-packages). The
+first two examples use boards of `php-baremetal/boards-waveshare`, which the project requires.
 
 ## What it changes
 

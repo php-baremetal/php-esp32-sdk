@@ -126,7 +126,8 @@ requests, use `ext-web` in the [event-driven](./event-driven.md) runtime.
 ```json
 {
   "require": {
-    "php-baremetal/conductor": "^1.0"
+    "php-baremetal/conductor": "^1.0",
+    "php-baremetal/boards-waveshare": "^1.0"
   },
   "extra": {
     "baremetal": {

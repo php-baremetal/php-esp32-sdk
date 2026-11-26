@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'A board is one JSON file in boards/: the chip, the memory, the console and the peripherals with their pins. This page lists every key, its values and what the SDK does with it.'
+lede:    'A board is one JSON file, in the SDK or in a board package: the chip, the memory, the console and the peripherals with their pins. This page lists every key, its values and what the SDK does with it, and how a board package is laid out.'
 see_also:
   - { href: './supported-boards.md', meta: 'Boards' }
   - { href: './board-overrides.md', meta: 'Reference' }
@@ -11,13 +11,17 @@ next: { label: 'Board overrides', href: './board-overrides.md' }
 
 # Board files
 
-The board id used in `extra.baremetal.board` is the file name without `.json`: `boards/waveshare-esp32-s3-eth.json`
-is the board `waveshare-esp32-s3-eth`. When the SDK is loaded every file is checked against its chip; a failed
-check stops phpbm with a message naming the file. To add a board, see
+The board id used in `extra.baremetal.board` is the file name without `.json`:
+`boards/espressif-esp32-s3-devkitc-1-n8r8.json` of the SDK is the board `espressif-esp32-s3-devkitc-1-n8r8`. A board
+can also come from a [board package](#board-packages) installed in the project, such as
+`php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
+against its chip; a failed check stops phpbm with a message naming the file. To add a board, see
 [Adding a board or chip](../development/adding-a-board.md); the boards that exist are in
 [Supported boards](./supported-boards.md).
 
-<!-- @code-block language="JSON" label="boards/waveshare-esp32-s3-eth.json" -->
+The file below is `boards/esp32/waveshare-esp32-s3-eth.json` of `php-baremetal/boards-waveshare`:
+
+<!-- @code-block language="JSON" label="boards/esp32/waveshare-esp32-s3-eth.json" -->
 ```json
 {
     "name": "Waveshare ESP32-S3-ETH",
@@ -82,7 +86,8 @@ the chip does not list is rejected when the SDK is loaded. Messages are listed a
 
 ## Peripheral blocks
 
-A block is named after a peripheral, and its `type` says which kind the board has. Two kinds of block exist:
+A block is named after a peripheral, and its `type` says which kind the board has. The Waveshare boards named in
+the tables below are in `php-baremetal/boards-waveshare`. Two kinds of block exist:
 
 - **Blocks the SDK implements**, `microsd` and `network`: the firmware has its own code for each type, so the type
   must be one the chip supports. `chips/<chip>/chip.json` lists them, and any other type is an error.
@@ -167,7 +172,7 @@ ESP32-S3-Touch-LCD-5B sets `4`; the trade-off is in [Wi-Fi](../modules/wifi.md#m
 
 | Type | Keys | Notes |
 | --- | --- | --- |
-| `i2c` | `sda`, `scl` | The board's on-board I2C bus (touch controller, sensors). Used by Waveshare ESP32-S3-Touch-LCD-1.85B and ESP32-S3-Touch-LCD-5B (SDA 8, SCL 9), and Waveshare ESP32-P4-WIFI6-Touch-LCD-5 (SDA 7, SCL 8). |
+| `i2c` | `sda`, `scl` | The board's on-board I2C bus (touch controller, sensors). Used by Waveshare ESP32-S3-Touch-LCD-1.85B (SDA 11, SCL 10), ESP32-S3-Touch-LCD-5B (SDA 8, SCL 9) and ESP32-P4-WIFI6-Touch-LCD-5 (SDA 7, SCL 8). |
 
 ### touch
 
@@ -189,6 +194,95 @@ ESP32-S3-Touch-LCD-5B sets `4`; the trade-off is in [Wi-Fi](../modules/wifi.md#m
 | `ws2812` | `pin`, `order` | One addressable LED on `pin`; `order` is the colour order (`rgb`, `grb`). Used by Waveshare ESP32-S3-Zero (GPIO 48, `rgb`), Espressif ESP32-S3-DevKitC-1 and Freenove ESP32-S3 WROOM Board Lite (GPIO 48, `grb`). |
 | `sk6812` | `pin`, `order` | Same wiring as `ws2812`, for SK6812 LEDs. |
 
+## Board packages
+
+A board package is a Composer package of type `bm-boards` that holds board files and nothing else: no sources,
+no PHP module, no driver. The project requires it like any other package; the conductor installs it and writes it
+into `.phpbm/manifest.json`, and phpbm loads its boards next to the SDK's. `php-baremetal/boards-waveshare` is one.
+
+<!-- @code-block language="text" label="layout of a board package" -->
+```text
+acme/boards
+├── composer.json
+├── README.md
+└── boards
+    ├── esp32
+    │   ├── acme-s3-mini.json
+    │   └── acme-p4-panel.json
+    └── <other sdk>
+        └── ...
+```
+<!-- @endcode-block -->
+
+<!-- @code-block language="json" label="composer.json of the package" -->
+```json
+{
+    "name": "acme/boards",
+    "description": "Board files of the Acme ESP32 boards for php-baremetal.",
+    "type": "bm-boards",
+    "license": "MIT",
+    "require": {}
+}
+```
+<!-- @endcode-block -->
+
+- **Folders per SDK.** The boards for this SDK are in `boards/esp32/` (`esp32` is the `name` in `sdk.json`). One
+  package can hold boards of several SDKs, one folder each; the SDK reads only its own folder, and a package
+  without it adds no board.
+- **Same format, same checks.** A file has the keys described on this page and is checked as the SDK's own
+  boards are, against the chips of the SDK in use. An error names the package and the file, for example
+  `acme/boards: boards/esp32/acme-s3-mini.json: chip 'esp32s9' does not exist`.
+- **No SDK constraint.** The package requires nothing: not the SDK, not the drivers of its blocks. Whether a
+  board fits an SDK is decided when the SDK loads it. The drivers of the blocks (`display`, `touch`, ...) are
+  packages the project requires itself; `phpbm init` proposes them from their `board-blocks`.
+- **No `extra.baremetal`.** The type takes no `extra.baremetal` keys; the build compiles nothing of the package.
+- **Optional catalog.** `boards/catalog.json` gives, for each board, the vendor's documentation page (`docs`)
+  and a product photo (`photo`), both `https://` URLs, grouped by SDK name and keyed by board id. The package
+  registry site uses it to link and show the boards; phpbm and the build do not read it. It sits in `boards/`,
+  not in `boards/esp32/`, where every `.json` file is a board.
+
+<!-- @code-block language="json" label="boards/catalog.json" -->
+```json
+{
+    "esp32": {
+        "acme-p4-panel": { "docs": "https://acme.example/docs/p4-panel", "photo": "https://acme.example/img/p4-panel.jpg" },
+        "acme-s3-mini": { "docs": "https://acme.example/docs/s3-mini", "photo": "https://acme.example/img/s3-mini.jpg" }
+    }
+}
+```
+<!-- @endcode-block -->
+
+### Board ids and duplicates
+
+The id of a package board is its file name, as for an SDK board, and `extra.baremetal.board` takes it as is. When
+two sources define the same id (the SDK and a package, or two packages), the short id is refused and the message
+names both sources:
+
+<!-- @code-block language="text" label="phpbm build" -->
+```text
+board 'acme-s3-mini' is defined by acme/boards and other/boards: use 'acme/boards:acme-s3-mini' or 'other/boards:acme-s3-mini'
+```
+<!-- @endcode-block -->
+
+The long form `<vendor>/<package>:<id>` picks the source: `"board": "acme/boards:acme-s3-mini"`. `sdk:<id>`
+picks the SDK's own board. The long form also works when the id is unique.
+
+### Official board packages
+
+`sdk.json` lists the board packages maintained with the SDK in `board-packages`:
+
+<!-- @code-block language="json" label="sdk.json" -->
+```json
+{
+    "board-packages": ["php-baremetal/boards-waveshare"]
+}
+```
+<!-- @endcode-block -->
+
+`phpbm init` shows the boards of these packages next to the SDK's and, when one is picked, adds the package to
+the project's `require`. The boards of any other board package work once the package is installed in the project
+(build, `phpbm board`, ...), but `phpbm init` does not list them: require the package, then name the board.
+
 ## Error messages
 
 | Message | Cause |
@@ -196,6 +290,10 @@ ESP32-S3-Touch-LCD-5B sets `4`; the trade-off is in [Wi-Fi](../modules/wifi.md#m
 | `boards/x.json: 'microsd' must be an object` | A key other than the board keys holds something that is not an object. |
 | `boards/x.json: 'microsd.type' must be a non-empty string` | A peripheral block without a `type`. |
 | `boards/x.json: chip 'abc' does not exist` | `chip` names no directory in `chips/`. |
+| `acme/boards: boards/esp32/x.json: chip 'abc' does not exist` | The same checks on a board of a board package: the message starts with the package and its file. |
+| `acme/boards: package directory not found: <dir>` | A board package of the manifest whose directory is missing: run `composer install`. |
+| `board 'x' is defined by the sdk and acme/boards: use 'sdk:x' or 'acme/boards:x'` | Two sources define the id: use the long form (see [Board ids and duplicates](#board-ids-and-duplicates)). |
+| `package acme/boards: type bm-boards takes no extra.baremetal keys, got 'sources'` | A board package with `extra.baremetal` keys. |
 | `boards/x.json: chip 'esp32s3' does not support psram 'hex'` | The `psram` is not in the chip's list. |
 | `boards/x.json: chip 'esp32s3' does not support microsd 'sdio'` | A `microsd` or `network` type the chip does not list. |
 | `board x: unsupported flash size '16' (use e.g. 4MB)` | `flash` is not a whole number followed by `MB`. |

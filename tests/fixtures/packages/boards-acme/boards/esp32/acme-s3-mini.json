@@ -1,0 +1,9 @@
+{
+    "name": "Acme S3 Mini",
+    "chip": "esp32s3",
+    "psram": "quad",
+    "flash": "4MB",
+    "console": "usb-jtag",
+    "network": { "type": "wifi" },
+    "led": { "type": "ws2812", "pin": 21, "order": "grb" }
+}

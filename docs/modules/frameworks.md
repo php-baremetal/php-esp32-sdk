@@ -26,8 +26,8 @@ project inside `project-src`, and run PHP 8.5 (8.5.13 with this SDK).
 ## What every framework needs
 
 - **A board with a microSD slot and `storage` set to `microsd`.** A framework's `vendor/` folder is large; it lives
-  on the card with the sources ([Storage](../runtime/storage.md)). Of the boards of the SDK, the examples use the
-  two P4 boards with `sdio` slots.
+  on the card with the sources ([Storage](../runtime/storage.md)). The examples use two Waveshare P4 boards with
+  `sdio` slots, from the board package `php-baremetal/boards-waveshare`.
 - **Plenty of PSRAM.** The P4 boards have 32 MB, which leaves PHP a large `memory_limit`. See
   [Memory, flash and partitions](../reference/memory-and-flash.md).
 - **The framework in `project-src`**, installed with its own Composer, as described in

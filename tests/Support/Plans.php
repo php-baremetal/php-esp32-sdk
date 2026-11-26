@@ -38,6 +38,20 @@ final class Plans
         self::$created = [];
     }
 
+    /**
+     * A board from a bm-boards package comes with that package in the manifest, as the project installs it.
+     *
+     * @param list<Package> $packages
+     * @return list<Package>
+     */
+    private static function withBoardPackage(array $packages, Board $board): array
+    {
+        if ($board->source !== SdkDescriptorsTest::WAVESHARE || in_array($board->source, array_map(static fn (Package $p): string => $p->name, $packages), true)) {
+            return $packages;
+        }
+        return [...$packages, SdkDescriptorsTest::waveshare()];
+    }
+
     /** @param array{board?: string|Board, runtime?: string, storage?: string, env?: array<string,string>, sources?: array<string,string>, clean?: bool, options?: array<string,string|int|bool>, packages?: list<Package>, sdk?: \PhpBaremetal\Spec\Sdk\Sdk, php?: string, phpExtensions?: list<\PhpBaremetal\Spec\Sdk\Descriptor\PhpExtension>, fonts?: array<string,string>, assetDirs?: list<array{dir: string, storage: string}>, assets?: list<\PhpBaremetal\Spec\Sdk\PreparedAsset>, imageDir?: string} $with */
     public static function plan(array $with = []): BuildPlan
     {
@@ -68,7 +82,7 @@ final class Plans
 
         return new BuildPlan(
             $dir . '/project',
-            new Manifest($project, $with['packages'] ?? []),
+            new Manifest($project, self::withBoardPackage($with['packages'] ?? [], $board)),
             $sdk,
             $board,
             $sdk->chip($board->chip),

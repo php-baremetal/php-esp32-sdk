@@ -94,6 +94,7 @@ button.
 {
   "require": {
     "php-baremetal/conductor": "^1.0",
+    "php-baremetal/boards-waveshare": "^1.0",
     "php-baremetal/ext-events": "^1.0"
   },
   "extra": {

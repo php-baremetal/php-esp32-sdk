@@ -8,6 +8,13 @@ the `sdk` branch publishes a preview `2.0.0-alpha.N` on the `sdk-preview` pre-re
 default. Previews are not ready for use: anything can still change.
 
 ### Changed
+- **The Waveshare boards are in a board package.** The 9 `waveshare-*` board files moved, unchanged, to
+  `php-baremetal/boards-waveshare` (Composer type `bm-boards`); the SDK keeps the Espressif, Freenove and generic
+  boards. A project on a Waveshare board must `composer require php-baremetal/boards-waveshare` (`phpbm init` adds
+  it); the board ids stay the same. `sdk.json` lists the official board packages in `board-packages`, and the driver
+  accepts `bm-boards` packages and compiles nothing of them. A board package's boards are checked like the SDK's;
+  an id defined by two sources is picked with `<vendor>/<package>:<id>` or `sdk:<id>`
+  ([Board files](docs/boards/board-files.md#board-packages)). Needs php-baremetal/spec 1.4.
 - **PHP 8.3.37, 8.4.28 and 8.5.13** (were 8.3.35, 8.4.26 and 8.5.11). The patches apply as before;
   `zend-mm-platform-storage` is rebased and also gives the firmware's heap the default hard memory limit that
   these releases add (`zend_mm_startup_ex()` leaves it unset).
@@ -32,8 +39,8 @@ default. Previews are not ready for use: anything can still change.
   (`php-baremetal/php-<name>`) come from the [registry](https://repository.php-baremetal.com) with
   `composer require`. The `php-baremetal/conductor` plugin installs them and adds the ESP32 HAL each one
   needs.
-- **Boards are JSON files** under `boards/`, selected by id (e.g. `waveshare-esp32-s3-eth`). `phpbm discover`
-  lists the boards that match the connected chip.
+- **Boards are JSON files** under `boards/` of the SDK or of a board package, selected by id (e.g.
+  `espressif-esp32-s3-devkitc-1-n8r8`). `phpbm discover` lists the boards that match the connected chip.
 - **ESP-IDF v6.1.1**, installed by `phpbm toolchain:install` into `esp-idf-v6.1.1` (`Toolchain::IDF_VERSION`;
   v6.1.1 or a later v6.1.x is required). It has fixes for the ESP32-P4 v3 memory protection (PMP) set-up. An
   older v6 folder next to it (`esp-idf-v6.1`, from a preview) is reported as too old and can be deleted.

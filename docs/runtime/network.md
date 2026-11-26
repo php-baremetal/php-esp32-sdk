@@ -49,6 +49,7 @@ The network is also switched on when the runtime or the storage requires the `ne
 
 `waveshare-esp32-p4-pico` and `generic-esp32p4` have no network block. The chip limits the types: the
 ESP32-S3 supports `w5500` and `wifi`, the ESP32-P4 supports `emac` and `wifi-c6`.
+The `waveshare-*` boards are in the board package `php-baremetal/boards-waveshare`, which the project requires.
 
 ## What is up before PHP
 

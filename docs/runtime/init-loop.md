@@ -99,6 +99,7 @@ An uncaught exception in `setup()`, `loop()` or the garbage collection follows `
 {
   "require": {
     "php-baremetal/conductor": "^1.0",
+    "php-baremetal/boards-waveshare": "^1.0",
     "php-baremetal/ext-hello": "^1.0",
     "php-baremetal/ext-sys": "^1.0"
   },

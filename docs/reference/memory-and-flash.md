@@ -12,7 +12,7 @@ next: { label: 'Power saving', href: './power-save.md' }
 
 # Memory, flash and partitions
 
-Every board of the SDK has PSRAM, and the firmware refuses to build without it: PHP's memory, the PHP task stack
+Every board of the SDK and of its board packages has PSRAM, and the firmware refuses to build without it: PHP's memory, the PHP task stack
 and the OPcache cache all live there.
 
 ## memory_limit
@@ -161,6 +161,8 @@ storage there is no `storage` partition: the sources live on the card and `phpbm
 
 ### Flash sizes
 
+The `waveshare-*` boards are in the board package `php-baremetal/boards-waveshare`.
+
 | Board | Flash | PSRAM |
 | --- | --- | --- |
 | `generic-esp32s3-quad`, `waveshare-esp32-s3-zero` | 4 MB | quad |
@@ -172,7 +174,7 @@ storage there is no `storage` partition: the sources live on the card and `phpbm
 <!-- @callout variant="note" title="Only 16 MB are used on a 32 MB board" -->
 With the quad flash bus (`quad` or `qio`), the cache maps only the first 16 MB of the flash, so the partitions stay below
 that limit: the upper 16 MB of a 32 MB ESP32-P4 board stay unused. A board can set `flash-mode` to `octal` on an
-ESP32-S3 (see [Board files](../boards/board-files.md)); no board of the SDK does.
+ESP32-S3 (see [Board files](../boards/board-files.md)); no board of the SDK or of boards-waveshare does.
 <!-- @endcallout -->
 
 When the sources and the package partitions leave less than 1024K for the firmware, the build stops with

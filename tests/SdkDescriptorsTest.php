@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpBaremetal\Esp32\Tests;
 
+use PhpBaremetal\Spec\Manifest\Package;
 use PhpBaremetal\Spec\Sdk\Driver;
 use PhpBaremetal\Spec\Sdk\Sdk;
 use PhpBaremetal\Spec\Sdk\SdkLoader;
@@ -11,9 +12,29 @@ use PHPUnit\Framework\TestCase;
 
 final class SdkDescriptorsTest extends TestCase
 {
+    public const WAVESHARE = 'php-baremetal/boards-waveshare';
+
+    /** The sdk with the Waveshare boards of the bm-boards fixture: the boards with W5500, EMAC, microSD and displays. */
     public static function sdk(): Sdk
     {
+        return self::withWaveshare(self::bareSdk());
+    }
+
+    /** The sdk alone: only the boards of its boards/ directory. */
+    public static function bareSdk(): Sdk
+    {
         return (new SdkLoader())->load(dirname(__DIR__));
+    }
+
+    public static function withWaveshare(Sdk $sdk): Sdk
+    {
+        return (new SdkLoader())->withBoardPackages($sdk, [self::waveshare()]);
+    }
+
+    /** A copy of packages/boards-waveshare (its board files), as the manifest names an installed bm-boards package. */
+    public static function waveshare(): Package
+    {
+        return new Package(self::WAVESHARE, 'bm-boards', '1.0.0', __DIR__ . '/fixtures/packages/boards-waveshare', []);
     }
 
     public function test_sdk_identity(): void
@@ -112,6 +133,49 @@ final class SdkDescriptorsTest extends TestCase
         self::assertSame(['32768'], $value('host/sdkconfig.defaults'));
         self::assertSame(['8192'], $value('chips/esp32s3/sdkconfig'));
         self::assertSame([], $value('chips/esp32p4/sdkconfig.hex'));
+    }
+
+    public function test_the_sdk_boards_and_its_official_board_packages(): void
+    {
+        $sdk = self::bareSdk();
+        self::assertSame([
+            'espressif-esp32-s3-devkitc-1-n16r8', 'espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8',
+            'freenove-esp32-s3-wroom-lite-n16r16', 'freenove-esp32-s3-wroom-lite-n16r8',
+            'generic-esp32p4', 'generic-esp32s3-octal', 'generic-esp32s3-quad',
+        ], array_keys($sdk->boards));
+        foreach ($sdk->boards as $board) {
+            self::assertTrue($board->fromSdk(), $board->id);
+        }
+        self::assertSame([self::WAVESHARE], $sdk->descriptor->boardPackages);
+    }
+
+    public function test_the_waveshare_boards_come_from_their_package(): void
+    {
+        $boards = array_filter(self::sdk()->boards, static fn ($b): bool => !$b->fromSdk());
+        self::assertSame([
+            'waveshare-esp32-p4-eth', 'waveshare-esp32-p4-pico', 'waveshare-esp32-p4-wifi6-touch-lcd-5', 'waveshare-esp32-p4-wifi6',
+            'waveshare-esp32-s3-eth', 'waveshare-esp32-s3-touch-lcd-1.85b', 'waveshare-esp32-s3-touch-lcd-5b',
+            'waveshare-esp32-s3-zero-n8r8', 'waveshare-esp32-s3-zero',
+        ], array_keys($boards));
+        foreach ($boards as $board) {
+            self::assertSame(self::WAVESHARE, $board->source);
+        }
+        self::assertSame('waveshare-esp32-s3-eth', self::sdk()->board(self::WAVESHARE . ':waveshare-esp32-s3-eth')->id);
+    }
+
+    /** The fixture is a copy of packages/boards-waveshare: checked where the monorepo has the package next to the sdk. */
+    public function test_the_waveshare_fixture_matches_the_package(): void
+    {
+        $package = dirname(__DIR__, 2) . '/packages/boards-waveshare/boards/esp32';
+        if (!is_dir($package)) {
+            self::markTestSkipped('packages/boards-waveshare is not next to the sdk');
+        }
+        $fixture = __DIR__ . '/fixtures/packages/boards-waveshare/boards/esp32';
+        $files = array_map('basename', glob("{$package}/*.json") ?: []);
+        self::assertSame($files, array_map('basename', glob("{$fixture}/*.json") ?: []));
+        foreach ($files as $file) {
+            self::assertFileEquals("{$package}/{$file}", "{$fixture}/{$file}", $file);
+        }
     }
 
     public function test_every_board_loads(): void

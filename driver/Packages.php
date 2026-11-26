@@ -129,7 +129,8 @@ final readonly class Packages
         $specs = [];
         foreach ($plan->manifest->packages as $package) {
             $spec = PackageSpec::fromPackage($package, $plan->projectDir, $plan->php->minor, $plan->sdk->descriptor->name);
-            if ($spec->phpExtension === null) {
+            // bm-boards packages bring board files only (already in the plan's sdk): no sources, module or registry.
+            if ($spec->phpExtension === null && $package->type !== 'bm-boards') {
                 $specs[] = $spec;
             }
         }

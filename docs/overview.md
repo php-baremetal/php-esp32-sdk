@@ -41,7 +41,7 @@ firmware image built with ESP-IDF v6.1.1.
 | --- | --- |
 | Chips | ESP32-S3 (`esp32s3`), ESP32-P4 (`esp32p4`) |
 | PHP | 8.3, 8.4, 8.5 and 8.6; the minor comes from `config.platform.php` in `composer.json` ([PHP versions and extensions](./reference/php.md)) |
-| Boards | 13, from Espressif and Waveshare plus generic boards ([Supported boards](./boards/supported-boards.md)) |
+| Boards | 8 in the SDK (Espressif, Freenove and generic boards), 9 Waveshare boards in the board package `php-baremetal/boards-waveshare` ([Supported boards](./boards/supported-boards.md)) |
 | Runtimes | `init-loop`, `event-driven`, `web-server` ([Runtimes](./runtime/runtimes.md)) |
 | Storages | `embedded` (sources in flash, read-only), `microsd` ([Storage](./runtime/storage.md)) |
 | Networks | `wifi`, `w5500` (SPI Ethernet), `emac` (on-chip Ethernet), `wifi-c6` (Wi-Fi through a companion C6) ([Network](./runtime/network.md)) |
@@ -53,7 +53,7 @@ the toolchain phpbm installs for the SDK is in [Toolchain](./reference/toolchain
 
 ## Requirements
 
-- A supported board with external PSRAM: every board in the SDK has it, and the firmware is sized for it.
+- A supported board with external PSRAM: every board of the SDK and of its board packages has it, and the firmware is sized for it.
 - A USB cable to the board's serial port.
 - phpbm, the conductor, PHP 8.4 or later and Composer on your computer, plus Python 3.10 or later and about 6 GB
   of disk for ESP-IDF. Installation is described in the

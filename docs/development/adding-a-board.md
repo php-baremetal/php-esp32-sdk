@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK development'
-lede:    'A board is one JSON file under boards/. Pick the chip, the PSRAM mode, the flash and the console, add the peripheral blocks with their pins, then prove it with the tests and on the board.'
+lede:    'A board is one JSON file, under boards/ of the SDK or of a board package. Pick the chip, the PSRAM mode, the flash and the console, add the peripheral blocks with their pins, then prove it with the tests and on the board.'
 see_also:
   - { href: '../boards/board-files.md', meta: 'Boards' }
   - { href: '../boards/supported-boards.md', meta: 'Boards' }
@@ -18,6 +18,15 @@ contributor's path.
 The part needs external PSRAM and at least 4 MB of flash, or the PHP engine does not fit. The loader does
 not enforce this (`psram` is optional in the file); the review and your hardware test do.
 <!-- @endcallout -->
+
+## SDK or board package
+
+A board goes into the SDK's `boards/` when it is a generic module or a board without a board package of its maker.
+A board of a maker that has one goes into that package: the Waveshare boards are in
+`php-baremetal/boards-waveshare`, in `boards/esp32/`. A maker or a user can also publish a board package of their
+own; its layout is in [Board packages](../boards/board-files.md#board-packages). The steps below are the same in
+both places, except the tests: a board package has no tests of its own, so check its boards by building a project
+with them.
 
 ## Add a board
 
@@ -83,7 +92,9 @@ add a block the board does not declare.
 
 ### A sample board
 
-<!-- @code-block language="JSON" label="boards/waveshare-esp32-s3-eth.json" -->
+The file below is `boards/esp32/waveshare-esp32-s3-eth.json` of `php-baremetal/boards-waveshare`.
+
+<!-- @code-block language="JSON" label="boards/esp32/waveshare-esp32-s3-eth.json" -->
 ```json
 {
     "name": "Waveshare ESP32-S3-ETH",

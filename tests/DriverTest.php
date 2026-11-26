@@ -6,6 +6,7 @@ namespace PhpBaremetal\Esp32\Tests;
 
 use PhpBaremetal\Esp32\BuildInputs;
 use PhpBaremetal\Esp32\Driver;
+use PhpBaremetal\Esp32\Packages;
 use PhpBaremetal\Esp32\SerialPorts;
 use PhpBaremetal\Esp32\Tests\Support\FakeIdf;
 use PhpBaremetal\Esp32\Tests\Support\Plans;
@@ -82,6 +83,27 @@ final class DriverTest extends TestCase
         self::assertContains('step: building for Waveshare ESP32-S3-ETH', $out->lines);
     }
 
+    public function test_build_with_a_board_from_a_bm_boards_package(): void
+    {
+        $boards = new \PhpBaremetal\Spec\Manifest\Package('acme/boards', 'bm-boards', '1.0.0', __DIR__ . '/fixtures/packages/boards-acme', []);
+        $sdk = (new \PhpBaremetal\Spec\Sdk\SdkLoader())->withBoardPackages(SdkDescriptorsTest::bareSdk(), [$boards]);
+        $plan = Plans::plan(['sdk' => $sdk, 'board' => 'acme/boards:acme-s3-mini', 'packages' => [$boards]]);
+        $process = $this->process()->on($this->python . ' ' . $this->idf . '/tools/idf.py', new ProcessResult(0, "[1/1] Linking\n"));
+        mkdir($plan->buildDir . '/idf', 0777, true);
+        file_put_contents($plan->buildDir . '/idf/flasher_args.json', '{"flash_files":{"0x0":"bootloader/bootloader.bin","0x10000":"blink.bin"}}');
+        $out = new BufferedOutput();
+
+        $this->driver($process)->build($plan, $out);
+
+        self::assertSame('acme/boards', $plan->board->source);
+        self::assertContains('step: building for Acme S3 Mini', $out->lines);
+        $inputs = (string) file_get_contents($plan->buildDir . '/inputs.cmake');
+        self::assertStringContainsString('set(PHPBM_BOARD "acme-s3-mini")', $inputs);
+        self::assertStringContainsString('set(PHPBM_FLASH_KB "4096")', $inputs);
+        self::assertStringContainsString('set(PHPBM_LED_PIN "21")', $inputs);
+        self::assertSame([], Packages::fromPlan($plan)->specs);   // board files only: nothing of the package is compiled
+    }
+
     public function test_build_runs_in_the_generated_project_with_the_target_in_the_environment(): void
     {
         $plan = Plans::plan();
@@ -148,7 +170,7 @@ final class DriverTest extends TestCase
         foreach (['sdk.json', 'composer.json', 'boards', 'chips', 'runtimes', 'storages', 'host', 'php', 'driver'] as $entry) {
             $this->copyTree("{$source}/{$entry}", "{$copy}/{$entry}");
         }
-        $plan = Plans::plan(['sdk' => (new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy)]);
+        $plan = Plans::plan(['sdk' => SdkDescriptorsTest::withWaveshare((new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy))]);
         $this->buildWith($plan);
         $this->seed($plan);
         $this->buildWith($plan);
@@ -175,7 +197,7 @@ final class DriverTest extends TestCase
             $this->copyTree("{$source}/{$entry}", "{$copy}/{$entry}");
         }
         $wifi = new \PhpBaremetal\Spec\Manifest\Package('php-baremetal/ext-wifi', 'bm-ext', '1.0.0', __DIR__ . '/fixtures/packages/hello', ['module' => 'wifi']);
-        $plan = Plans::plan(['sdk' => (new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy), 'board' => 'waveshare-esp32-p4-wifi6', 'packages' => [$wifi]]);
+        $plan = Plans::plan(['sdk' => SdkDescriptorsTest::withWaveshare((new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy)), 'board' => 'waveshare-esp32-p4-wifi6', 'packages' => [$wifi]]);
         $this->buildWith($plan);
         $this->seed($plan);
         $this->buildWith($plan);
@@ -252,7 +274,7 @@ final class DriverTest extends TestCase
         foreach (['sdk.json', 'composer.json', 'boards', 'chips', 'runtimes', 'storages', 'networks', 'host', 'php', 'driver'] as $entry) {
             $this->copyTree("{$source}/{$entry}", "{$copy}/{$entry}");
         }
-        $plan = Plans::plan(['sdk' => (new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy), 'board' => 'waveshare-esp32-s3-touch-lcd-5b']);
+        $plan = Plans::plan(['sdk' => SdkDescriptorsTest::withWaveshare((new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy)), 'board' => 'waveshare-esp32-s3-touch-lcd-5b']);
         $this->buildWith($plan);
         $this->seed($plan);
         $this->buildWith($plan);
@@ -379,7 +401,7 @@ final class DriverTest extends TestCase
         foreach (['sdk.json', 'composer.json', 'boards', 'chips', 'runtimes', 'storages', 'host', 'php', 'driver'] as $entry) {
             $this->copyTree("{$source}/{$entry}", "{$copy}/{$entry}");
         }
-        $plan = Plans::plan(['sdk' => (new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy)]);
+        $plan = Plans::plan(['sdk' => SdkDescriptorsTest::withWaveshare((new \PhpBaremetal\Spec\Sdk\SdkLoader())->load($copy))]);
         $this->buildWith($plan);
         $this->seed($plan);
         $before = \PhpBaremetal\Esp32\Driver::sdkContentHash($plan);

@@ -1,0 +1,6 @@
+{
+    "name": "acme/boards",
+    "type": "bm-boards",
+    "license": "MIT",
+    "require": {}
+}
