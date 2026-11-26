@@ -65,7 +65,8 @@ test suite on push and PR; keep it green, and add a test with the change.
 - **Add a board** — `boards/<vendor>-<model>.json` with the name, chip, PSRAM mode, flash size, console and
   the peripheral blocks the chip supports (`network`, `microsd`) with their pins. Copy the closest existing board. Two
   hard requirements: the part needs **external PSRAM** and **at least 4 MB of flash**, or the engine
-  won't fit. A Waveshare board goes into `php-baremetal/boards-waveshare` (`boards/esp32/`) instead
+  won't fit. A Waveshare or Freenove board goes into `php-baremetal/boards-waveshare` or `php-baremetal/boards-freenove`
+  (`boards/esp32/`) instead
   ([Adding a board](docs/development/adding-a-board.md#sdk-or-board-package)).
 - **Add a chip variant** — `chips/<chip>/` (`chip.json` and its `sdkconfig.*` fragments).
 - **Make a PHP extension available** — `php/<minor>/extensions/<name>.json` for every minor that supports

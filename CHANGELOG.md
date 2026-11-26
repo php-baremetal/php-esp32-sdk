@@ -8,13 +8,19 @@ the `sdk` branch publishes a preview `2.0.0-alpha.N` on the `sdk-preview` pre-re
 default. Previews are not ready for use: anything can still change.
 
 ### Changed
-- **The Waveshare boards are in a board package.** The 9 `waveshare-*` board files moved, unchanged, to
-  `php-baremetal/boards-waveshare` (Composer type `bm-boards`); the SDK keeps the Espressif, Freenove and generic
-  boards. A project on a Waveshare board must `composer require php-baremetal/boards-waveshare` (`phpbm init` adds
-  it); the board ids stay the same. `sdk.json` lists the official board packages in `board-packages`, and the driver
-  accepts `bm-boards` packages and compiles nothing of them. A board package's boards are checked like the SDK's;
+- **The Waveshare and Freenove boards are in board packages.** The 9 `waveshare-*` board files moved, unchanged, to
+  `php-baremetal/boards-waveshare` and the 2 `freenove-*` board files to `php-baremetal/boards-freenove` (Composer
+  type `bm-boards`, with their catalog and the Freenove photos); the SDK keeps the Espressif and generic boards. A
+  project on a Waveshare board must `composer require php-baremetal/boards-waveshare`, one on a Freenove board
+  `composer require php-baremetal/boards-freenove` (`phpbm init` adds it); the board ids stay the same. `sdk.json`
+  lists the official board packages in `board-packages`, and the driver accepts `bm-boards` packages and compiles
+  nothing of them. A board package's boards are checked like the SDK's;
   an id defined by two sources is picked with `<vendor>/<package>:<id>` or `sdk:<id>`
   ([Board files](docs/boards/board-files.md#board-packages)). Needs php-baremetal/spec 1.4.
+- **The SDK has a board catalog.** `boards/catalog.json` gives the documentation page and product photo of the
+  Espressif boards, and marks the generic boards with `"generic": true`, in the format of a board
+  package's catalog ([Board catalog](docs/boards/board-files.md#board-catalog)). `catalog.json` is a reserved name in
+  `boards/`: the SDK does not read it as a board (php-baremetal/spec 1.4).
 - **PHP 8.3.37, 8.4.28 and 8.5.13** (were 8.3.35, 8.4.26 and 8.5.11). The patches apply as before;
   `zend-mm-platform-storage` is rebased and also gives the firmware's heap the default hard memory limit that
   these releases add (`zend_mm_startup_ex()` leaves it unset).

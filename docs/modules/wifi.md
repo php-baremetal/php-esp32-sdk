@@ -39,8 +39,9 @@ and does not need ext-events.
 On a `wifi` or `wifi-c6` board, the `network` option set to `on` (or a runtime that needs the network) without
 ext-wifi is a build error: `board '...' connects over Wi-Fi from PHP: composer require php-baremetal/ext-wifi`.
 Wired boards get an address before PHP starts; see [Network](../runtime/network.md). `waveshare-esp32-p4-wifi6`
-builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet. The `waveshare-*` boards are in the
-board package `php-baremetal/boards-waveshare`, which the project requires.
+builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet. The `freenove-*` and `waveshare-*`
+boards are in the board packages `php-baremetal/boards-freenove` and `php-baremetal/boards-waveshare`, which the
+project requires.
 
 ## The main functions
 

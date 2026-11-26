@@ -69,9 +69,17 @@ project format and every command.
 | `espressif-esp32-s3-devkitc-1-n8r2` | Espressif ESP32-S3-DevKitC-1 (N8R2) | ESP32-S3 | Wi-Fi |
 | `espressif-esp32-s3-devkitc-1-n8r8` | Espressif ESP32-S3-DevKitC-1 (N8R8) | ESP32-S3 | Wi-Fi |
 | `espressif-esp32-s3-devkitc-1-n16r8` | Espressif ESP32-S3-DevKitC-1 (N16R8) | ESP32-S3 | Wi-Fi |
+| `generic-esp32s3-quad`, `generic-esp32s3-octal`, `generic-esp32p4` | Any ESP32-S3 (quad or octal PSRAM) or ESP32-P4 | | |
+
+The Freenove boards are in the board package
+[`php-baremetal/boards-freenove`](https://repository.php-baremetal.com/packages/php-baremetal/boards-freenove):
+`phpbm init` adds it when you pick one of them, or run `composer require php-baremetal/boards-freenove` in the
+project.
+
+| Board id | Board | Chip | Network |
+| --- | --- | --- | --- |
 | `freenove-esp32-s3-wroom-lite-n16r8` | Freenove ESP32-S3 WROOM Board Lite (N16R8) | ESP32-S3 | Wi-Fi |
 | `freenove-esp32-s3-wroom-lite-n16r16` | Freenove ESP32-S3 WROOM Board Lite (N16R16) | ESP32-S3 | Wi-Fi |
-| `generic-esp32s3-quad`, `generic-esp32s3-octal`, `generic-esp32p4` | Any ESP32-S3 (quad or octal PSRAM) or ESP32-P4 | | |
 
 The Waveshare boards are in the board package
 [`php-baremetal/boards-waveshare`](https://repository.php-baremetal.com/packages/php-baremetal/boards-waveshare):

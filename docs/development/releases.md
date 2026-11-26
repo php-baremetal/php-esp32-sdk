@@ -84,6 +84,18 @@ read from somewhere else (another directory, an URL) are made absolute, so they 
    - publishes `php-esp32-sdk-*.tar.gz`, `SHA256SUMS` and `index.json` to the GitHub release of the tag, with
      generated release notes. A tag with a `-` is a prerelease and is not made the latest release; any other
      tag is, so `releases/latest/download/index.json` always lists every stable version.
+   - for a stable tag, asks the package registry to read the new index right away:
+     `POST https://repository.php-baremetal.com/api/sdk/<name>/refresh`, with `<name>` from `sdk.json` and the
+     `REGISTRY_TOKEN` secret as a bearer token. Without the secret the step is skipped with a notice; a failure
+     is a warning and never fails the release. Either way the registry picks up the release when its cache
+     expires, within 6 hours.
+
+<!-- @callout variant="note" title="The REGISTRY_TOKEN secret" -->
+`REGISTRY_TOKEN` is a repository secret holding a registry token with the **SDK refresh** ability
+(`sdk:refresh`). An administrator creates it on repository.php-baremetal.com under Deploy Tokens, with only
+that ability and no repositories, and saves the token shown once as the secret. Previews are not refreshed:
+the registry reads the latest stable release only.
+<!-- @endcallout -->
 
 <!-- @callout variant="note" title="Set SPEC_REF before tagging" -->
 `SPEC_REF` in `release.yml` is the `php-baremetal/spec` tag the release is built and tested against. It

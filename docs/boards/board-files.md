@@ -14,10 +14,11 @@ next: { label: 'Board overrides', href: './board-overrides.md' }
 The board id used in `extra.baremetal.board` is the file name without `.json`:
 `boards/espressif-esp32-s3-devkitc-1-n8r8.json` of the SDK is the board `espressif-esp32-s3-devkitc-1-n8r8`. A board
 can also come from a [board package](#board-packages) installed in the project, such as
-`php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
+`php-baremetal/boards-freenove` or `php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
 against its chip; a failed check stops phpbm with a message naming the file. To add a board, see
 [Adding a board or chip](../development/adding-a-board.md); the boards that exist are in
-[Supported boards](./supported-boards.md).
+[Supported boards](./supported-boards.md). The name `catalog.json` is reserved in the SDK's `boards/`: that
+file is the SDK's [catalog](#board-catalog), not a board, so no board can have the id `catalog`.
 
 The file below is `boards/esp32/waveshare-esp32-s3-eth.json` of `php-baremetal/boards-waveshare`:
 
@@ -191,14 +192,15 @@ ESP32-S3-Touch-LCD-5B sets `4`; the trade-off is in [Wi-Fi](../modules/wifi.md#m
 
 | Type | Keys | Notes |
 | --- | --- | --- |
-| `ws2812` | `pin`, `order` | One addressable LED on `pin`; `order` is the colour order (`rgb`, `grb`). Used by Waveshare ESP32-S3-Zero (GPIO 48, `rgb`), Espressif ESP32-S3-DevKitC-1 and Freenove ESP32-S3 WROOM Board Lite (GPIO 48, `grb`). |
+| `ws2812` | `pin`, `order` | One addressable LED on `pin`; `order` is the colour order (`rgb`, `grb`). Used by Espressif ESP32-S3-DevKitC-1 (GPIO 48, `grb`) and, in their board packages, Waveshare ESP32-S3-Zero (GPIO 48, `rgb`) and Freenove ESP32-S3 WROOM Board Lite (GPIO 48, `grb`). |
 | `sk6812` | `pin`, `order` | Same wiring as `ws2812`, for SK6812 LEDs. |
 
 ## Board packages
 
 A board package is a Composer package of type `bm-boards` that holds board files and nothing else: no sources,
 no PHP module, no driver. The project requires it like any other package; the conductor installs it and writes it
-into `.phpbm/manifest.json`, and phpbm loads its boards next to the SDK's. `php-baremetal/boards-waveshare` is one.
+into `.phpbm/manifest.json`, and phpbm loads its boards next to the SDK's. `php-baremetal/boards-freenove` and
+`php-baremetal/boards-waveshare` are two.
 
 <!-- @code-block language="text" label="layout of a board package" -->
 ```text
@@ -236,10 +238,9 @@ acme/boards
   board fits an SDK is decided when the SDK loads it. The drivers of the blocks (`display`, `touch`, ...) are
   packages the project requires itself; `phpbm init` proposes them from their `board-blocks`.
 - **No `extra.baremetal`.** The type takes no `extra.baremetal` keys; the build compiles nothing of the package.
-- **Optional catalog.** `boards/catalog.json` gives, for each board, the vendor's documentation page (`docs`)
-  and a product photo (`photo`), both `https://` URLs, grouped by SDK name and keyed by board id. The package
-  registry site uses it to link and show the boards; phpbm and the build do not read it. It sits in `boards/`,
-  not in `boards/esp32/`, where every `.json` file is a board.
+- **Optional catalog.** `boards/catalog.json` links each board to its online documentation and photo, in the
+  [catalog format](#board-catalog). It sits in `boards/`, not in `boards/esp32/`, where every `.json` file is a
+  board.
 
 <!-- @code-block language="json" label="boards/catalog.json" -->
 ```json
@@ -247,6 +248,34 @@ acme/boards
     "esp32": {
         "acme-p4-panel": { "docs": "https://acme.example/docs/p4-panel", "photo": "https://acme.example/img/p4-panel.jpg" },
         "acme-s3-mini": { "docs": "https://acme.example/docs/s3-mini", "photo": "https://acme.example/img/s3-mini.jpg" }
+    }
+}
+```
+<!-- @endcode-block -->
+
+### Board catalog
+
+A catalog, `boards/catalog.json`, groups its entries by SDK name and keys them by board id. Each entry takes
+these optional fields:
+
+- `docs`: the `https://` URL of the vendor's documentation page for the board.
+- `photo`: the `https://` URL of a product photo.
+- `generic`: `true` for a board that describes a bare chip or module rather than a specific product. Sites and
+  tools may show it with a distinct marker. Its `docs` may point to the chip's page or datasheet.
+
+The SDK has its own `boards/catalog.json` in the same format, for the Espressif and generic boards it
+ships; a board package has one for its boards. The package registry site uses them to link and show the boards;
+phpbm and the build do not read them.
+
+<!-- @code-block language="json" label="boards/catalog.json of the SDK (excerpt)" -->
+```json
+{
+    "esp32": {
+        "espressif-esp32-s3-devkitc-1-n8r8": {
+            "docs": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html",
+            "photo": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/esp32-s3-devkitc-1-v1.1-isometric.png"
+        },
+        "generic-esp32p4": { "docs": "https://www.espressif.com/en/products/socs/esp32-p4", "generic": true }
     }
 }
 ```
@@ -274,7 +303,7 @@ picks the SDK's own board. The long form also works when the id is unique.
 <!-- @code-block language="json" label="sdk.json" -->
 ```json
 {
-    "board-packages": ["php-baremetal/boards-waveshare"]
+    "board-packages": ["php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"]
 }
 ```
 <!-- @endcode-block -->

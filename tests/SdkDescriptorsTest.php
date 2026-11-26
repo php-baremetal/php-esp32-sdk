@@ -140,13 +140,12 @@ final class SdkDescriptorsTest extends TestCase
         $sdk = self::bareSdk();
         self::assertSame([
             'espressif-esp32-s3-devkitc-1-n16r8', 'espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8',
-            'freenove-esp32-s3-wroom-lite-n16r16', 'freenove-esp32-s3-wroom-lite-n16r8',
             'generic-esp32p4', 'generic-esp32s3-octal', 'generic-esp32s3-quad',
         ], array_keys($sdk->boards));
         foreach ($sdk->boards as $board) {
             self::assertTrue($board->fromSdk(), $board->id);
         }
-        self::assertSame([self::WAVESHARE], $sdk->descriptor->boardPackages);
+        self::assertSame(['php-baremetal/boards-freenove', self::WAVESHARE], $sdk->descriptor->boardPackages);
     }
 
     public function test_the_waveshare_boards_come_from_their_package(): void
@@ -181,7 +180,7 @@ final class SdkDescriptorsTest extends TestCase
     public function test_every_board_loads(): void
     {
         $boards = self::sdk()->boards;
-        self::assertCount(17, $boards);
+        self::assertCount(15, $boards);
         self::assertSame(['microsd' => 'spi', 'network' => 'w5500'], $boards['waveshare-esp32-s3-eth']->capabilities());
         self::assertSame(14, $boards['waveshare-esp32-s3-eth']->peripherals['network']['cs']);
         self::assertSame('octal', $boards['waveshare-esp32-s3-eth']->psram);
@@ -196,7 +195,7 @@ final class SdkDescriptorsTest extends TestCase
         self::assertSame('4MB', $boards['generic-esp32s3-quad']->flash);
         self::assertEqualsCanonicalizing(['display' => 'st77916', 'i2c' => 'i2c', 'microsd' => 'spi', 'network' => 'wifi', 'touch' => 'cst816s'], $boards['waveshare-esp32-s3-touch-lcd-1.85b']->capabilities());
         self::assertSame(360, $boards['waveshare-esp32-s3-touch-lcd-1.85b']->peripherals['display']['width']);
-        foreach (['espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8', 'espressif-esp32-s3-devkitc-1-n16r8', 'freenove-esp32-s3-wroom-lite-n16r8', 'freenove-esp32-s3-wroom-lite-n16r16'] as $id) {
+        foreach (['espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8', 'espressif-esp32-s3-devkitc-1-n16r8'] as $id) {
             self::assertEqualsCanonicalizing(['led' => 'ws2812', 'network' => 'wifi'], $boards[$id]->capabilities(), $id);
             self::assertSame(['type' => 'ws2812', 'pin' => 48, 'order' => 'grb'], $boards[$id]->peripherals['led'], $id);
         }

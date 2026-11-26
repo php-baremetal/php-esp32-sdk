@@ -1,0 +1,28 @@
+{
+    "esp32": {
+        "espressif-esp32-s3-devkitc-1-n16r8": {
+            "docs": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html",
+            "photo": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/esp32-s3-devkitc-1-v1.1-isometric.png"
+        },
+        "espressif-esp32-s3-devkitc-1-n8r2": {
+            "docs": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html",
+            "photo": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/esp32-s3-devkitc-1-v1.1-isometric.png"
+        },
+        "espressif-esp32-s3-devkitc-1-n8r8": {
+            "docs": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp32-s3-devkitc-1/user_guide_v1.1.html",
+            "photo": "https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/_images/esp32-s3-devkitc-1-v1.1-isometric.png"
+        },
+        "generic-esp32p4": {
+            "docs": "https://www.espressif.com/en/products/socs/esp32-p4",
+            "generic": true
+        },
+        "generic-esp32s3-octal": {
+            "docs": "https://www.espressif.com/en/products/socs/esp32-s3",
+            "generic": true
+        },
+        "generic-esp32s3-quad": {
+            "docs": "https://www.espressif.com/en/products/socs/esp32-s3",
+            "generic": true
+        }
+    }
+}
