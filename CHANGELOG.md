@@ -16,11 +16,11 @@ default. Previews are not ready for use: anything can still change.
   lists the official board packages in `board-packages`, and the driver accepts `bm-boards` packages and compiles
   nothing of them. A board package's boards are checked like the SDK's;
   an id defined by two sources is picked with `<vendor>/<package>:<id>` or `sdk:<id>`
-  ([Board files](docs/boards/board-files.md#board-packages)). Needs php-baremetal/spec 1.4.
+  ([Board files](docs/boards/board-files.md#board-packages)). Needs php-baremetal/spec 1.4.1.
 - **The SDK has a board catalog.** `boards/catalog.json` gives the documentation page and product photo of the
   Espressif boards, and marks the generic boards with `"generic": true`, in the format of a board
   package's catalog ([Board catalog](docs/boards/board-files.md#board-catalog)). `catalog.json` is a reserved name in
-  `boards/`: the SDK does not read it as a board (php-baremetal/spec 1.4).
+  `boards/`: the SDK does not read it as a board (php-baremetal/spec 1.4.1).
 - **PHP 8.3.37, 8.4.28 and 8.5.13** (were 8.3.35, 8.4.26 and 8.5.11). The patches apply as before;
   `zend-mm-platform-storage` is rebased and also gives the firmware's heap the default hard memory limit that
   these releases add (`zend_mm_startup_ex()` leaves it unset).
