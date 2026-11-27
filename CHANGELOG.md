@@ -75,6 +75,11 @@ default. Previews are not ready for use: anything can still change.
   version it uses in `phpbm.lock`.
 
 ### Added
+- Board `php-baremetal-s3-discover` (php-baremetal S3-DISCOVER, coming soon): ESP32-S3R8, 16 MB flash, USB serial
+  console, Wi-Fi, microSD in SPI mode, I2C bus with a QMI8658A IMU and an MMC5603NJ compass, WS2812 on GPIO 21. Its catalog entry
+  links a picture and the datasheet poster (`assets/boards/`) and sets the new key `"coming-soon": true`, which
+  keeps it out of the `phpbm init` board list; the catalog also takes a new key `poster`
+  ([Board catalog](docs/boards/board-files.md#board-catalog)).
 - PHP 8.6 (8.6.0): the 8.5 patches ported, the same thirteen optional extensions (`date` adds `Time\Duration`),
   and the new `Io\Poll` API on ESP-IDF's `poll()`. Without `php-date`, `Io\Poll\Context::wait()` takes only a
   `null` timeout; as on 8.5, the WHATWG URL parser is not built (`Uri\WhatWg\Url`, `UrlBuilder::build()` and

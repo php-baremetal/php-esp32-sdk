@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'The 6 boards of the esp32 SDK and the boards of php-baremetal/boards-freenove and php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
+lede:    'The 7 boards of the esp32 SDK and the boards of php-baremetal/boards-freenove and php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
 see_also:
   - { href: './board-files.md', meta: 'Reference' }
   - { href: './board-overrides.md', meta: 'Reference' }
@@ -29,6 +29,7 @@ file is built, and how a board package is laid out, is in [Board files](./board-
 | `generic-esp32s3-quad` | ESP32-S3 (quad PSRAM, generic) | ESP32-S3 | quad | 4 MB | uart |
 | `generic-esp32s3-octal` | ESP32-S3 (octal PSRAM, generic) | ESP32-S3 | octal | 8 MB | uart |
 | `generic-esp32p4` | ESP32-P4 (generic) | ESP32-P4 | hex | 32 MB | uart |
+| `php-baremetal-s3-discover` | php-baremetal S3-DISCOVER (coming soon) | ESP32-S3 | octal | 16 MB | usb-jtag |
 
 The generic P4 board sets `revision` `v1` (see [Board files](./board-files.md)).
 
@@ -46,6 +47,7 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
 | `generic-esp32s3-quad` | none | `wifi` |
 | `generic-esp32s3-octal` | none | `wifi` |
 | `generic-esp32p4` | none | none |
+| `php-baremetal-s3-discover` | `spi`: cs 11, sclk 13, mosi 12, miso 14 | `wifi` |
 
 - An `sdio` slot (ESP32-P4) uses SDMMC slot 0. The pins it does not name take the defaults clk 43, cmd 44,
   d0 39, d1 40, d2 41, d3 42; `pwr_en` is absent unless the block sets it.
@@ -106,6 +108,15 @@ Their peripherals (microSD slots, networks, displays, touch controllers, LEDs), 
 packages each block needs are in the package's documentation:
 [boards-waveshare](https://repository.php-baremetal.com/packages/php-baremetal/boards-waveshare). The SDK lists the package in
 `sdk.json` (`board-packages`), which is how `phpbm init` finds it.
+
+## php-baremetal S3-DISCOVER
+
+`php-baremetal-s3-discover` is php-baremetal's own board, in prototyping and not on sale yet: an ESP32-S3R8
+(octal PSRAM) with 16 MB of flash, 18 x 38.8 mm, USB-C on the chip's USB serial, a printed antenna, a microSD
+slot, a LiPo charger and a WS2812 on GPIO 21 (GRB). Its I2C bus (SDA 42, SCL 41) carries a QMI8658A IMU
+(0x6B, INT1 on GPIO 16) and an MMC5603NJ magnetometer used as a compass (0x30), driven by `php-baremetal/imu-qmi8658` and `php-baremetal/mag-mmc5603`; the battery voltage is on
+GPIO 9 through a 1:2 divider. The slot is wired for 4-bit SD mode and the board file uses it in SPI mode, the one the SDK supports on
+the ESP32-S3. `phpbm init` does not list the board until it ships; `--board php-baremetal-s3-discover` selects it.
 
 ## Generic boards
 

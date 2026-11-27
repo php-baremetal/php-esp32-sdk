@@ -262,10 +262,15 @@ these optional fields:
 - `photo`: the `https://` URL of a product photo.
 - `generic`: `true` for a board that describes a bare chip or module rather than a specific product. Sites and
   tools may show it with a distinct marker. Its `docs` may point to the chip's page or datasheet.
+- `poster`: the `https://` URL of a large image of the board, such as a datasheet poster. The registry site
+  shows it on the board's page.
+- `coming-soon`: `true` for a board that cannot be bought yet. Its file works like any other, but `phpbm init`
+  does not offer it in the board list (`--board <id>` still selects it) and the registry site marks it
+  "Coming soon".
 
-The SDK has its own `boards/catalog.json` in the same format, for the Espressif and generic boards it
-ships; a board package has one for its boards. The package registry site uses them to link and show the boards;
-phpbm and the build do not read them.
+The SDK has its own `boards/catalog.json` in the same format, for the boards it ships; a board package has one
+for its boards. The package registry site uses them to link and show the boards; phpbm reads only
+`coming-soon`, and the build reads nothing of them.
 
 <!-- @code-block language="json" label="boards/catalog.json of the SDK (excerpt)" -->
 ```json

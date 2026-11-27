@@ -23,6 +23,11 @@
         "generic-esp32s3-quad": {
             "docs": "https://www.espressif.com/en/products/socs/esp32-s3",
             "generic": true
+        },
+        "php-baremetal-s3-discover": {
+            "photo": "https://raw.githubusercontent.com/php-baremetal/php-esp32-sdk/sdk/assets/boards/php-baremetal-s3-discover.png",
+            "poster": "https://raw.githubusercontent.com/php-baremetal/php-esp32-sdk/sdk/assets/boards/php-baremetal-s3-discover-poster.png",
+            "coming-soon": true
         }
     }
 }

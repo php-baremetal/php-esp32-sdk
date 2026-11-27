@@ -93,8 +93,8 @@ read from somewhere else (another directory, an URL) are made absolute, so they 
 <!-- @callout variant="note" title="The REGISTRY_TOKEN secret" -->
 `REGISTRY_TOKEN` is a repository secret holding a registry token with the **SDK refresh** ability
 (`sdk:refresh`). An administrator creates it on repository.php-baremetal.com under Deploy Tokens, with only
-that ability and no repositories, and saves the token shown once as the secret. Previews are not refreshed:
-the registry reads the latest stable release only.
+that ability and no repositories, and saves the token shown once as the secret. `preview.yml` uses the same
+secret: the registry shows the latest preview while there is no stable release.
 <!-- @endcallout -->
 
 <!-- @callout variant="note" title="Set SPEC_REF before tagging" -->
@@ -123,6 +123,9 @@ these previews by default, so `esp32@^2.0` resolves to them.
   `releases/download/sdk-preview`: the index lists every preview so far, and each tarball stays downloadable.
 - The assets go to the `sdk-preview` pre-release, never the latest one, named `SDK preview (latest <version>)`.
 - Runs are serialised (`concurrency: preview`, no cancelling), so two pushes cannot overwrite each other's index.
+- Like a stable release, it then asks the package registry to refresh the SDK (same step, same
+  `REGISTRY_TOKEN` secret). The registry reads the `sdk-preview` index only while the latest release has no
+  `index.json` or no stable version, so after 2.0.0 the call just keeps the stable release.
 
 Once v2.0.0 is out, delete `.github/workflows/preview.yml` and the `sdk-preview` release; the default index of
 phpbm moves back to `releases/latest/download/index.json`.

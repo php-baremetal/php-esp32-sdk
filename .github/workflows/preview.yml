@@ -76,3 +76,25 @@ jobs:
           prerelease: true
           make_latest: false
           fail_on_unmatched_files: true
+      # Tell the package registry (repository.php-baremetal.com) to read the new preview now instead of when its
+      # cache expires. The registry shows the latest preview while the SDK has no stable release; a registry
+      # problem never fails the preview.
+      - name: Refresh the SDK on the package registry
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          if [ -z "$REGISTRY_TOKEN" ]; then
+            echo "::notice::REGISTRY_TOKEN is not set: the registry shows the preview when its cache expires (at most 6 hours)"
+            exit 0
+          fi
+          sdk="$(jq -r .name php-esp32-sdk/sdk.json)"
+          if ! curl -fsS --max-time 120 -X POST \
+            -H "Authorization: Bearer $REGISTRY_TOKEN" \
+            -H "Accept: application/json" \
+            "https://repository.php-baremetal.com/api/sdk/${sdk}/refresh"; then
+            echo "::warning::the registry could not refresh SDK ${sdk}: it shows the preview when its cache expires"
+            exit 1
+          fi
+          echo

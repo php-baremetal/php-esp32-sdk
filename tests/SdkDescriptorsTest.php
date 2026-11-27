@@ -140,7 +140,7 @@ final class SdkDescriptorsTest extends TestCase
         $sdk = self::bareSdk();
         self::assertSame([
             'espressif-esp32-s3-devkitc-1-n16r8', 'espressif-esp32-s3-devkitc-1-n8r2', 'espressif-esp32-s3-devkitc-1-n8r8',
-            'generic-esp32p4', 'generic-esp32s3-octal', 'generic-esp32s3-quad',
+            'generic-esp32p4', 'generic-esp32s3-octal', 'generic-esp32s3-quad', 'php-baremetal-s3-discover',
         ], array_keys($sdk->boards));
         foreach ($sdk->boards as $board) {
             self::assertTrue($board->fromSdk(), $board->id);
@@ -180,7 +180,9 @@ final class SdkDescriptorsTest extends TestCase
     public function test_every_board_loads(): void
     {
         $boards = self::sdk()->boards;
-        self::assertCount(15, $boards);
+        self::assertCount(16, $boards);
+        self::assertSame(['network' => 'wifi', 'microsd' => 'spi', 'i2c' => 'i2c', 'led' => 'ws2812'], $boards['php-baremetal-s3-discover']->capabilities());
+        self::assertSame(11, $boards['php-baremetal-s3-discover']->peripherals['microsd']['cs']);
         self::assertSame(['microsd' => 'spi', 'network' => 'w5500'], $boards['waveshare-esp32-s3-eth']->capabilities());
         self::assertSame(14, $boards['waveshare-esp32-s3-eth']->peripherals['network']['cs']);
         self::assertSame('octal', $boards['waveshare-esp32-s3-eth']->psram);

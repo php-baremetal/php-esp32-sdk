@@ -1,0 +1,27 @@
+{
+    "name": "php-baremetal S3-DISCOVER",
+    "chip": "esp32s3",
+    "psram": "octal",
+    "flash": "16MB",
+    "console": "usb-jtag",
+    "network": {
+        "type": "wifi"
+    },
+    "microsd": {
+        "type": "spi",
+        "cs": 11,
+        "sclk": 13,
+        "mosi": 12,
+        "miso": 14
+    },
+    "i2c": {
+        "type": "i2c",
+        "sda": 42,
+        "scl": 41
+    },
+    "led": {
+        "type": "ws2812",
+        "pin": 21,
+        "order": "grb"
+    }
+}
