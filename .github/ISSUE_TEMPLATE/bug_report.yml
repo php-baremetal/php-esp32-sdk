@@ -14,27 +14,20 @@ body:
       description: What you expected, and what happened instead.
     validations:
       required: true
-  - type: dropdown
+  - type: input
     id: board
     attributes:
       label: Board
-      options:
-        - espressif-esp32-s3-devkitc-1-n16r8
-        - espressif-esp32-s3-devkitc-1-n8r2
-        - espressif-esp32-s3-devkitc-1-n8r8
-        - generic-esp32p4
-        - generic-esp32s3-octal
-        - generic-esp32s3-quad
-        - waveshare-esp32-p4-eth
-        - waveshare-esp32-p4-pico
-        - waveshare-esp32-p4-wifi6
-        - waveshare-esp32-s3-eth
-        - waveshare-esp32-s3-touch-lcd-1.85b
-        - waveshare-esp32-s3-zero
-        - waveshare-esp32-s3-zero-n8r8
-        - other (say which in "What happened")
+      description: The value of `extra.baremetal.board` in your composer.json, and the board's product name if it is a board of your own.
+      placeholder: "espressif-esp32-s3-devkitc-1-n16r8"
     validations:
       required: true
+  - type: input
+    id: board-package
+    attributes:
+      label: Board package and version
+      description: For a board that comes from a board package (Composer type `bm-boards`), the package and its version from composer.lock. Leave empty for a board of the SDK.
+      placeholder: "php-baremetal/boards-waveshare 1.0.0"
   - type: input
     id: versions
     attributes:
@@ -80,7 +73,7 @@ body:
     attributes:
       label: Environment
       description: phpbm version (`phpbm --version`), ESP-IDF version, and host OS.
-      placeholder: "phpbm 1.0.0, ESP-IDF v6.1, Ubuntu 24.04"
+      placeholder: "phpbm 0.4.1, ESP-IDF v6.1.1, Ubuntu 24.04"
   - type: checkboxes
     id: checks
     attributes:

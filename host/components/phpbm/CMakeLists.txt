@@ -1,5 +1,5 @@
 include("$ENV{PHPBM_INPUTS}")
-set(_srcs "boot.c" "startup.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}" "${PHPBM_BOARD_C}")
+set(_srcs "boot.c" "board_pins.c" "startup.c" "run.c" "memory.c" "fs_pathnorm.c" "fs_glob.c" "${PHPBM_ENV_C}" "${PHPBM_BOARD_C}")
 set(_priv esp_pm esp_hw_support esp_driver_gpio esp_app_format esp_netif esp_event esp_timer fatfs)
 include("${PHPBM_SDK_DIR}/host/cmake/microsd.cmake")
 if(PHPBM_MICROSD)

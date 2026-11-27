@@ -2,7 +2,7 @@
     "name": "esp32",
     "version": "0.1.0",
     "contract": 1,
-    "board-packages": ["php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"],
+    "board-packages": ["php-baremetal/boards-arduino", "php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"],
     "driver": {
         "class": "PhpBaremetal\\Esp32\\Driver",
         "autoload": { "psr-4": { "PhpBaremetal\\Esp32\\": "driver/" } }
@@ -53,6 +53,11 @@
             "min": 0,
             "max": 3600,
             "default": 30
+        },
+        "board-constants": {
+            "description": "Where the pin names of the board file (pins) become PHP constants: class (Baremetal\\Board\\Pin::A3 only) or global (also a global constant A3). The class exists in both.",
+            "values": ["class", "global"],
+            "default": "class"
         }
     },
     "php": {

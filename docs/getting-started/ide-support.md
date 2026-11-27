@@ -50,11 +50,18 @@ If the folder is missing after the first `composer install` of a project, an old
 instead of the one in the project (Composer runs the global plugin of the same name). Run
 `composer global update php-baremetal/conductor`, or simply `composer install` a second time.
 
+The board's pin names are not in a package: phpbm writes them to `.phpbm/ide/board.php` at `phpbm init`, at
+`phpbm board` and at each build, from the [`pins`](../boards/board-files.md#pin-names) of the project's board. The
+file declares `final class Baremetal\Board\Pin` with one constant per pin (an empty class when the board has no
+`pins`) and, with the [`board-constants`](../reference/options.md#sdk-options) option set to `global`, the same
+names as global constants. It is regenerated every time: do not edit it.
+
 ## Excluding `.phpbm`
 
-The `.phpbm/` folder of a project holds the manifest and the build files that phpbm generates. It is safe to
-exclude it from the IDE index (in PhpStorm, mark the folder as excluded); the declarations are in `vendor/`, not
-there.
+The `.phpbm/` folder of a project holds the manifest, the build files and the IDE file that phpbm generates.
+Exclude the build and cache folders from the IDE index, `.phpbm/build/` above all (in PhpStorm, mark them as
+excluded), but keep `.phpbm/ide/` indexed: it holds `board.php`, the declarations of `Baremetal\Board\Pin`.
+Excluding the whole `.phpbm/` folder hides the pin names from the IDE.
 
 ## The stubs are not part of the firmware
 

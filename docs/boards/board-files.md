@@ -14,7 +14,7 @@ next: { label: 'Board overrides', href: './board-overrides.md' }
 The board id used in `extra.baremetal.board` is the file name without `.json`:
 `boards/espressif-esp32-s3-devkitc-1-n8r8.json` of the SDK is the board `espressif-esp32-s3-devkitc-1-n8r8`. A board
 can also come from a [board package](#board-packages) installed in the project, such as
-`php-baremetal/boards-freenove` or `php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
+`php-baremetal/boards-arduino`, `php-baremetal/boards-freenove` or `php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
 against its chip; a failed check stops phpbm with a message naming the file. To add a board, see
 [Adding a board or chip](../development/adding-a-board.md); the boards that exist are in
 [Supported boards](./supported-boards.md). The name `catalog.json` is reserved in the SDK's `boards/`: that
@@ -61,6 +61,7 @@ The file below is `boards/esp32/waveshare-esp32-s3-eth.json` of `php-baremetal/b
 | `flash-mode` | no | Flash bus and mode. `quad` is the default (quad bus, DIO commands); `qio` (quad bus, QIO commands: faster reads) is accepted on the ESP32-S3 and the ESP32-P4, `octal` on the ESP32-S3. |
 | `revision` | no | Silicon revision family the firmware targets. ESP32-P4 only: `v1` (default) or `v3`. |
 | `console` | no | `uart` (default) or `usb-jtag`. Selects `host/sdkconfig/console-<value>`. |
+| `pins` | no | The names of the board's pins, name => GPIO number. See [Pin names](#pin-names). |
 | any other key | no | A peripheral block (below). |
 
 Every other key of the file must be an object with a non-empty `type`.
@@ -84,6 +85,40 @@ Every other key of the file must be an object with a non-empty `type`.
 A `revision` or a `flash-mode` the chip has no `sdkconfig` fragment for is rejected at build time, and a `psram`
 the chip does not list is rejected when the SDK is loaded. Messages are listed at the end of this page.
 <!-- @endcallout -->
+
+## Pin names
+
+Boards that label their pins with their own names, such as `D13` or `A3` on the Arduino Nano ESP32, list them in
+`pins`: each name with its GPIO number. The names become PHP constants and can be used in the blocks of the same
+file.
+
+<!-- @code-block language="JSON" label="boards/esp32/arduino-nano-esp32.json of php-baremetal/boards-arduino (excerpt)" -->
+```json
+{
+    "pins": {
+        "D13": 48,
+        "A3": 4,
+        "A4": 11,
+        "A5": 12,
+        "LED_BUILTIN": 48
+    },
+    "i2c": { "type": "i2c", "sda": "A4", "scl": "A5" }
+}
+```
+<!-- @endcode-block -->
+
+- **Names.** Upper-case letters, digits and `_`, starting with a letter (`/^[A-Z][A-Z0-9_]*$/`). Several names may
+  share a GPIO (`D13` and `LED_BUILTIN`). `CLASS` is refused, because `Pin::class` is the class name.
+- **Values.** A GPIO number of the chip: an integer from 0 to 48 on the ESP32-S3, from 0 to 54 on the ESP32-P4. The
+  build checks every pin before it compiles anything.
+- **Names in blocks.** A string value of a block (other than `type`) equal to a pin name is that pin's GPIO: above,
+  `i2c.sda` is 11. The same holds for the values of [board overrides](./board-overrides.md). A string that is not a
+  pin name stays a string, as an expander pin (`"exio2"`, lower case) does.
+- **Not a block.** `pins` has no `type`, is not a peripheral and cannot be changed by `board-overrides`.
+- **In PHP.** The firmware declares `final class Baremetal\Board\Pin` with one int constant per name
+  (`Pin::A3 === 4`); the class exists, empty, on a board without `pins`. With the option
+  [`board-constants`](../reference/options.md#sdk-options) set to `global`, the names are global constants too
+  (`A3`). See [Pin names in PHP](../modules/gpio.md#pin-names).
 
 ## Peripheral blocks
 
@@ -200,7 +235,8 @@ ESP32-S3-Touch-LCD-5B sets `4`; the trade-off is in [Wi-Fi](../modules/wifi.md#m
 A board package is a Composer package of type `bm-boards` that holds board files and nothing else: no sources,
 no PHP module, no driver. The project requires it like any other package; the conductor installs it and writes it
 into `.phpbm/manifest.json`, and phpbm loads its boards next to the SDK's. `php-baremetal/boards-freenove` and
-`php-baremetal/boards-waveshare` are two.
+`php-baremetal/boards-waveshare` are two; `php-baremetal/boards-arduino` also names the pins of its board
+(`pins`).
 
 <!-- @code-block language="text" label="layout of a board package" -->
 ```text
@@ -308,7 +344,7 @@ picks the SDK's own board. The long form also works when the id is unique.
 <!-- @code-block language="json" label="sdk.json" -->
 ```json
 {
-    "board-packages": ["php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"]
+    "board-packages": ["php-baremetal/boards-arduino", "php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"]
 }
 ```
 <!-- @endcode-block -->
@@ -346,6 +382,13 @@ the project's `require`. The boards of any other board package work once the pac
 | `board x: network.static-buffers applies only to network type 'wifi' (the chip's own radio), not to 'w5500'` | `static-buffers` on a `wifi-c6`, `w5500` or `emac` block. |
 | `board x: network.static-buffers needs network.buffers 'psram' (ESP-IDF has static Wi-Fi TX buffers only in that mode)` | `static-buffers` without `buffers: "psram"`. |
 | `board x: network.cs must be a number or a string` | A block value that is an array or an object. |
+| `boards/x.json: pin name 'a3' is not valid (...)` | A name of `pins` that is not upper-case letters, digits and `_` starting with a letter (spec). |
+| `boards/x.json: pin 'A3' must be an integer >= 0 (a GPIO number)` | A value of `pins` that is not a whole number (spec). |
+| `board-overrides: 'pins' cannot be overridden: ...` | `pins` in `board-overrides` (spec). |
+| `board x: pin D9 must be a GPIO number from 0 to 48, got 49` | A pin outside the chip's GPIO range. |
+| `board x: pin CLASS cannot be a constant of Baremetal\Board\Pin (Pin::class is the class name): rename the pin` | A pin named `CLASS`. |
+| `board x: pin E_ALL cannot be a global constant (board-constants: global): E_ALL is already a constant of PHP; ...` | With `board-constants: global`, a pin named like a PHP constant (or `TRUE`, `FALSE`, `NULL`). |
+| `board x: pin GPIO_INPUT cannot be a global constant (board-constants: global): GPIO_INPUT is already a constant of package php-baremetal/ext-gpio (ide/ext-gpio.stub); ...` | The same, for a constant an installed package declares in its IDE stubs. |
 | `board x: led.gain must be an integer or a string` | A block value that is a decimal number: `phpbm_board.c` holds integers and strings only. |
 
 To change a pin in a project without editing the board file, use [board overrides](./board-overrides.md).

@@ -22,6 +22,21 @@ final class HostComponentsTest extends TestCase
         self::assertStringContainsString('const char *phpbm_source_dir(void);', $m[1]);
     }
 
+    /** A source-text check: the real compile is a firmware build (see the CHANGELOG). */
+    public function test_the_board_pins_are_registered_once_at_module_startup(): void
+    {
+        $dir = __DIR__ . '/../host/components/phpbm';
+        $boot = (string) file_get_contents($dir . '/boot.c');
+        self::assertStringContainsString('return php_module_startup(sapi, &phpbm_board_module_entry);', $boot);
+        self::assertStringContainsString('php_embed_module.startup = phpbm_embed_startup;', $boot);
+        $pins = (string) file_get_contents($dir . '/board_pins.c');
+        self::assertStringContainsString('static PHP_MINIT_FUNCTION(phpbm_board)', $pins);
+        self::assertStringContainsString('INIT_CLASS_ENTRY(ce, "Baremetal\\\\Board\\\\Pin", NULL);', $pins);
+        self::assertStringContainsString('pin->ce_flags |= ZEND_ACC_FINAL;', $pins);
+        self::assertSame(1, preg_match('/#if PHPBM_OPTION_BOARD_CONSTANTS_GLOBAL\n.*zend_register_long_constant\(name, len, phpbm_board_pins\[i\]\.gpio, CONST_PERSISTENT, module_number\);.*#endif/s', $pins));
+        self::assertStringContainsString('"board_pins.c"', (string) file_get_contents($dir . '/CMakeLists.txt'));
+    }
+
     public function test_the_card_is_mounted_for_microsd_code_or_microsd_assets(): void
     {
         $cmake = (string) file_get_contents(__DIR__ . '/../host/cmake/microsd.cmake');

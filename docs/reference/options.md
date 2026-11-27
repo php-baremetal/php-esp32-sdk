@@ -57,6 +57,7 @@ These apply to every runtime.
 | `optimization` | enum | `size`, `performance`, `debug` | `size` | Compiler optimization of the whole firmware: `size` is `-Os`, `performance` is `-O2`, `debug` is `-Og`. |
 | `log` | enum | `none`, `error`, `warn`, `info`, `debug` | `info` | Lowest level of the firmware's own log lines (ESP-IDF, the network drivers, native packages) that are compiled in and printed. See [The log option](#the-log-option). |
 | `power-save` | enum | `off`, `on` | `off` | Automatic light sleep while every task waits. See [Power saving](./power-save.md). |
+| `board-constants` | enum | `class`, `global` | `class` | Where the [pin names](../boards/board-files.md#pin-names) of the board become PHP constants: `class` only as `Baremetal\Board\Pin::A3`, `global` also as the global constant `A3`. With `global` a name that is already a PHP constant, or a constant of an installed package, is a build error. See [Pin names](../modules/gpio.md#pin-names). |
 | `request-timeout` | int | 0 to 3600 | `30` | Seconds allowed for one HTTP request, in `web-server` or for ext-web requests in `event-driven`: PHP gets `max_execution_time` equal to this value, and the server answers 503 after it plus 5 s. `0` means no limit. |
 
 ### The log option

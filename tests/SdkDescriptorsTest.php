@@ -145,7 +145,7 @@ final class SdkDescriptorsTest extends TestCase
         foreach ($sdk->boards as $board) {
             self::assertTrue($board->fromSdk(), $board->id);
         }
-        self::assertSame(['php-baremetal/boards-freenove', self::WAVESHARE], $sdk->descriptor->boardPackages);
+        self::assertSame(['php-baremetal/boards-arduino', 'php-baremetal/boards-freenove', self::WAVESHARE], $sdk->descriptor->boardPackages);
     }
 
     public function test_the_waveshare_boards_come_from_their_package(): void
@@ -235,7 +235,7 @@ final class SdkDescriptorsTest extends TestCase
         $options = self::sdk()->descriptor->options;
         $names = array_keys($options);
         sort($names);
-        self::assertSame(['firmware-reserve', 'log', 'network', 'on-error', 'optimization', 'power-save', 'request-timeout', 'restart-delay'], $names);
+        self::assertSame(['board-constants', 'firmware-reserve', 'log', 'network', 'on-error', 'optimization', 'power-save', 'request-timeout', 'restart-delay'], $names);
         self::assertSame(['int', 0, 3600, 30], [$options['request-timeout']->type, $options['request-timeout']->min, $options['request-timeout']->max, $options['request-timeout']->default]);
         self::assertSame(['size', 'performance', 'debug'], $options['optimization']->values);
         self::assertSame('size', $options['optimization']->default);
@@ -252,6 +252,7 @@ final class SdkDescriptorsTest extends TestCase
         self::assertSame(['off', 'on'], $options['network']->values);
         self::assertSame('off', $options['network']->default);
         self::assertSame([256, 8192, 1024], [$options['firmware-reserve']->min, $options['firmware-reserve']->max, $options['firmware-reserve']->default]);
+        self::assertSame(['enum', ['class', 'global'], 'class'], [$options['board-constants']->type, $options['board-constants']->values, $options['board-constants']->default]);
     }
 
     public function test_runtime_specific_options(): void

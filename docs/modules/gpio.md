@@ -30,7 +30,33 @@ ext-sys is only there for `delay()` in the examples. The esp32 HAL (`esp32-gpio-
 | `gpio_read(int $pin): int` | The level of the pin, 0 or 1; works on outputs too |
 | `gpio_available(): bool` | Always `true` when the extension is in the firmware |
 
-There are no classes and no exceptions. `$pin` is the GPIO number of the chip, not the label printed on the board.
+ext-gpio has no classes and no exceptions. `$pin` is the GPIO number of the chip, not the label printed on the board;
+on a board whose file names its pins, the names give that number (below).
+
+## Pin names
+
+When the board file lists [`pins`](../boards/board-files.md#pin-names), as the Arduino Nano ESP32 of
+`php-baremetal/boards-arduino` does, the firmware declares each name as a constant of `Baremetal\Board\Pin`,
+holding its GPIO number. The class is built into the firmware (no package to require, no autoload) and exists on
+every board, empty when the board names no pins.
+
+<!-- @code-block language="php" label="index.php on arduino-nano-esp32" -->
+```php
+<?php
+use Baremetal\Board\Pin;
+
+function setup(): void {
+    gpio_mode(Pin::LED_BUILTIN, GPIO_OUTPUT);   // GPIO 48
+    gpio_mode(Pin::D2, GPIO_INPUT);             // GPIO 5
+}
+```
+<!-- @endcode-block -->
+
+With the SDK option [`board-constants`](../reference/options.md#sdk-options) set to `global`, the same names are
+also global constants, as in Arduino sketches: `gpio_write(LED_BUILTIN, 1)`. The build refuses a name that is
+already a constant of PHP or of an installed package (`E_ALL`, `GPIO_INPUT`, ...); `Pin::` names never collide.
+The constants are registered once when PHP starts, like those of any extension: they cost no time per request. For
+the IDE, phpbm writes their declarations to `.phpbm/ide/board.php` ([IDE support](../getting-started/ide-support.md)).
 
 ## Blink an LED
 

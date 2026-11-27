@@ -19,6 +19,7 @@
 
 #include "php.h"
 #include "php_embed.h"
+#include "php_main.h"
 #include "phpbm.h"
 #include "phpbm_options.h"
 
@@ -133,6 +134,13 @@ static void phpbm_opcache_ini(HashTable *ini)
 }
 #endif
 
+/* The embed SAPI's startup with phpbm's own module (board_pins.c) as the additional module: it starts after the
+ * built-in extensions and the packages' modules. */
+static int phpbm_embed_startup(sapi_module_struct *sapi)
+{
+    return php_module_startup(sapi, &phpbm_board_module_entry);
+}
+
 static void phpbm_ini_defaults(HashTable *ini)
 {
     char size[16];
@@ -217,6 +225,7 @@ static const char *phpbm_boot(const char *root)
     }
     php_embed_module.ub_write = phpbm_ub_write;
     php_embed_module.ini_defaults = phpbm_ini_defaults;
+    php_embed_module.startup = phpbm_embed_startup;
     if (php_embed_init(0, NULL) == FAILURE) {
         ESP_LOGE(TAG, "the PHP engine failed to start");
         return NULL;

@@ -13,6 +13,7 @@ extern "C" {
 
 struct _zval_struct;
 struct _zend_array;
+struct _zend_module_entry;
 
 const char *phpbm_storage_mount(void);
 void phpbm_storage_unmount(void);
@@ -110,6 +111,14 @@ int phpbm_request_timeout(void);
 /* Makes seconds the startup value of max_execution_time (every later request starts with it) and arms
  * it for the request open now (web-server). */
 void phpbm_startup_time_limit(int seconds);
+
+/* The board's pin names (the board file's pins, pin name => GPIO), in file order; generated into phpbm_board.c. */
+typedef struct { const char *name; int gpio; } phpbm_board_pin_t;
+extern const phpbm_board_pin_t phpbm_board_pins[];
+extern const size_t phpbm_board_pin_count;
+/* The PHP module that registers them at module startup: final class Baremetal\Board\Pin, one int constant per pin,
+ * and with the board-constants option global, global constants too. Passed to php_module_startup() by boot.c. */
+extern struct _zend_module_entry phpbm_board_module_entry;
 
 /* Sets a persistent ini default (called from the ini defaults hook, before the modules start). */
 void phpbm_ini_set(struct _zend_array *ini, const char *name, const char *value);

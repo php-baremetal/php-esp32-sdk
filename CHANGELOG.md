@@ -16,11 +16,11 @@ default. Previews are not ready for use: anything can still change.
   lists the official board packages in `board-packages`, and the driver accepts `bm-boards` packages and compiles
   nothing of them. A board package's boards are checked like the SDK's;
   an id defined by two sources is picked with `<vendor>/<package>:<id>` or `sdk:<id>`
-  ([Board files](docs/boards/board-files.md#board-packages)). Needs php-baremetal/spec 1.4.1.
+  ([Board files](docs/boards/board-files.md#board-packages)). Needs php-baremetal/spec 1.5.
 - **The SDK has a board catalog.** `boards/catalog.json` gives the documentation page and product photo of the
   Espressif boards, and marks the generic boards with `"generic": true`, in the format of a board
   package's catalog ([Board catalog](docs/boards/board-files.md#board-catalog)). `catalog.json` is a reserved name in
-  `boards/`: the SDK does not read it as a board (php-baremetal/spec 1.4.1).
+  `boards/`: the SDK does not read it as a board (php-baremetal/spec 1.4.1 and later).
 - **PHP 8.3.37, 8.4.28 and 8.5.13** (were 8.3.35, 8.4.26 and 8.5.11). The patches apply as before;
   `zend-mm-platform-storage` is rebased and also gives the firmware's heap the default hard memory limit that
   these releases add (`zend_mm_startup_ex()` leaves it unset).
@@ -75,6 +75,18 @@ default. Previews are not ready for use: anything can still change.
   version it uses in `phpbm.lock`.
 
 ### Added
+- **Pin names of the board.** A board file can name its GPIOs in a top-level `pins` object (`"A3": 4`, several names
+  may share a GPIO), and a block value equal to a pin name is that pin's GPIO (`"sda": "A4"`); `board-overrides`
+  cannot change `pins` ([Board files](docs/boards/board-files.md#pin-names)). Every pin must be a GPIO number of
+  the chip (0-48 on the ESP32-S3, 0-54 on the ESP32-P4), checked before anything is written. The build writes the
+  pins into `phpbm_board.c` (`phpbm_board_pins`, bm-common unchanged), and the firmware registers
+  `final class Baremetal\Board\Pin` with one int constant per pin at module startup, once, as a persistent internal
+  class (it always exists, empty when the board has no `pins`): `Pin::A3 === 4`. The new SDK option
+  `board-constants` (`class`, default, or `global`) also registers the names as global constants (`A3`); with
+  `global`, a name that is already a constant of PHP (of the PHP running the build, plus `TRUE`, `FALSE`, `NULL`) or
+  of an installed package's IDE stubs is a build error, and a name that still exists at startup is skipped with a
+  warning in the log. A pin named `CLASS` is refused. Needs php-baremetal/spec 1.5.
+- `sdk.json` lists `php-baremetal/boards-arduino` (Arduino Nano ESP32, with its pin names) in `board-packages`.
 - Board `php-baremetal-s3-discover` (php-baremetal S3-DISCOVER, coming soon): ESP32-S3R8, 16 MB flash, USB serial
   console, Wi-Fi, microSD in SPI mode, I2C bus with a QMI8658A IMU and an MMC5603NJ compass, WS2812 on GPIO 21. Its catalog entry
   links a picture and the datasheet poster (`assets/boards/`) and sets the new key `"coming-soon": true`, which

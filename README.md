@@ -71,6 +71,10 @@ project format and every command.
 | `espressif-esp32-s3-devkitc-1-n16r8` | Espressif ESP32-S3-DevKitC-1 (N16R8) | ESP32-S3 | Wi-Fi |
 | `generic-esp32s3-quad`, `generic-esp32s3-octal`, `generic-esp32p4` | Any ESP32-S3 (quad or octal PSRAM) or ESP32-P4 | | |
 
+The Arduino Nano ESP32 (`arduino-nano-esp32`, with its pin names `D0`-`D13`, `A0`-`A7` as `Baremetal\Board\Pin`
+constants) is in the board package
+[`php-baremetal/boards-arduino`](https://repository.php-baremetal.com/packages/php-baremetal/boards-arduino).
+
 The Freenove boards are in the board package
 [`php-baremetal/boards-freenove`](https://repository.php-baremetal.com/packages/php-baremetal/boards-freenove):
 `phpbm init` adds it when you pick one of them, or run `composer require php-baremetal/boards-freenove` in the

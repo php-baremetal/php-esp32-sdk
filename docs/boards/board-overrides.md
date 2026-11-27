@@ -138,12 +138,16 @@ The top-level keys of the board (`name`, `chip`, `psram`, `flash`, `flash-mode`,
 blocks: they cannot be overridden, and they cannot be added as blocks either. Naming one fails with the "has no"
 error below.
 
+The board's [pin names](./board-files.md#pin-names) (`pins`) come from its file and cannot be overridden either. An
+override value may use them, though: on `arduino-nano-esp32`, `{"i2c": {"sda": "D4"}}` sets `i2c.sda` to GPIO 7.
+
 ## Error messages
 
 | Message | Cause |
 | --- | --- |
 | `board-overrides: board 'x' has no 'display' to override: to add the block, give its 'type'` | The name is not a block of the board and the entry has no `type`: a typo, or a block to add that needs its `type`. |
 | `board-overrides: board 'x' has no 'flash' to override` | A top-level key of the board, which is not a block. |
+| `board-overrides: 'pins' cannot be overridden: the pin names of board 'x' come from its board file` | `pins` in the overrides. |
 | `board-overrides: 'display.type' must be a non-empty string` | An added block whose `type` is empty or not a string. |
 | `board-overrides: 'microsd' must be an object` | The value is not an object, for example a list. |
 | `board-overrides: 'microsd.type' cannot be overridden: board 'x' has a 'sdio' microsd` | The entry gives a `type` other than the board's. |

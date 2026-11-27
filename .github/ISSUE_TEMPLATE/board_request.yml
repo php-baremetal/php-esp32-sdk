@@ -5,7 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        A board is one JSON file under `boards/` — a good first contribution, too (see
+        A board is one JSON file, in the SDK's `boards/` or in a board package (Composer type `bm-boards`,
+        such as `php-baremetal/boards-waveshare`) — a good first contribution, too (see
         [CONTRIBUTING](https://github.com/php-baremetal/php-esp32-sdk/blob/master/CONTRIBUTING.md)).
         Two hard requirements: the part needs **external PSRAM** and **at least 4 MB of flash**, or the
         engine won't fit.
@@ -62,5 +63,5 @@ body:
       options:
         - label: This part has external PSRAM and at least 4 MB of flash.
           required: true
-        - label: I checked it isn't already in [`boards/`](https://github.com/php-baremetal/php-esp32-sdk/tree/master/boards).
+        - label: I checked it isn't already on the [boards page of the registry](https://repository.php-baremetal.com/boards) (the SDK's boards and those of the board packages).
           required: true

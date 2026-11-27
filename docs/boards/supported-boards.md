@@ -1,11 +1,12 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'The 7 boards of the esp32 SDK and the boards of php-baremetal/boards-freenove and php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
+lede:    'The 7 boards of the esp32 SDK and the boards of php-baremetal/boards-arduino, php-baremetal/boards-freenove and php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
 see_also:
   - { href: './board-files.md', meta: 'Reference' }
   - { href: './board-overrides.md', meta: 'Reference' }
   - { href: '../runtime/storage.md', meta: 'Storage' }
   - { href: '../runtime/network.md', meta: 'Network' }
+  - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-arduino', meta: 'Board package', label: 'boards-arduino' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-freenove', meta: 'Board package', label: 'boards-freenove' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-waveshare', meta: 'Board package', label: 'boards-waveshare' }
 prev: { label: 'IDE support', href: '../getting-started/ide-support.md' }
@@ -58,6 +59,28 @@ A board lists only the peripherals the SDK uses. The pin numbers are GPIOs.
   before PHP starts when the network is on ([Network](../runtime/network.md)).
 - A different wiring of a slot or a network block is set in the project with
   [board overrides](./board-overrides.md).
+
+## Arduino boards
+
+The Arduino Nano ESP32 is in the board package `php-baremetal/boards-arduino`, not in the SDK. Require it in the
+project (`phpbm init` does it when you pick it), then use the id as for an SDK board:
+
+<!-- @code-block language="bash" label="in the project folder" -->
+```bash
+composer require php-baremetal/boards-arduino
+```
+<!-- @endcode-block -->
+
+| Board id | Product | Chip | PSRAM | Flash | Console |
+| --- | --- | --- | --- | --- | --- |
+| `arduino-nano-esp32` | Arduino Nano ESP32 | ESP32-S3 | octal | 16 MB | usb-jtag |
+
+Its board file names the pins as printed on the board (`D0` to `D13`, `A0` to `A7`, `LED_BUILTIN`, ...), so a
+script writes `Pin::D13` instead of GPIO 48 ([Pin names](./board-files.md#pin-names)). Its blocks (Wi-Fi, the I2C
+bus on A4 and A5), the full list of pins and the driver packages each block needs are in the package's
+documentation:
+[boards-arduino](https://repository.php-baremetal.com/packages/php-baremetal/boards-arduino). The SDK lists the
+package in `sdk.json` (`board-packages`), which is how `phpbm init` finds it.
 
 ## Freenove boards
 
@@ -134,7 +157,7 @@ The two S3 generic boards declare `wifi`; the generic P4 declares nothing, so it
 ## Requirements
 
 <!-- @callout variant="warning" title="External PSRAM is required" -->
-Every board of the SDK, of boards-freenove and of boards-waveshare has external PSRAM, and the firmware keeps the PHP heap and the PHP task stack there.
+Every board of the SDK, of boards-arduino, of boards-freenove and of boards-waveshare has external PSRAM, and the firmware keeps the PHP heap and the PHP task stack there.
 The PSRAM type of the board must match the chip: quad or octal on the ESP32-S3, hex on the ESP32-P4. The
 flash size must be the real size of the module: the firmware's partition table is laid out from it.
 <!-- @endcallout -->

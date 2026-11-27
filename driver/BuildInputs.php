@@ -74,6 +74,7 @@ final class BuildInputs
             self::checkPath("the source {$name}", $dir);
         }
         self::checkBlocks($plan);
+        self::checkPins($plan);
         $build = $plan->buildDir;
         $board = $plan->board;
         $project = $plan->manifest->project;
@@ -420,6 +421,152 @@ final class BuildInputs
         }
     }
 
+    /** The board-constants option: 'class' (Baremetal\Board\Pin only) or 'global' (also global constants). */
+    public static function boardConstants(BuildPlan $plan): string
+    {
+        return (string) ($plan->options['board-constants'] ?? ($plan->sdk->descriptor->options['board-constants']->default ?? 'class'));
+    }
+
+    /**
+     * The board's pins (pin name => GPIO), checked before anything is written: each a GPIO number of the chip, no
+     * name that PHP reserves as a class constant, and with board-constants 'global' no name that is already a
+     * constant of PHP (the PHP running the build, plus TRUE, FALSE and NULL) or of an installed package's IDE stubs.
+     */
+    private static function checkPins(BuildPlan $plan): void
+    {
+        $board = $plan->board;
+        // spec < 1.5 has no Board::$pins: no pins.
+        $pins = $board->pins ?? [];
+        if ($pins === []) {
+            return;
+        }
+        $max = self::MAX_GPIO[$board->chip] ?? 54;
+        foreach ($pins as $name => $gpio) {
+            if (!is_int($gpio) || $gpio < 0 || $gpio > $max) {
+                throw new SpecException(sprintf('board %s: pin %s must be a GPIO number from 0 to %d, got %s', $board->id, $name, $max, json_encode($gpio)));
+            }
+            if ((string) $name === 'CLASS') {
+                throw new SpecException("board {$board->id}: pin CLASS cannot be a constant of Baremetal\\Board\\Pin (Pin::class is the class name): rename the pin");
+            }
+        }
+        if (self::boardConstants($plan) !== 'global') {
+            return;
+        }
+        $php = array_fill_keys(['TRUE', 'FALSE', 'NULL'], true) + get_defined_constants();
+        $stubs = self::stubConstants($plan);
+        foreach (array_keys($pins) as $name) {
+            $name = (string) $name;
+            if (isset($php[$name])) {
+                throw new SpecException("board {$board->id}: pin {$name} cannot be a global constant (board-constants: global): {$name} is already a constant of PHP; use Baremetal\\Board\\Pin::{$name} with board-constants: class");
+            }
+            if (isset($stubs[$name])) {
+                throw new SpecException("board {$board->id}: pin {$name} cannot be a global constant (board-constants: global): {$name} is already a constant of {$stubs[$name]}; use Baremetal\\Board\\Pin::{$name} with board-constants: class");
+            }
+        }
+    }
+
+    /**
+     * The global constants the installed packages declare in their IDE stubs (extra.baremetal.ide-stubs): `const NAME`
+     * in the global namespace, outside classes, and `define('NAME', ...)`. A stub that cannot be read is skipped.
+     *
+     * @return array<string,string> constant name => "package <name> (<stub>)"
+     */
+    public static function stubConstants(BuildPlan $plan): array
+    {
+        $constants = [];
+        foreach ($plan->manifest->packages as $package) {
+            $stubs = $package->meta['ide-stubs'] ?? [];
+            if (!is_array($stubs)) {
+                continue;
+            }
+            $dir = rtrim(self::packageDir($plan->projectDir, $package->path), '/');
+            foreach ($stubs as $stub) {
+                $code = is_string($stub) ? @file_get_contents("{$dir}/{$stub}") : false;
+                if ($code === false) {
+                    continue;
+                }
+                foreach (self::declaredConstants($code) as $name) {
+                    $constants[$name] ??= "package {$package->name} ({$stub})";
+                }
+            }
+        }
+        return $constants;
+    }
+
+    /**
+     * The global constants a PHP file declares: `const NAME = ...` in the global namespace and outside a class body
+     * (a namespaced const is not global), and `define('NAME', ...)` with a literal name.
+     *
+     * @return list<string>
+     */
+    public static function declaredConstants(string $code): array
+    {
+        if (!function_exists('token_get_all')) {
+            preg_match_all('/^\s*const\s+([A-Za-z_]\w*)\s*=|\bdefine\s*\(\s*[\'"]([A-Za-z_]\w*)[\'"]/m', $code, $m);
+            return array_values(array_unique(array_filter([...$m[1], ...$m[2]], static fn (string $n): bool => $n !== '')));
+        }
+        $tokens = array_values(array_filter(token_get_all($code), static fn ($t): bool => !is_array($t) || !in_array($t[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)));
+        $names = [];
+        $namespace = '';
+        $depth = 0;
+        $classDepth = [];
+        $pendingClass = false;
+        $count = count($tokens);
+        for ($i = 0; $i < $count; $i++) {
+            $t = $tokens[$i];
+            $id = is_array($t) ? $t[0] : $t;
+            if ($id === T_NAMESPACE) {
+                $next = $tokens[$i + 1] ?? null;
+                if (is_array($next) && in_array($next[0], [T_STRING, T_NAME_QUALIFIED], true)) {
+                    $namespace = $next[1];
+                } elseif ($next === '{' || $next === ';') {
+                    $namespace = '';
+                }
+            } elseif (in_array($id, [T_CLASS, T_INTERFACE, T_TRAIT, T_ENUM], true)) {
+                $prev = $tokens[$i - 1] ?? null;
+                $pendingClass = !(is_array($prev) && $prev[0] === T_DOUBLE_COLON);
+            } elseif ($id === '{' || $id === T_CURLY_OPEN || $id === T_DOLLAR_OPEN_CURLY_BRACES) {
+                $depth++;
+                if ($pendingClass) {
+                    $classDepth[] = $depth;
+                    $pendingClass = false;
+                }
+            } elseif ($id === '}') {
+                if ($classDepth !== [] && end($classDepth) === $depth) {
+                    array_pop($classDepth);
+                }
+                $depth--;
+            } elseif ($id === T_CONST && $classDepth === [] && $namespace === '') {
+                // const A = 1, B = [2, C];  the names are the ones before '=' outside brackets.
+                $nested = 0;
+                $expectName = true;
+                for ($j = $i + 1; $j < $count && !($nested === 0 && $tokens[$j] === ';'); $j++) {
+                    $tj = $tokens[$j];
+                    if (in_array($tj, ['(', '[', '{'], true)) {
+                        $nested++;
+                    } elseif (in_array($tj, [')', ']', '}'], true)) {
+                        $nested--;
+                    } elseif ($nested === 0 && $tj === ',') {
+                        $expectName = true;
+                    } elseif ($expectName && is_array($tj) && $tj[0] === T_STRING && ($tokens[$j + 1] ?? null) === '=') {
+                        $names[] = $tj[1];
+                        $expectName = false;
+                    }
+                }
+                $i = $j;
+            } elseif ($id === T_STRING && strtolower($t[1]) === 'define' && ($tokens[$i + 1] ?? null) === '(') {
+                $arg = $tokens[$i + 2] ?? null;
+                if (is_array($arg) && $arg[0] === T_CONSTANT_ENCAPSED_STRING) {
+                    $name = stripslashes(substr($arg[1], 1, -1));
+                    if (preg_match('/^[A-Za-z_]\w*$/D', $name)) {
+                        $names[] = $name;
+                    }
+                }
+            }
+        }
+        return array_values(array_unique($names));
+    }
+
     private static function chipFragment(BuildPlan $plan, string $suffix): string
     {
         return "{$plan->sdk->dir}/chips/{$plan->board->chip}/sdkconfig.{$suffix}";
@@ -557,7 +704,7 @@ final class BuildInputs
         return "#include <stddef.h>\n\nconst char *const phpbm_env[] = {\n{$entries}    NULL,\n};\nconst size_t phpbm_env_count = " . count($env) . ";\n";
     }
 
-    /** The board blocks as a C table read by packages through bm_board.h. */
+    /** The board blocks as a C table read by packages through bm_board.h, and the board's pins for the firmware. */
     private static function boardSource(Board $board): string
     {
         $peripherals = $board->peripherals;
@@ -583,6 +730,16 @@ final class BuildInputs
         if ($entries === '') {
             $entries = "    { NULL, NULL, false, 0, NULL },\n";
         }
+        // spec < 1.5 has no Board::$pins.
+        $pins = $board->pins ?? [];
+        $pinEntries = '';
+        foreach ($pins as $name => $gpio) {
+            $pinEntries .= sprintf("    { \"%s\", %d },\n", self::c((string) $name), $gpio);
+        }
+        if ($pinEntries === '') {
+            $pinEntries = "    { NULL, 0 },\n";
+        }
+        $pinCount = count($pins);
         $id = self::c($board->id);
         return <<<C
             #include <stdbool.h>
@@ -610,6 +767,13 @@ final class BuildInputs
             const char *bm_board_type(const char *block) { const phpbm_board_value_t *v = find(block, "type"); return v ? v->s : NULL; }
             bool bm_board_int(const char *block, const char *key, int *out) { const phpbm_board_value_t *v = find(block, key); if (!v || !v->is_int || !out) { return false; } *out = v->i; return true; }
             const char *bm_board_str(const char *block, const char *key) { const phpbm_board_value_t *v = find(block, key); return v && !v->is_int ? v->s : NULL; }
+
+            /* The board's pin names (pins), in file order: Baremetal\\Board\\Pin constants (phpbm.h). */
+            typedef struct { const char *name; int gpio; } phpbm_board_pin_t;
+
+            const phpbm_board_pin_t phpbm_board_pins[] = {
+            {$pinEntries}};
+            const size_t phpbm_board_pin_count = {$pinCount};
 
             C;
     }

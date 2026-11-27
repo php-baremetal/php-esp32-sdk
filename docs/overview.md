@@ -41,7 +41,7 @@ firmware image built with ESP-IDF v6.1.1.
 | --- | --- |
 | Chips | ESP32-S3 (`esp32s3`), ESP32-P4 (`esp32p4`) |
 | PHP | 8.3, 8.4, 8.5 and 8.6; the minor comes from `config.platform.php` in `composer.json` ([PHP versions and extensions](./reference/php.md)) |
-| Boards | 6 in the SDK (Espressif and generic boards), 2 Freenove boards in the board package `php-baremetal/boards-freenove`, 9 Waveshare boards in the board package `php-baremetal/boards-waveshare` ([Supported boards](./boards/supported-boards.md)) |
+| Boards | 6 in the SDK (Espressif and generic boards), the Arduino Nano ESP32 in the board package `php-baremetal/boards-arduino`, 2 Freenove boards in the board package `php-baremetal/boards-freenove`, 9 Waveshare boards in the board package `php-baremetal/boards-waveshare` ([Supported boards](./boards/supported-boards.md)) |
 | Runtimes | `init-loop`, `event-driven`, `web-server` ([Runtimes](./runtime/runtimes.md)) |
 | Storages | `embedded` (sources in flash, read-only), `microsd` ([Storage](./runtime/storage.md)) |
 | Networks | `wifi`, `w5500` (SPI Ethernet), `emac` (on-chip Ethernet), `wifi-c6` (Wi-Fi through a companion C6) ([Network](./runtime/network.md)) |
