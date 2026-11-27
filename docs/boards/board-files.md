@@ -14,7 +14,7 @@ next: { label: 'Board overrides', href: './board-overrides.md' }
 The board id used in `extra.baremetal.board` is the file name without `.json`:
 `boards/espressif-esp32-s3-devkitc-1-n8r8.json` of the SDK is the board `espressif-esp32-s3-devkitc-1-n8r8`. A board
 can also come from a [board package](#board-packages) installed in the project, such as
-`php-baremetal/boards-arduino`, `php-baremetal/boards-freenove` or `php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
+`php-baremetal/boards-arduino`, `php-baremetal/boards-freenove`, `php-baremetal/boards-seeed` or `php-baremetal/boards-waveshare`. When the SDK and the project's board packages are loaded every file is checked
 against its chip; a failed check stops phpbm with a message naming the file. To add a board, see
 [Adding a board or chip](../development/adding-a-board.md); the boards that exist are in
 [Supported boards](./supported-boards.md). The name `catalog.json` is reserved in the SDK's `boards/`: that
@@ -235,8 +235,8 @@ ESP32-S3-Touch-LCD-5B sets `4`; the trade-off is in [Wi-Fi](../modules/wifi.md#m
 A board package is a Composer package of type `bm-boards` that holds board files and nothing else: no sources,
 no PHP module, no driver. The project requires it like any other package; the conductor installs it and writes it
 into `.phpbm/manifest.json`, and phpbm loads its boards next to the SDK's. `php-baremetal/boards-freenove` and
-`php-baremetal/boards-waveshare` are two; `php-baremetal/boards-arduino` also names the pins of its board
-(`pins`).
+`php-baremetal/boards-waveshare` are two; `php-baremetal/boards-arduino` and
+`php-baremetal/boards-seeed` also name the pins of their boards (`pins`).
 
 <!-- @code-block language="text" label="layout of a board package" -->
 ```text
@@ -344,7 +344,7 @@ picks the SDK's own board. The long form also works when the id is unique.
 <!-- @code-block language="json" label="sdk.json" -->
 ```json
 {
-    "board-packages": ["php-baremetal/boards-arduino", "php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"]
+    "board-packages": ["php-baremetal/boards-arduino", "php-baremetal/boards-freenove", "php-baremetal/boards-seeed", "php-baremetal/boards-waveshare"]
 }
 ```
 <!-- @endcode-block -->

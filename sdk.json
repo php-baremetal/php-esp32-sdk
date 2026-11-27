@@ -2,7 +2,7 @@
     "name": "esp32",
     "version": "0.1.0",
     "contract": 1,
-    "board-packages": ["php-baremetal/boards-arduino", "php-baremetal/boards-freenove", "php-baremetal/boards-waveshare"],
+    "board-packages": ["php-baremetal/boards-arduino", "php-baremetal/boards-freenove", "php-baremetal/boards-seeed", "php-baremetal/boards-waveshare"],
     "driver": {
         "class": "PhpBaremetal\\Esp32\\Driver",
         "autoload": { "psr-4": { "PhpBaremetal\\Esp32\\": "driver/" } }

@@ -31,7 +31,7 @@ and does not need ext-events.
 
 | Network type | Boards | ext-wifi |
 | --- | --- | --- |
-| `wifi` | `espressif-esp32-s3-devkitc-1-n16r8`, `-n8r2`, `-n8r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `-n16r16`, `generic-esp32s3-quad`, `generic-esp32s3-octal`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b`, `waveshare-esp32-s3-zero`, `waveshare-esp32-s3-zero-n8r8` | Required to get any network |
+| `wifi` | `arduino-nano-esp32`, `espressif-esp32-s3-devkitc-1-n16r8`, `-n8r2`, `-n8r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `-n16r16`, `generic-esp32s3-quad`, `generic-esp32s3-octal`, `php-baremetal-s3-discover`, `seeed-xiao-esp32s3`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b`, `waveshare-esp32-s3-zero`, `waveshare-esp32-s3-zero-n8r8` | Required to get any network |
 | `wifi-c6` | `waveshare-esp32-p4-wifi6`: an ESP32-C6 companion chip over SDIO | Required; the firmware starts the link to the companion whenever ext-wifi is installed |
 | `w5500` | `waveshare-esp32-s3-eth`: wired, and the ESP32-S3 has a radio | Optional: Wi-Fi then runs next to Ethernet |
 | none or wired without a radio | `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `generic-esp32p4` | Not supported: the build fails with `board '...' has no Wi-Fi: remove php-baremetal/ext-wifi` |
@@ -39,9 +39,9 @@ and does not need ext-events.
 On a `wifi` or `wifi-c6` board, the `network` option set to `on` (or a runtime that needs the network) without
 ext-wifi is a build error: `board '...' connects over Wi-Fi from PHP: composer require php-baremetal/ext-wifi`.
 Wired boards get an address before PHP starts; see [Network](../runtime/network.md). `waveshare-esp32-p4-wifi6`
-builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet. The `freenove-*` and `waveshare-*`
-boards are in the board packages `php-baremetal/boards-freenove` and `php-baremetal/boards-waveshare`, which the
-project requires.
+builds with ext-wifi, but Wi-Fi has not been verified on the hardware yet. The `arduino-*`, `freenove-*`, `seeed-*`
+and `waveshare-*` boards are in the board packages `php-baremetal/boards-arduino`, `php-baremetal/boards-freenove`,
+`php-baremetal/boards-seeed` and `php-baremetal/boards-waveshare`, which the project requires.
 
 ## The main functions
 

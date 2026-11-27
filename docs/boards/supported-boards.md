@@ -1,6 +1,6 @@
 ---
 eyebrow: 'SDK · Boards'
-lede:    'The 7 boards of the esp32 SDK and the boards of php-baremetal/boards-arduino, php-baremetal/boards-freenove and php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
+lede:    'The 7 boards of the esp32 SDK and the boards of php-baremetal/boards-arduino, php-baremetal/boards-freenove, php-baremetal/boards-seeed and php-baremetal/boards-waveshare: chip, PSRAM, flash, console and the peripherals each one has.'
 see_also:
   - { href: './board-files.md', meta: 'Reference' }
   - { href: './board-overrides.md', meta: 'Reference' }
@@ -8,6 +8,7 @@ see_also:
   - { href: '../runtime/network.md', meta: 'Network' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-arduino', meta: 'Board package', label: 'boards-arduino' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-freenove', meta: 'Board package', label: 'boards-freenove' }
+  - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-seeed', meta: 'Board package', label: 'boards-seeed' }
   - { href: 'https://repository.php-baremetal.com/packages/php-baremetal/boards-waveshare', meta: 'Board package', label: 'boards-waveshare' }
 prev: { label: 'IDE support', href: '../getting-started/ide-support.md' }
 next: { label: 'Board files', href: './board-files.md' }
@@ -104,6 +105,28 @@ package's documentation:
 [boards-freenove](https://repository.php-baremetal.com/packages/php-baremetal/boards-freenove). The SDK lists the
 package in `sdk.json` (`board-packages`), which is how `phpbm init` finds it.
 
+## Seeed Studio boards
+
+The Seeed Studio XIAO ESP32-S3 is in the board package `php-baremetal/boards-seeed`, not in the SDK. Require it in
+the project (`phpbm init` does it when you pick it), then use the id as for an SDK board:
+
+<!-- @code-block language="bash" label="in the project folder" -->
+```bash
+composer require php-baremetal/boards-seeed
+```
+<!-- @endcode-block -->
+
+| Board id | Product | Chip | PSRAM | Flash | Console |
+| --- | --- | --- | --- | --- | --- |
+| `seeed-xiao-esp32s3` | Seeed Studio XIAO ESP32-S3 | ESP32-S3 | octal | 8 MB | usb-jtag |
+
+Its board file names the pins as printed on the board (`D0` to `D10`, `A0` to `A10`, `LED_BUILTIN`, ...), so a
+script writes `Pin::D10` instead of GPIO 9 ([Pin names](./board-files.md#pin-names)). Its blocks (Wi-Fi, the I2C
+bus on D4 and D5), the full list of pins and the driver packages each block needs are in the package's
+documentation:
+[boards-seeed](https://repository.php-baremetal.com/packages/php-baremetal/boards-seeed). The SDK lists the
+package in `sdk.json` (`board-packages`), which is how `phpbm init` finds it.
+
 ## Waveshare boards
 
 The Waveshare boards are in the board package `php-baremetal/boards-waveshare`, not in the SDK. Require it in the
@@ -157,7 +180,7 @@ The two S3 generic boards declare `wifi`; the generic P4 declares nothing, so it
 ## Requirements
 
 <!-- @callout variant="warning" title="External PSRAM is required" -->
-Every board of the SDK, of boards-arduino, of boards-freenove and of boards-waveshare has external PSRAM, and the firmware keeps the PHP heap and the PHP task stack there.
+Every board of the SDK, of boards-arduino, of boards-freenove, of boards-seeed and of boards-waveshare has external PSRAM, and the firmware keeps the PHP heap and the PHP task stack there.
 The PSRAM type of the board must match the chip: quad or octal on the ESP32-S3, hex on the ESP32-P4. The
 flash size must be the real size of the module: the firmware's partition table is laid out from it.
 <!-- @endcallout -->

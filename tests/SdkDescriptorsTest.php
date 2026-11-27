@@ -145,7 +145,7 @@ final class SdkDescriptorsTest extends TestCase
         foreach ($sdk->boards as $board) {
             self::assertTrue($board->fromSdk(), $board->id);
         }
-        self::assertSame(['php-baremetal/boards-arduino', 'php-baremetal/boards-freenove', self::WAVESHARE], $sdk->descriptor->boardPackages);
+        self::assertSame(['php-baremetal/boards-arduino', 'php-baremetal/boards-freenove', 'php-baremetal/boards-seeed', self::WAVESHARE], $sdk->descriptor->boardPackages);
     }
 
     public function test_the_waveshare_boards_come_from_their_package(): void

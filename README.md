@@ -74,6 +74,8 @@ project format and every command.
 The Arduino Nano ESP32 (`arduino-nano-esp32`, with its pin names `D0`-`D13`, `A0`-`A7` as `Baremetal\Board\Pin`
 constants) is in the board package
 [`php-baremetal/boards-arduino`](https://repository.php-baremetal.com/packages/php-baremetal/boards-arduino).
+The Seeed Studio XIAO ESP32-S3 (`seeed-xiao-esp32s3`, with its pin names `D0`-`D10`, `A0`-`A10`) is in the board
+package [`php-baremetal/boards-seeed`](https://repository.php-baremetal.com/packages/php-baremetal/boards-seeed).
 
 The Freenove boards are in the board package
 [`php-baremetal/boards-freenove`](https://repository.php-baremetal.com/packages/php-baremetal/boards-freenove):

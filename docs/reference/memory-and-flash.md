@@ -161,21 +161,22 @@ storage there is no `storage` partition: the sources live on the card and `phpbm
 
 ### Flash sizes
 
-The `freenove-*` boards are in the board package `php-baremetal/boards-freenove`, the `waveshare-*` boards in
+The `arduino-*` boards are in the board package `php-baremetal/boards-arduino`, the `freenove-*` boards in
+`php-baremetal/boards-freenove`, the `seeed-*` boards in `php-baremetal/boards-seeed`, the `waveshare-*` boards in
 `php-baremetal/boards-waveshare`.
 
 | Board | Flash | PSRAM |
 | --- | --- | --- |
 | `generic-esp32s3-quad`, `waveshare-esp32-s3-zero` | 4 MB | quad |
 | `espressif-esp32-s3-devkitc-1-n8r2` | 8 MB | quad |
-| `espressif-esp32-s3-devkitc-1-n8r8`, `generic-esp32s3-octal`, `waveshare-esp32-s3-zero-n8r8` | 8 MB | octal |
-| `espressif-esp32-s3-devkitc-1-n16r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `freenove-esp32-s3-wroom-lite-n16r16`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b` | 16 MB | octal |
+| `espressif-esp32-s3-devkitc-1-n8r8`, `generic-esp32s3-octal`, `seeed-xiao-esp32s3`, `waveshare-esp32-s3-zero-n8r8` | 8 MB | octal |
+| `arduino-nano-esp32`, `espressif-esp32-s3-devkitc-1-n16r8`, `freenove-esp32-s3-wroom-lite-n16r8`, `freenove-esp32-s3-wroom-lite-n16r16`, `php-baremetal-s3-discover`, `waveshare-esp32-s3-eth`, `waveshare-esp32-s3-touch-lcd-1.85b`, `waveshare-esp32-s3-touch-lcd-5b` | 16 MB | octal |
 | `generic-esp32p4`, `waveshare-esp32-p4-eth`, `waveshare-esp32-p4-pico`, `waveshare-esp32-p4-wifi6`, `waveshare-esp32-p4-wifi6-touch-lcd-5` | 32 MB | hex |
 
 <!-- @callout variant="note" title="Only 16 MB are used on a 32 MB board" -->
 With the quad flash bus (`quad` or `qio`), the cache maps only the first 16 MB of the flash, so the partitions stay below
 that limit: the upper 16 MB of a 32 MB ESP32-P4 board stay unused. A board can set `flash-mode` to `octal` on an
-ESP32-S3 (see [Board files](../boards/board-files.md)); no board of the SDK, of boards-freenove or of boards-waveshare does.
+ESP32-S3 (see [Board files](../boards/board-files.md)); no board of the SDK or of the official board packages does.
 <!-- @endcallout -->
 
 When the sources and the package partitions leave less than 1024K for the firmware, the build stops with

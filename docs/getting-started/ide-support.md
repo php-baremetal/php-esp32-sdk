@@ -50,7 +50,7 @@ If the folder is missing after the first `composer install` of a project, an old
 instead of the one in the project (Composer runs the global plugin of the same name). Run
 `composer global update php-baremetal/conductor`, or simply `composer install` a second time.
 
-The board's pin names are not in a package: phpbm writes them to `.phpbm/ide/board.php` at `phpbm init`, at
+The board's pin names are not in a package: phpbm (0.4.2 or later) writes them to `.phpbm/ide/board.php` at `phpbm init`, at
 `phpbm board` and at each build, from the [`pins`](../boards/board-files.md#pin-names) of the project's board. The
 file declares `final class Baremetal\Board\Pin` with one constant per pin (an empty class when the board has no
 `pins`) and, with the [`board-constants`](../reference/options.md#sdk-options) option set to `global`, the same

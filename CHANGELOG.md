@@ -86,7 +86,8 @@ default. Previews are not ready for use: anything can still change.
   `global`, a name that is already a constant of PHP (of the PHP running the build, plus `TRUE`, `FALSE`, `NULL`) or
   of an installed package's IDE stubs is a build error, and a name that still exists at startup is skipped with a
   warning in the log. A pin named `CLASS` is refused. Needs php-baremetal/spec 1.5.
-- `sdk.json` lists `php-baremetal/boards-arduino` (Arduino Nano ESP32, with its pin names) in `board-packages`.
+- `sdk.json` lists `php-baremetal/boards-arduino` (Arduino Nano ESP32) and `php-baremetal/boards-seeed` (Seeed Studio
+  XIAO ESP32-S3), both with their pin names, in `board-packages`.
 - Board `php-baremetal-s3-discover` (php-baremetal S3-DISCOVER, coming soon): ESP32-S3R8, 16 MB flash, USB serial
   console, Wi-Fi, microSD in SPI mode, I2C bus with a QMI8658A IMU and an MMC5603NJ compass, WS2812 on GPIO 21. Its catalog entry
   links a picture and the datasheet poster (`assets/boards/`) and sets the new key `"coming-soon": true`, which
